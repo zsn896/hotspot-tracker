@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "api/track.js": {"maxDuration":60},
+    "api/worker.js": {"maxDuration":60},
+    "api/state.js": {"maxDuration":30},
+    "api/group.js": {"maxDuration":30}
+  },
+  "headers":[{"source":"/api/(.*)","headers":[{"key":"Cache-Control","value":"no-store, max-age=0"}]}]
+}
