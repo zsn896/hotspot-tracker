@@ -1,4 +1,4 @@
-const {db,statsForGroup,californiaNowParts,scheduleMode}=require('./lib');
+const {db,statsForGroup,californiaNowParts,scheduleMode,cycleDateKey}=require('./lib');
 const COLLECTION_DRAWS=180;
 const CONTROL_PREFIX='AUTO_CONTROL_';
 const AUTO_PREFIX='AUTO Group ';
@@ -10,7 +10,11 @@ module.exports=async(req,res)=>{
   res.setHeader('Cache-Control','no-store,max-age=0');
   try{
     const now=californiaNowParts();
-    const ctr=await db(`tracker_groups?select=id,name,start_draw_id,last_seen_draw_id,created_at&name=like.${encodeURIComponent(CONTROL_PREFIX+'*')}&order=id.desc&limit=1`);const control=ctr?.[0]||null;
+    const ctr=await db(`tracker_groups?select=id,name,start_draw_id,last_seen_draw_id,created_at&name=like.${encodeURIComponent(CONTROL_PREFIX+'*')}&order=id.desc&limit=1`);
+    let control=ctr?.[0]||null;
+    const cycleKey=cycleDateKey(now);
+    const stale=!!(control&&!String(control.name).endsWith(cycleKey));
+    if(stale)control=null; // belongs to a previous cycle; only worker.js can actually reset it, so don't show its numbers as if they were today's
     let history=[];if(control){const end=Number(control.start_draw_id)+COLLECTION_DRAWS-1;history=await db(`hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gte.${control.start_draw_id}&draw_id=lte.${end}&order=draw_id.asc&limit=${COLLECTION_DRAWS}`)||[]}
     const groups=await db(`tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&active=eq.true&name=like.${encodeURIComponent(AUTO_PREFIX+'*')}&order=id.asc`)||[];
     const raw=[];
@@ -20,6 +24,6 @@ module.exports=async(req,res)=>{
     const latest=await db('hotspot_draws?select=draw_id,draw_date,draw_time,bulls_eye&order=draw_id.desc&limit=1');
     const mode=scheduleMode(now.minutes,raw.length>0);
     const have=Math.min(COLLECTION_DRAWS,history.length);
-    res.status(200).json({ok:true,mode,schedule:{collection:'6:00 AM – 6:00 PM',selection:'6:00 PM',tracking:'6:00 PM – 2:00 AM',cleanup:'2:30 AM'},collection:{have,need:COLLECTION_DRAWS,remaining:Math.max(0,COLLECTION_DRAWS-have),startDrawId:control?.start_draw_id||null},groups:raw,latest:latest?.[0]||null,serverStored:true});
+    res.status(200).json({ok:true,mode,schedule:{collection:'6:00 AM – 6:00 PM',selection:'6:00 PM',tracking:'6:00 PM – 2:00 AM',cleanup:'2:30 AM'},collection:{have,need:COLLECTION_DRAWS,remaining:Math.max(0,COLLECTION_DRAWS-have),startDrawId:control?.start_draw_id||null},workerStale:stale,workerMessage:stale?'The background worker (/api/worker) has not run yet for the current cycle, so no draws have been collected. This endpoint (/api/state) only reads data — it cannot start collection itself. Make sure something calls /api/worker on a schedule (roughly every 4 minutes); see the project README/setup notes for how to configure this on your hosting plan.':null,groups:raw,latest:latest?.[0]||null,serverStored:true});
   }catch(e){res.status(500).json({ok:false,error:e.message||String(e)})}
 };

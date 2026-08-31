@@ -82,11 +82,26 @@ function statsForGroup(draws,numbers){
   const expectedGap=gaps.length?Math.max(1,Math.round((avg+med)/2)):null;
   const latest=Number(draws.at(-1)?.draw_id??draws.at(-1)?.id??0),last=occ.at(-1)||null;
   let center=last&&expectedGap?last+expectedGap:null;if(center){while(center<=latest)center+=expectedGap;}
-  const half=gaps.length?Math.max(2,Math.round(sd/2)):null;
+  // With very few observed gaps, sd alone is not a trustworthy width: with 1 gap, sd
+  // is mathematically 0 (a single point has no spread) even though the true variability
+  // is completely unknown; with 2 gaps it's still noisy. Rather than report a falsely
+  // narrow window in those cases, fall back to a width proportional to the gap size
+  // itself, then apply a small-sample widening factor (same spirit as a wider
+  // confidence interval for a smaller sample): factor = 1 + 2/n, so n=1 -> x3,
+  // n=2 -> x2, n=3 -> x1.67, n=5 -> x1.4, shrinking toward x1 as more gaps accumulate.
+  const n=gaps.length;
+  const baseHalf=sd>0?sd/2:(expectedGap?expectedGap*0.4:null);
+  const widenFactor=n?1+2/n:1;
+  const half=baseHalf!=null?Math.max(2,Math.round(baseHalf*widenFactor)):null;
   const from=center?Math.max(latest+1,center-half):null,to=center?center+half:null;
   const times=drawTimeMap(draws),latestMinutes=parseDrawMinutes(draws.at(-1)?.draw_time??draws.at(-1)?.time);
   const toClock=id=>id&&latestMinutes!=null?formatMinutes(latestMinutes+(id-latest)*4):null;
-  return {numbers,count:occ.length,occurrences:occ,gaps,meanGap:+avg.toFixed(2),medianGap:+med.toFixed(2),minGap:gaps.length?Math.min(...gaps):0,maxGap:gaps.length?Math.max(...gaps):0,standardDeviation:+sd.toFixed(2),coefficientVariation:cv===999?null:+cv.toFixed(3),lastDrawId:last,lastAppearanceTime:last?formatMinutes(times.get(last)):null,sinceLastDraws:last?latest-last:null,sinceLastMinutes:last?(latest-last)*4:null,expectedGapDraws:expectedGap,expectedCenterDrawId:center,expectedFromDrawId:from,expectedToDrawId:to,expectedCenterTime:toClock(center),expectedFromTime:toClock(from),expectedToTime:toClock(to)};
+  // Honest confidence label based purely on how many past gaps this estimate rests on.
+  // This describes how much data backs the window, NOT how likely the group is to
+  // actually reappear there — Hot Spot draws are independent, so no sample size
+  // changes the true odds of the next draw.
+  const confidence=occ.length<3?'very low (1 gap or fewer)':occ.length===3?'low (2 gaps)':occ.length<6?'moderate (3-4 gaps)':'higher sample, still not predictive of a random game';
+  return {numbers,count:occ.length,occurrences:occ,gaps,meanGap:+avg.toFixed(2),medianGap:+med.toFixed(2),minGap:gaps.length?Math.min(...gaps):0,maxGap:gaps.length?Math.max(...gaps):0,standardDeviation:+sd.toFixed(2),coefficientVariation:cv===999?null:+cv.toFixed(3),lastDrawId:last,lastAppearanceTime:last?formatMinutes(times.get(last)):null,sinceLastDraws:last?latest-last:null,sinceLastMinutes:last?(latest-last)*4:null,expectedGapDraws:expectedGap,expectedCenterDrawId:center,expectedFromDrawId:from,expectedToDrawId:to,expectedCenterTime:toClock(center),expectedFromTime:toClock(from),expectedToTime:toClock(to),estimateConfidence:confidence};
 }
 function mineCandidates(sourceDraws){
   const sourceSets=sourceDraws.map(d=>new Set(d.numbers||[]));
