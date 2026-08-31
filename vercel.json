@@ -5,5 +5,9 @@
     "api/state.js": {"maxDuration":30},
     "api/group.js": {"maxDuration":30}
   },
-  "headers":[{"source":"/api/(.*)","headers":[{"key":"Cache-Control","value":"no-store, max-age=0"}]}]
+  "headers":[{"source":"/api/(.*)","headers":[{"key":"Cache-Control","value":"no-store, max-age=0"}]}],
+  "crons":[
+    {"path":"/api/worker","schedule":"0 13 * * *"},
+    {"path":"/api/worker","schedule":"30 9 * * *"}
+  ]
 }
