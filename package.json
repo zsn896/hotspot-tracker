@@ -1,0 +1,8 @@
+{
+  "name": "hotspot-automatic-12h-tracker",
+  "version": "2.0.0",
+  "private": true,
+  "dependencies": {
+    "cheerio": "1.0.0"
+  }
+}
