@@ -1,1 +1,0 @@
-module.exports=async(req,res)=>{res.setHeader('Cache-Control','no-store,max-age=0');res.status(409).json({ok:false,error:'This version is fully automatic. Groups are selected automatically at 6:00 PM after the 12-hour analysis window.'})};
