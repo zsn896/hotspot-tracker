@@ -1,29 +1,158 @@
-const {db,statsForGroup,californiaNowParts,scheduleMode,cycleDateKey}=require('./lib');
-const COLLECTION_DRAWS=180;
-const CONTROL_PREFIX='AUTO_CONTROL_';
-const AUTO_PREFIX='AUTO Group ';
+'use strict';
 
-function reportBlock(rows,block){const part=rows.slice((block-1)*20,block*20);if(part.length<20)return null;const hist=[0,0,0,0,0,0];for(const r of part)hist[r.hit_count]++;const best=Math.max(...part.map(r=>r.hit_count));return {block,fromDrawId:part[0].draw_id,toDrawId:part.at(-1).draw_id,fromTime:part[0].time,toTime:part.at(-1).time,bestHit:best,exact5:hist[5],fourPlus:hist[4]+hist[5],threePlus:hist[3]+hist[4]+hist[5],averageHits:+(part.reduce((s,r)=>s+r.hit_count,0)/20).toFixed(2),bullsEyeMatches:part.filter(r=>r.bulls_eye_match).length,distribution:{zero:hist[0],one:hist[1],two:hist[2],three:hist[3],four:hist[4],five:hist[5]}}}
-function addTimingCheck(analysis,rows){if(!analysis?.expectedFromDrawId||!analysis?.expectedToDrawId)return 'Not available';const exact=rows.find(r=>r.hit_count===5&&r.draw_id>=analysis.expectedFromDrawId&&r.draw_id<=analysis.expectedToDrawId);if(exact)return `Hit at draw ${exact.draw_id}`;const last=rows.at(-1)?.draw_id;if(!last||last<analysis.expectedFromDrawId)return 'Pending';if(last>analysis.expectedToDrawId)return 'Window passed without 5/5';return 'Inside expected window';}
+const C = require('../lib/config');
+const DB = require('../lib/db');
+const T = require('../lib/time');
+const { groupTimingStats, blockReport, evaluateTracking } = require('../lib/analysis');
+const { hitDistribution, fullHitProbability } = require('../lib/stats');
 
-module.exports=async(req,res)=>{
-  res.setHeader('Cache-Control','no-store,max-age=0');
-  try{
-    const now=californiaNowParts();
-    const ctr=await db(`tracker_groups?select=id,name,start_draw_id,last_seen_draw_id,created_at&name=like.${encodeURIComponent(CONTROL_PREFIX+'*')}&order=id.desc&limit=1`);
-    let control=ctr?.[0]||null;
-    const cycleKey=cycleDateKey(now);
-    const stale=!!(control&&!String(control.name).endsWith(cycleKey));
-    if(stale)control=null; // belongs to a previous cycle; only worker.js can actually reset it, so don't show its numbers as if they were today's
-    let history=[];if(control){const end=Number(control.start_draw_id)+COLLECTION_DRAWS-1;history=await db(`hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gte.${control.start_draw_id}&draw_id=lte.${end}&order=draw_id.asc&limit=${COLLECTION_DRAWS}`)||[]}
-    const groups=await db(`tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&active=eq.true&name=like.${encodeURIComponent(AUTO_PREFIX+'*')}&order=id.asc`)||[];
-    const raw=[];
-    for(const g of groups){let rows=await db(`tracker_results?select=draw_id,hit_count,hit_numbers,bulls_eye,bulls_eye_match,created_at&group_id=eq.${g.id}&order=draw_id.asc&limit=200`)||[];const ids=rows.map(r=>r.draw_id);let meta={};if(ids.length){const ds=await db(`hotspot_draws?select=draw_id,draw_date,draw_time&draw_id=in.(${ids.join(',')})`);meta=Object.fromEntries((ds||[]).map(d=>[d.draw_id,d]))}rows=rows.map(r=>({...r,date:meta[r.draw_id]?.draw_date||'',time:meta[r.draw_id]?.draw_time||''}));const analysis=history.length>=COLLECTION_DRAWS?statsForGroup(history,g.numbers):null;raw.push({...g,analysis,results:rows})}
-    if(raw.length===2){const a=raw[0].analysis?.coefficientVariation??999,b=raw[1].analysis?.coefficientVariation??999;if(Math.abs(a-b)<0.03){raw[0].analysis.stability='Similar Stability';raw[1].analysis.stability='Similar Stability'}else if(a<b){raw[0].analysis.stability='More Stable';raw[1].analysis.stability='Less Stable'}else{raw[0].analysis.stability='Less Stable';raw[1].analysis.stability='More Stable'}}
-    for(const g of raw){const completed=Math.floor(g.results.length/20);g.reports=[];for(let b=1;b<=completed;b++){const r=reportBlock(g.results,b);if(r)g.reports.push(r)}g.currentBlock={number:Math.min(6,completed+1),have:g.results.length%20,need:20,remaining:g.results.length>=120?0:20-(g.results.length%20)};if(g.analysis)g.analysis.forecastCheck=addTimingCheck(g.analysis,g.results)}
-    const latest=await db('hotspot_draws?select=draw_id,draw_date,draw_time,bulls_eye&order=draw_id.desc&limit=1');
-    const mode=scheduleMode(now.minutes,raw.length>0);
-    const have=Math.min(COLLECTION_DRAWS,history.length);
-    res.status(200).json({ok:true,mode,schedule:{collection:'6:00 AM – 6:00 PM',selection:'6:00 PM',tracking:'6:00 PM – 2:00 AM',cleanup:'2:30 AM'},collection:{have,need:COLLECTION_DRAWS,remaining:Math.max(0,COLLECTION_DRAWS-have),startDrawId:control?.start_draw_id||null},workerStale:stale,workerMessage:stale?'The background worker (/api/worker) has not run yet for the current cycle, so no draws have been collected. This endpoint (/api/state) only reads data — it cannot start collection itself. Make sure something calls /api/worker on a schedule (roughly every 4 minutes); see the project README/setup notes for how to configure this on your hosting plan.':null,groups:raw,latest:latest?.[0]||null,serverStored:true});
-  }catch(e){res.status(500).json({ok:false,error:e.message||String(e)})}
+/** Did the projected next-appearance window actually contain a 5/5? */
+function windowOutcome(analysis, rows) {
+  if (!analysis?.expectedFromDrawId || !analysis?.expectedToDrawId) return 'not available';
+  const hit = rows.find((r) => r.hit_count === C.GROUP_SIZE
+    && r.draw_id >= analysis.expectedFromDrawId
+    && r.draw_id <= analysis.expectedToDrawId);
+  if (hit) return `matched at draw ${hit.draw_id}`;
+  const last = rows[rows.length - 1]?.draw_id;
+  if (!last || last < analysis.expectedFromDrawId) return 'window not reached yet';
+  if (last > analysis.expectedToDrawId) return 'window passed without a 5/5';
+  return 'inside the window now';
+}
+
+function compareStability(groups) {
+  if (groups.length !== 2) return;
+  const [a, b] = groups.map((g) => g.analysis?.coefficientVariation ?? Infinity);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return;
+  if (Math.abs(a - b) < 0.03) {
+    groups[0].analysis.stability = 'similar spacing';
+    groups[1].analysis.stability = 'similar spacing';
+  } else {
+    groups[a < b ? 0 : 1].analysis.stability = 'more evenly spaced';
+    groups[a < b ? 1 : 0].analysis.stability = 'more erratic';
+  }
+}
+
+module.exports = async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+
+  try {
+    const now = T.californiaNowParts();
+    const cycleKey = T.cycleDateKey(now);
+
+    const controls = await DB.findGroups(C.CONTROL_PREFIX);
+    let control = controls[controls.length - 1] || null;
+    // A control row from a previous cycle must not be shown as if it were today's;
+    // only the worker can actually reset it.
+    const stale = Boolean(control && !String(control.name).endsWith(cycleKey));
+    if (stale) control = null;
+
+    let history = [];
+    if (control) {
+      const end = Number(control.start_draw_id) + C.COLLECTION_DRAWS - 1;
+      history = await DB.getDrawRange(control.start_draw_id, end, C.COLLECTION_DRAWS);
+    }
+
+    const groupRows = await DB.findGroups(C.AUTO_PREFIX, { activeOnly: true });
+
+    // Fetch every group's results, then resolve draw metadata in ONE query for
+    // all of them instead of one query per group.
+    const resultsByGroup = await Promise.all(groupRows.map((g) => DB.getResults(g.id)));
+    const allIds = [...new Set(resultsByGroup.flat().map((r) => r.draw_id))];
+    let meta = {};
+    if (allIds.length) {
+      const metaRows = await DB.db(
+        `hotspot_draws?select=draw_id,draw_date,draw_time&draw_id=in.(${allIds.join(',')})&limit=${allIds.length}`,
+      );
+      meta = Object.fromEntries((metaRows || []).map((d) => [d.draw_id, d]));
+    }
+
+    const groups = groupRows.map((group, i) => {
+      const results = resultsByGroup[i].map((r) => ({
+        ...r,
+        date: meta[r.draw_id]?.draw_date || '',
+        time: meta[r.draw_id]?.draw_time || '',
+      }));
+
+      const analysis = history.length >= C.COLLECTION_DRAWS
+        ? groupTimingStats(history, group.numbers)
+        : null;
+
+      const completedBlocks = Math.floor(results.length / C.TRACKING_BLOCK_SIZE);
+      const reports = [];
+      for (let b = 1; b <= Math.min(completedBlocks, C.TRACKING_BLOCKS); b++) {
+        const r = blockReport(results, b);
+        if (r) reports.push(r);
+      }
+
+      if (analysis) analysis.windowOutcome = windowOutcome(analysis, results);
+
+      return {
+        id: group.id,
+        name: group.name,
+        numbers: group.numbers,
+        analysis,
+        performance: evaluateTracking(results),
+        reports,
+        currentBlock: {
+          number: Math.min(C.TRACKING_BLOCKS, completedBlocks + 1),
+          have: results.length % C.TRACKING_BLOCK_SIZE,
+          need: C.TRACKING_BLOCK_SIZE,
+          finished: results.length >= C.MAX_TRACKED_DRAWS,
+        },
+        results,
+      };
+    });
+
+    compareStability(groups);
+
+    const latestRows = await DB.getLatestStoredDraw();
+    const have = Math.min(C.COLLECTION_DRAWS, history.length);
+
+    // How often each of the 80 numbers came up during the collection window.
+    // Drives the board on the dashboard, and is a useful reality check in its
+    // own right: over 180 draws every number should land near 45.
+    const boardFrequency = new Array(C.POOL_SIZE + 1).fill(0);
+    for (const d of history) for (const n of d.numbers || []) boardFrequency[n]++;
+    const expectedPerNumber = history.length
+      ? +(history.length * C.DRAWN_PER_DRAW / C.POOL_SIZE).toFixed(1)
+      : 0;
+
+    res.status(200).json({
+      ok: true,
+      mode: T.scheduleMode(now.minutes, groups.length > 0),
+      now: { minutes: now.minutes, cycle: cycleKey, timezone: T.TZ },
+      schedule: {
+        collection: '6:00 AM – 6:00 PM',
+        selection: '6:00 PM',
+        tracking: '6:00 PM – 2:00 AM',
+        cleanup: '2:30 AM',
+      },
+      collection: {
+        have,
+        need: C.COLLECTION_DRAWS,
+        remaining: Math.max(0, C.COLLECTION_DRAWS - have),
+        startDrawId: control?.start_draw_id || null,
+      },
+      chanceModel: {
+        poolSize: C.POOL_SIZE,
+        drawnPerDraw: C.DRAWN_PER_DRAW,
+        groupSize: C.GROUP_SIZE,
+        hitProbabilities: hitDistribution(),
+        expectedHitsPerDraw: 1.25,
+        fullGroupOdds: Math.round(1 / fullHitProbability()),
+      },
+      workerStale: stale,
+      workerMessage: stale
+        ? 'No draws have been collected for the current cycle. This endpoint only reads data — schedule /api/worker to run every few minutes. See README.md.'
+        : null,
+      board: { frequency: boardFrequency, windowDraws: history.length, expectedPerNumber },
+      selection: control?.notes || null,
+      groups,
+      latest: latestRows,
+      blockSize: C.TRACKING_BLOCK_SIZE,
+      totalBlocks: C.TRACKING_BLOCKS,
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message || String(error) });
+  }
 };
