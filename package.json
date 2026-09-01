@@ -1,8 +1,13 @@
 {
-  "name": "hotspot-automatic-12h-tracker",
-  "version": "2.0.0",
+  "name": "hotspot-tracker",
+  "version": "3.0.0",
   "private": true,
-  "dependencies": {
-    "cheerio": "1.0.0"
-  }
+  "description": "Statistical tracking dashboard for California Lottery Hot Spot draws, measured against the exact chance model.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "simulate": "node test/simulate.js 40",
+    "check": "npm run test && npm run simulate"
+  },
+  "dependencies": {}
 }

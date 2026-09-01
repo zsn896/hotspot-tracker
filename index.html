@@ -1,19 +1,594 @@
-<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hot Spot Automatic 12-Hour Analysis</title>
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Hot Spot, measured against chance</title>
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;margin:0;background:#f4f5f7;color:#17191c}.wrap{max-width:1050px;margin:auto;padding:16px}.card{background:#fff;border:1px solid #e2e5e9;border-radius:16px;padding:16px;margin:12px 0}.title{font-size:20px;font-weight:900}.mut{color:#667085}.ok{color:#087a3d;font-weight:900}.blue{color:#175cd3;font-weight:900}.bad{color:#b42318}.amber{color:#a15c00;font-weight:900}.balls{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.ball{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#eceff3;font-weight:900}.hit{background:#d92d20;color:#fff}.bull{background:#1570ef!important;color:#fff;box-shadow:0 0 0 3px #b2ccff}.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}.stat{border:1px solid #e4e7ec;border-radius:11px;padding:10px}.big{font-size:20px;font-weight:900}.row{border-top:1px solid #eceef1;padding:11px 0}.bar{height:14px;background:#eceff3;border-radius:999px;overflow:hidden}.bar>i{display:block;height:100%;background:#111}.btn{border:0;border-radius:11px;padding:11px 15px;font-weight:850;font-size:15px;background:#111;color:#fff}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.spin{display:inline-block;width:15px;height:15px;border:3px solid #bbb;border-top-color:#111;border-radius:50%;animation:r .8s linear infinite}@keyframes r{to{transform:rotate(360deg)}}.phase{font-size:18px;font-weight:900}.report{border-left:5px solid #111}.bullbox{background:#eef4ff;border:1px solid #84adff;border-radius:12px;padding:10px;margin:10px 0;color:#175cd3}.tag{display:inline-block;padding:4px 8px;border-radius:999px;background:#f2f4f7;font-size:13px;font-weight:900}.schedule{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}h1{margin-bottom:6px}</style></head><body><div class="wrap">
-<h1>Hot Spot Automatic Analysis & Tracking</h1>
-<p class="mut">Fully automatic. No manual number entry is required. The system analyzes the 12-hour collection window, selects the two 5-number groups whose co-occurrence is least likely to be pure chance (statistically corrected for the number of groups tested, not just raw frequency), evaluates timing stability, estimates the next appearance window, and tracks performance in 20-draw blocks.</p>
-<p class="mut"><b>Note:</b> Hot Spot draws are independent random events — each draw does not "remember" past draws. Past frequency, however rigorously measured, does not improve the odds of future draws. This tool is for statistical tracking and entertainment only, not a prediction system.</p>
-<div class="card schedule"><div><b>Collection</b><br>6:00 AM – 6:00 PM</div><div><b>Automatic Selection</b><br>6:00 PM</div><div><b>Tracking</b><br>6:00 PM – 2:00 AM</div><div><b>Daily Cleanup</b><br>2:30 AM</div></div>
-<div class="card toolbar"><button class="btn" id="refresh">Refresh Now</button><span id="busy"></span><span id="status">Connecting…</span></div><div id="content"></div></div>
+:root{
+  /* Palette taken from the physical object: a lottery play slip is dark ink and
+     marker red on pale card stock, with cyan register marks. */
+  --slip:#EDF0EB;
+  --card:#FFFFFF;
+  --ink:#1A2321;
+  --ink-soft:#5D6B64;
+  --rule:#C8D0C9;
+  --rule-soft:#E1E6E0;
+  --mark:#B02A1F;
+  --mark-soft:#F6E3E0;
+  --bull:#14607A;
+  --bull-soft:#DDEDF2;
+  --ghost:#9AA69E;
+  --pad:clamp(14px,3vw,26px);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--slip);color:var(--ink);
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-variant-numeric:tabular-nums slashed-zero;
+  line-height:1.5;
+}
+[dir=rtl] body{font-family:ui-sans-serif,system-ui,"Segoe UI","Noto Sans Arabic",Tahoma,Arial,sans-serif}
+.wrap{max-width:940px;margin:0 auto;padding:var(--pad)}
+
+h1{font-size:clamp(26px,5.4vw,40px);line-height:1.08;letter-spacing:-.022em;font-weight:680;margin:0 0 10px}
+h2{font-size:clamp(17px,3vw,21px);letter-spacing:-.012em;font-weight:660;margin:0}
+h3{font-size:15px;font-weight:640;margin:26px 0 10px;color:var(--ink-soft)}
+p{margin:0 0 12px;max-width:66ch}
+.lede{color:var(--ink-soft);font-size:clamp(15px,2.2vw,16.5px)}
+.fine{font-size:13.5px;color:var(--ink-soft)}
+a{color:var(--bull)}
+
+/* --- masthead ------------------------------------------------------------ */
+header{padding-bottom:18px;border-bottom:2px solid var(--ink)}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+button{
+  font:inherit;font-weight:600;cursor:pointer;color:var(--ink);
+  background:var(--card);border:1px solid var(--rule);border-radius:2px;padding:8px 14px;
+}
+button:hover{border-color:var(--ink)}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--bull);outline-offset:2px}
+button[aria-pressed=true]{background:var(--ink);color:var(--slip);border-color:var(--ink)}
+.status{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ghost);flex:none}
+.dot.live{background:var(--mark)}
+.dot.wait{background:var(--bull)}
+.spin{width:13px;height:13px;border:2px solid var(--rule);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* --- panels -------------------------------------------------------------- */
+section{background:var(--card);border:1px solid var(--rule);margin:20px 0;padding:var(--pad)}
+section.flat{background:none;border:0;border-top:1px solid var(--rule);padding-left:0;padding-right:0}
+.alert{border-inline-start:4px solid var(--mark);background:var(--mark-soft);border-color:var(--rule)}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.badge{font-size:12.5px;font-weight:640;padding:3px 9px;border:1px solid var(--rule);border-radius:2px;color:var(--ink-soft);white-space:nowrap}
+.badge.flag{border-color:var(--mark);color:var(--mark);background:var(--mark-soft)}
+
+/* --- the board (hero) ---------------------------------------------------- */
+.board{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin:6px 0 14px}
+@media(max-width:560px){.board{grid-template-columns:repeat(8,1fr)}}
+.cell{
+  position:relative;aspect-ratio:1;display:grid;place-items:center;
+  font-size:clamp(10px,2.1vw,13px);font-weight:600;
+  border:1px solid var(--rule-soft);background:var(--card);color:var(--ink-soft);
+}
+.cell[data-g="1"]{background:var(--mark);border-color:var(--mark);color:#fff;font-weight:720}
+.cell[data-g="2"]{background:var(--bull);border-color:var(--bull);color:#fff;font-weight:720}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft);align-items:center}
+.key{display:inline-flex;align-items:center;gap:6px}
+.chip{width:13px;height:13px;border:1px solid var(--rule)}
+.chip.g1{background:var(--mark);border-color:var(--mark)}
+.chip.g2{background:var(--bull);border-color:var(--bull)}
+.chip.freq{background:linear-gradient(90deg,var(--card),var(--ghost));width:44px}
+
+/* --- number row ---------------------------------------------------------- */
+.picks{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 16px}
+.pick{
+  width:44px;height:44px;display:grid;place-items:center;font-weight:680;font-size:16px;
+  border:1.5px solid var(--rule);background:var(--card);color:var(--ink-soft);border-radius:2px;
+}
+.pick.on{background:var(--mark);border-color:var(--mark);color:#fff}
+.pick.bull{background:var(--bull);border-color:var(--bull);color:#fff}
+
+/* --- data table ---------------------------------------------------------- */
+table{width:100%;border-collapse:collapse;font-size:14px}
+caption{text-align:start;font-size:13.5px;color:var(--ink-soft);padding-bottom:8px}
+th,td{text-align:start;padding:7px 10px 7px 0;border-bottom:1px solid var(--rule-soft);vertical-align:baseline}
+[dir=rtl] th,[dir=rtl] td{padding:7px 0 7px 10px}
+th{font-weight:600;color:var(--ink-soft)}
+td.num{font-weight:640;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+
+/* --- observed vs expected ------------------------------------------------ */
+.dist{display:grid;gap:7px;margin:10px 0 4px}
+.dist-row{display:grid;grid-template-columns:5.5em 1fr 6.5em;gap:10px;align-items:center;font-size:13.5px}
+.track{position:relative;height:20px;background:var(--rule-soft)}
+.track .obs{position:absolute;inset-block:0;inset-inline-start:0;background:var(--ink)}
+.track .exp{position:absolute;inset-block:-3px;width:2px;background:var(--mark)}
+.dist-row .val{color:var(--ink-soft);text-align:end}
+@media(max-width:520px){.dist-row{grid-template-columns:4.4em 1fr 5.6em;gap:7px;font-size:12.5px}}
+
+.progress{height:8px;background:var(--rule-soft);margin:12px 0}
+.progress i{display:block;height:100%;background:var(--ink)}
+
+/* --- draw log ------------------------------------------------------------ */
+.log{border-top:1px solid var(--rule-soft);padding:12px 0}
+.log:first-of-type{border-top:0}
+.log-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;font-size:13.5px;color:var(--ink-soft)}
+.log-head b{color:var(--ink);font-size:14.5px}
+.mini{display:flex;gap:4px;margin-top:7px;flex-wrap:wrap}
+.mini span{
+  width:30px;height:30px;display:grid;place-items:center;font-size:12.5px;font-weight:620;
+  border:1px solid var(--rule-soft);background:var(--card);color:var(--ghost);border-radius:2px;
+}
+.mini span.on{background:var(--mark);border-color:var(--mark);color:#fff}
+.mini span.bull{background:var(--bull);border-color:var(--bull);color:#fff}
+
+footer{border-top:2px solid var(--ink);margin-top:30px;padding-top:16px}
+.hidden{display:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1 data-t="title">Hot Spot, measured against chance</h1>
+  <p class="lede" data-t="lede"></p>
+  <div class="controls">
+    <button id="refresh" data-t="refresh">Refresh</button>
+    <button id="lang" aria-pressed="false" lang="ar">العربية</button>
+    <span class="status" id="status" role="status" aria-live="polite"></span>
+  </div>
+</header>
+
+<main id="content"></main>
+
+<footer>
+  <p class="fine" data-t="footer"></p>
+  <p class="fine" id="stamp"></p>
+</footer>
+
+</div>
+
 <script>
-const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
-function busy(t){document.getElementById('busy').innerHTML=t?`<span class="spin"></span> ${t}`:''}
-async function api(u){const r=await fetch(u,{cache:'no-store'}),j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Connection failed');return j}
-function report(r){return `<div class="card report"><div class="title">20-Draw Performance Report #${r.block}</div><p class="mut">Draws ${r.fromDrawId} – ${r.toDrawId} &nbsp; ${esc(r.fromTime)} – ${esc(r.toTime)}</p><div class="summary"><div class="stat">Best Result<div class="big">${r.bestHit}/5</div></div><div class="stat">3+ Hit Rate<div class="big">${r.threePlus}/20</div></div><div class="stat">4+ Hit Rate<div class="big">${r.fourPlus}/20</div></div><div class="stat">Exact 5/5<div class="big">${r.exact5}/20</div></div><div class="stat">Average Hits<div class="big">${r.averageHits}/5</div></div><div class="stat">Bulls-eye Matches<div class="big blue">${r.bullsEyeMatches}</div></div></div><p class="mut">Distribution: 0/5=${r.distribution.zero}, 1/5=${r.distribution.one}, 2/5=${r.distribution.two}, 3/5=${r.distribution.three}, 4/5=${r.distribution.four}, 5/5=${r.distribution.five}</p></div>`}
-function group(g,i){const a=g.analysis||{},rows=g.results||[],st=a.stability||'Timing analysis pending';const current=g.currentBlock||{};return `<div class="card"><div class="title">Group ${i+1} — Frequency Rank #${i+1} <span class="ok">● Automatic Tracking</span></div><div class="balls">${g.numbers.map(n=>`<span class="ball">${n}</span>`).join('')}</div><p><span class="tag">${esc(st)}</span></p><div class="summary"><div class="stat">12-Hour Appearances<div class="big">${a.count??'—'}</div></div><div class="stat">Last Appearance<div class="big">${a.lastAppearanceTime??'—'}</div></div><div class="stat">Time Since Last<div class="big">${a.sinceLastMinutes==null?'—':a.sinceLastMinutes+' min'}</div></div><div class="stat">Average Gap<div class="big">${a.meanGap??'—'} draws</div></div><div class="stat">Median Gap<div class="big">${a.medianGap??'—'} draws</div></div><div class="stat">Gap Range<div class="big">${a.minGap??'—'} – ${a.maxGap??'—'}</div></div></div><p><b>Appearance Draws:</b> ${(a.occurrences||[]).join(', ')||'—'}</p><p><b>Gaps:</b> ${(a.gaps||[]).join(', ')||'—'}</p><p class="blue"><b>Expected Next Appearance Window:</b> ${a.expectedFromTime||'—'} – ${a.expectedToTime||'—'} &nbsp; (center: ${a.expectedCenterTime||'—'})</p><p class="mut"><b>Estimate confidence:</b> ${esc(a.estimateConfidence||'—')} — based on sample size only, not a prediction of the next draw.</p><p class="mut"><b>Forecast Check:</b> ${esc(a.forecastCheck||'Pending')} — statistical estimate, not a guarantee.</p><div class="bullbox"><b>Blue Bulls-eye Tracking</b><br>If the official Bulls-eye number matches one of the five selected numbers, it is highlighted in blue in the draw result.</div><p><b>Current 20-draw block:</b> ${rows.length>=120?'All six 20-draw reports completed':`Block ${current.number||1}: ${current.have||0}/20 draws completed`}</p>${(g.reports||[]).map(report).join('')}${rows.length?`<h3>Latest Tracking Results</h3>${rows.slice(-25).reverse().map(r=>`<div class="row"><b>Draw ${r.draw_id}</b> — ${esc(r.time)} &nbsp; <b>${r.hit_count}/5</b><div class="balls">${g.numbers.map(n=>`<span class="ball ${(r.hit_numbers||[]).includes(n)?'hit':''} ${r.bulls_eye_match&&r.bulls_eye===n?'bull':''}">${n}</span>`).join('')}</div>${r.bulls_eye_match?`<div class="blue"><b>Bulls-eye Match:</b> ${r.bulls_eye}</div>`:`<div class="mut">Bulls-eye: ${r.bulls_eye??'—'}</div>`}</div>`).join('')}`:''}</div>`}
-async function load(){busy('Refreshing…');try{const j=await api('/api/state?ts='+Date.now()),c=j.collection||{have:0,need:180,remaining:180};const S=document.getElementById('status');if(j.mode==='collecting')S.innerHTML='<span class="blue">● Phase 1: 12-Hour Data Collection</span>';else if(j.mode==='preparing')S.innerHTML='<span class="amber">● Preparing Automatic Selection</span>';else if(j.mode==='tracking')S.innerHTML='<span class="ok">● Phase 2: Automatic Tracking</span>';else if(j.mode==='cleanup')S.innerHTML='<span class="blue">● Daily Cleanup / Waiting for 6:00 AM</span>';else S.innerHTML='<span class="mut">● Cycle ended / waiting for cleanup</span>';
-const warn=j.workerStale?`<div class="card" style="border-color:#c0392b"><div class="title" style="color:#c0392b">⚠ Background worker has not run yet</div><p>${esc(j.workerMessage||'')}</p></div>`:'';
-if(j.mode==='collecting'||j.mode==='preparing'){const p=Math.min(100,Math.round(c.have/c.need*100));document.getElementById('content').innerHTML=warn+`<div class="card"><div class="title">12-Hour Collection Window</div><p>Collected <b>${c.have}</b> of <b>${c.need}</b> draws. Remaining: <b>${c.remaining}</b>.</p><div class="bar"><i style="width:${p}%"></i></div><p class="mut">No group is selected before 6:00 PM. At 6:00 PM the system selects the two most frequently co-occurring 5-number groups from this window.</p>${c.startDrawId?`<p>Collection start draw: <b>${c.startDrawId}</b></p>`:''}${j.latest?`<p>Latest stored draw: <b>${j.latest.draw_id}</b> — ${esc(j.latest.draw_time)}</p>`:''}</div>`}else if(j.mode==='tracking'&&j.groups?.length)document.getElementById('content').innerHTML=warn+j.groups.map(group).join('');else if(j.mode==='cleanup')document.getElementById('content').innerHTML=warn+'<div class="card"><div class="title">Daily data has been cleared.</div><p>The next automatic collection cycle begins at 6:00 AM.</p></div>';else document.getElementById('content').innerHTML=warn+'<div class="card"><div class="title">Tracking finished for today.</div><p>Waiting for the daily cleanup and the next 6:00 AM cycle.</p></div>'}catch(e){document.getElementById('status').innerHTML=`<span class="bad">${esc(e.message)}</span>`}finally{busy('')}}
-document.getElementById('refresh').onclick=load;load();setInterval(load,240000);
-</script></body></html>
+'use strict';
+
+/* ---------------------------------------------------------------------------
+   Copy. Both languages live in one table so a change to the English wording
+   cannot silently leave the Arabic behind.
+--------------------------------------------------------------------------- */
+const COPY = {
+  en: {
+    dir:'ltr', label:'العربية',
+    title:'Hot Spot, measured against chance',
+    lede:'Every four minutes California draws 20 numbers from 80. This dashboard collects twelve hours of them, searches for five-number groups that repeat, and then reports whether those groups beat the odds — which, in a fair game, they will not.',
+    refresh:'Refresh',
+    footer:'Hot Spot draws are independent. Nothing that happened in earlier draws changes what the next one does, so no group found here carries predictive value. This is a measurement tool, not a betting system.',
+    modes:{
+      collecting:'Collecting the twelve-hour window',
+      preparing:'Preparing the selection',
+      tracking:'Tracking the selected groups',
+      cleanup:'Cleared, waiting for 6:00 AM',
+      idle:'Tracking finished for today'
+    },
+    connecting:'Connecting', refreshing:'Refreshing', failed:'Could not load',
+    retry:'Retrying shortly.',
+    workerTitle:'No data yet for this cycle',
+    boardTitle:'The board', boardCap:n=>`How often each number came up across ${n} draws. Even shading means a fair game.`,
+    boardWait:'The board fills in as draws are collected.',
+    expectedEach:n=>`Expected about ${n} appearances per number`,
+    observedRange:(a,b)=>`observed ${a} to ${b}`,
+    keyG1:'Group 1', keyG2:'Group 2', keyFreq:'less often — more often',
+    collectTitle:'Twelve-hour collection window',
+    collected:(h,n)=>`${h} of ${n} draws collected.`,
+    startDraw:d=>`Window opens at draw ${d}.`,
+    latestStored:(d,t)=>`Latest stored draw ${d}, ${t}.`,
+    noSelect:'No group is chosen before 6:00 PM.',
+    selTitle:'How these groups were chosen',
+    selBody:(tested,test,odds)=>`Candidate groups were mined from the first half of the window and then scored only on the second half, so a group is judged on draws it was never derived from. ${fmt(tested)} candidates were tested against ${test} unseen draws. Any single five-number group has a 1 in ${fmt(odds)} chance of landing in full in one draw.`,
+    benchHead:'Repeats found, against what chance alone produces',
+    benchCols:['Candidates repeating','Observed','Expected by chance'],
+    atLeast:k=>k===1?'at least once':`at least ${k} times`,
+    verdictNone:'No group in this window is distinguishable from chance once the size of the search is accounted for. That is the expected result.',
+    verdictSome:'At least one group survives correction for the search size in this window. Treat it as a curiosity, not a signal.',
+    groupTitle:n=>`Group ${n}`,
+    timingTitle:'Appearances during the collection window',
+    rows:{
+      count:'Full appearances', last:'Last appearance', since:'Time since last',
+      meanGap:'Average gap', medianGap:'Median gap', range:'Gap range',
+      spacing:'Spacing', evidence:'Gaps observed', pvalue:'Out-of-sample p-value',
+      verdict:'Against chance', window:'If the spacing continued', windowCheck:'Window outcome'
+    },
+    draws:'draws', minutes:'min', none:'none yet',
+    perfTitle:'Hits per draw, against the chance model',
+    perfCap:n=>`${n} tracked draws. Bars are what happened; the red mark is what a fair game predicts.`,
+    perfWait:'Comparison appears once tracking begins.',
+    hits:k=>`${k} of 5`,
+    meanLine:(o,e)=>`Average ${o} hits per draw against an expected ${e}.`,
+    chiLine:(p)=>`Goodness-of-fit p-value ${p}.`,
+    fitOk:'The results match the chance model.',
+    fitOff:'The results differ from the chance model in this sample.',
+    threePlus:(r,lo,hi)=>`Three or more hits in ${r}% of draws (95% interval ${lo}–${hi}%).`,
+    bullLine:(o,e)=>`Bulls-eye landed inside the group ${o}% of draws against an expected ${e}%.`,
+    blocksTitle:'Twenty-draw blocks',
+    blockCols:['Block','Draws','Best','3+','4+','5/5','Average','Bulls-eye'],
+    blockProgress:(b,h)=>`Block ${b} in progress, ${h} of 20 draws.`,
+    blocksDone:'All six blocks complete.',
+    recentTitle:'Recent draws',
+    bullMatch:b=>`Bulls-eye ${b} is in the group`,
+    bullMiss:b=>`Bulls-eye ${b}`,
+    updated:t=>`Updated ${t}.`
+  },
+  ar: {
+    dir:'rtl', label:'English',
+    title:'هوت سبوت، مقيسًا مقابل الصدفة',
+    lede:'كل أربع دقائق تسحب كاليفورنيا ٢٠ رقمًا من ٨٠. تجمع هذه اللوحة اثنتي عشرة ساعة من السحوبات، تبحث عن مجموعات من خمسة أرقام تتكرر، ثم تُبلغ إن كانت تلك المجموعات تتفوق على الاحتمال — وهو ما لن يحدث في لعبة نزيهة.',
+    refresh:'تحديث',
+    footer:'سحوبات هوت سبوت مستقلة. لا شيء مما حدث في السحوبات السابقة يغيّر ما سيحدث في التالية، لذا لا تحمل أي مجموعة هنا قيمة تنبؤية. هذه أداة قياس، لا نظام مراهنة.',
+    modes:{
+      collecting:'جمع نافذة الاثنتي عشرة ساعة',
+      preparing:'تحضير الاختيار',
+      tracking:'تتبّع المجموعات المختارة',
+      cleanup:'تم المسح، بانتظار السادسة صباحًا',
+      idle:'انتهى التتبّع لهذا اليوم'
+    },
+    connecting:'جارٍ الاتصال', refreshing:'جارٍ التحديث', failed:'تعذّر التحميل',
+    retry:'ستُعاد المحاولة قريبًا.',
+    workerTitle:'لا توجد بيانات لهذه الدورة بعد',
+    boardTitle:'اللوحة', boardCap:n=>`كم مرة ظهر كل رقم عبر ${n} سحبة. التظليل المتقارب يعني لعبة نزيهة.`,
+    boardWait:'تمتلئ اللوحة مع جمع السحوبات.',
+    expectedEach:n=>`المتوقع نحو ${n} ظهورًا لكل رقم`,
+    observedRange:(a,b)=>`المُلاحظ من ${a} إلى ${b}`,
+    keyG1:'المجموعة ١', keyG2:'المجموعة ٢', keyFreq:'أقل تكرارًا ← أكثر تكرارًا',
+    collectTitle:'نافذة الجمع لاثنتي عشرة ساعة',
+    collected:(h,n)=>`جُمعت ${h} من ${n} سحبة.`,
+    startDraw:d=>`تبدأ النافذة عند السحبة ${d}.`,
+    latestStored:(d,t)=>`آخر سحبة مخزّنة ${d}، ${t}.`,
+    noSelect:'لا تُختار أي مجموعة قبل السادسة مساءً.',
+    selTitle:'كيف اختيرت هذه المجموعات',
+    selBody:(tested,test,odds)=>`استُخرجت المجموعات المرشّحة من النصف الأول من النافذة ثم قُيّمت على النصف الثاني فقط، فتُحكم كل مجموعة على سحوبات لم تُشتق منها. اختُبر ${fmt(tested)} مرشّحًا مقابل ${test} سحبة غير مرئية. احتمال ظهور أي مجموعة من خمسة أرقام كاملةً في سحبة واحدة هو ١ من ${fmt(odds)}.`,
+    benchHead:'التكرارات الموجودة مقابل ما تنتجه الصدفة وحدها',
+    benchCols:['تكرار المرشّحين','المُلاحظ','المتوقع بالصدفة'],
+    atLeast:k=>k===1?'مرة واحدة على الأقل':`${k} مرات على الأقل`,
+    verdictNone:'لا تتميّز أي مجموعة في هذه النافذة عن الصدفة بعد احتساب حجم البحث. وهذه هي النتيجة المتوقعة.',
+    verdictSome:'صمدت مجموعة واحدة على الأقل أمام تصحيح حجم البحث في هذه النافذة. عاملها كطرفة لا كإشارة.',
+    groupTitle:n=>`المجموعة ${n}`,
+    timingTitle:'الظهور خلال نافذة الجمع',
+    rows:{
+      count:'الظهور الكامل', last:'آخر ظهور', since:'منذ آخر ظهور',
+      meanGap:'متوسط الفجوة', medianGap:'وسيط الفجوة', range:'مدى الفجوات',
+      spacing:'التباعد', evidence:'الفجوات المرصودة', pvalue:'القيمة الاحتمالية خارج العينة',
+      verdict:'مقابل الصدفة', window:'لو استمر التباعد نفسه', windowCheck:'نتيجة النافذة'
+    },
+    draws:'سحبة', minutes:'دقيقة', none:'لا شيء بعد',
+    perfTitle:'الإصابات لكل سحبة مقابل نموذج الصدفة',
+    perfCap:n=>`${n} سحبة متتبَّعة. الأعمدة هي ما حدث فعلًا، والعلامة الحمراء هي ما تتوقعه لعبة نزيهة.`,
+    perfWait:'تظهر المقارنة بعد بدء التتبّع.',
+    hits:k=>`${k} من ٥`,
+    meanLine:(o,e)=>`المتوسط ${o} إصابة لكل سحبة مقابل ${e} متوقعة.`,
+    chiLine:(p)=>`القيمة الاحتمالية لجودة المطابقة ${p}.`,
+    fitOk:'النتائج تطابق نموذج الصدفة.',
+    fitOff:'النتائج تختلف عن نموذج الصدفة في هذه العينة.',
+    threePlus:(r,lo,hi)=>`ثلاث إصابات أو أكثر في ${r}٪ من السحوبات (فترة ٩٥٪: ${lo}–${hi}٪).`,
+    bullLine:(o,e)=>`وقع رقم البولز-آي داخل المجموعة في ${o}٪ من السحوبات مقابل ${e}٪ متوقعة.`,
+    blocksTitle:'كتل العشرين سحبة',
+    blockCols:['الكتلة','السحوبات','الأفضل','٣+','٤+','٥/٥','المتوسط','بولز-آي'],
+    blockProgress:(b,h)=>`الكتلة ${b} جارية، ${h} من ٢٠ سحبة.`,
+    blocksDone:'اكتملت الكتل الست.',
+    recentTitle:'أحدث السحوبات',
+    bullMatch:b=>`رقم البولز-آي ${b} داخل المجموعة`,
+    bullMiss:b=>`بولز-آي ${b}`,
+    updated:t=>`آخر تحديث ${t}.`
+  }
+};
+
+let lang = localStorage.getItem('hotspot-lang') === 'ar' ? 'ar' : 'en';
+const t = () => COPY[lang];
+
+/* --- helpers ------------------------------------------------------------- */
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const fmt = (n) => Number(n).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US');
+const pct = (x) => (x * 100).toFixed(1);
+const el = (id) => document.getElementById(id);
+
+/** Very small p-values are unreadable in fixed notation. */
+function pFormat(p) {
+  if (p == null) return '—';
+  if (p >= 0.001) return p.toFixed(3);
+  return p.toExponential(1).replace('e-', ' × 10⁻');
+}
+
+/* --- rendering ----------------------------------------------------------- */
+
+/**
+ * The 80-cell board. This is the hero of the page because it is the object the
+ * game is actually played on, and because an even wash of shading is itself the
+ * headline finding: no number is hot.
+ */
+function renderBoard(board, groups) {
+  const c = t();
+  if (!board || !board.windowDraws) {
+    return `<section><h2>${c.boardTitle}</h2><p class="fine">${c.boardWait}</p></section>`;
+  }
+  const freq = board.frequency || [];
+  const values = freq.slice(1).filter((v) => Number.isFinite(v));
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  const span = Math.max(1, hi - lo);
+  const owner = new Map();
+  groups.forEach((g, i) => (g.numbers || []).forEach((n) => { if (!owner.has(n)) owner.set(n, i + 1); }));
+
+  let cells = '';
+  for (let n = 1; n <= 80; n++) {
+    const g = owner.get(n);
+    const shade = ((freq[n] ?? 0) - lo) / span;
+    const style = g ? '' : ` style="background:rgba(154,166,158,${(shade * 0.55).toFixed(3)})"`;
+    cells += `<div class="cell"${g ? ` data-g="${g}"` : ''}${style} title="${n}: ${freq[n] ?? 0}">${n}</div>`;
+  }
+
+  return `<section>
+    <div class="panel-head"><h2>${c.boardTitle}</h2>
+      <span class="badge">${esc(c.expectedEach(board.expectedPerNumber))}</span></div>
+    <p class="fine">${esc(c.boardCap(board.windowDraws))} ${esc(c.observedRange(lo, hi))}.</p>
+    <div class="board" role="img" aria-label="${esc(c.boardCap(board.windowDraws))}">${cells}</div>
+    <div class="legend">
+      <span class="key"><i class="chip freq"></i>${esc(c.keyFreq)}</span>
+      ${groups[0] ? `<span class="key"><i class="chip g1"></i>${esc(c.keyG1)}</span>` : ''}
+      ${groups[1] ? `<span class="key"><i class="chip g2"></i>${esc(c.keyG2)}</span>` : ''}
+    </div>
+  </section>`;
+}
+
+/** How the groups were chosen, including what chance alone would have produced. */
+function renderSelection(selection, chanceModel) {
+  const c = t();
+  const d = selection?.diagnostics;
+  if (!d) return '';
+  const rows = (d.chanceBenchmark || []).map((b) => `<tr>
+      <td>${esc(c.atLeast(b.atLeast))}</td>
+      <td class="num">${fmt(b.observedCandidates)}</td>
+      <td class="num">${fmt(b.expectedIfRandom)}</td>
+    </tr>`).join('');
+
+  return `<section>
+    <h2>${c.selTitle}</h2>
+    <p class="fine">${esc(c.selBody(d.candidatesTested, d.testWindowDraws, chanceModel?.fullGroupOdds ?? d.oneInN))}</p>
+    <table>
+      <caption>${esc(c.benchHead)}</caption>
+      <thead><tr><th>${esc(c.benchCols[0])}</th><th>${esc(c.benchCols[1])}</th><th>${esc(c.benchCols[2])}</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p class="fine" style="margin-top:14px">${d.anySignificant ? esc(c.verdictSome) : esc(c.verdictNone)}</p>
+  </section>`;
+}
+
+/** Observed hit distribution with the chance model marked on each bar. */
+function renderDistribution(performance) {
+  const c = t();
+  if (!performance?.ready) return `<p class="fine">${c.perfWait}</p>`;
+  const max = Math.max(...performance.observed, ...performance.expected, 1);
+
+  const rows = performance.observed.map((count, k) => {
+    const expected = performance.expected[k];
+    return `<div class="dist-row">
+      <span>${esc(c.hits(k))}</span>
+      <span class="track">
+        <i class="obs" style="width:${(count / max * 100).toFixed(1)}%"></i>
+        <i class="exp" style="inset-inline-start:${(expected / max * 100).toFixed(1)}%"></i>
+      </span>
+      <span class="val">${fmt(count)} / ${fmt(expected)}</span>
+    </div>`;
+  }).join('');
+
+  const ci = performance.threePlus.interval;
+  const fit = performance.chiSquare.pValue >= 0.05;
+
+  return `<h3>${c.perfTitle}</h3>
+    <p class="fine">${esc(c.perfCap(performance.draws))}</p>
+    <div class="dist">${rows}</div>
+    <p class="fine">
+      ${esc(c.meanLine(performance.observedMeanHits, performance.expectedMeanHits))}
+      ${esc(c.chiLine(pFormat(performance.chiSquare.pValue)))}
+      <b>${fit ? esc(c.fitOk) : esc(c.fitOff)}</b><br>
+      ${esc(c.threePlus(pct(performance.threePlus.rate), pct(ci.low), pct(ci.high)))}<br>
+      ${esc(c.bullLine(pct(performance.bullsEye.rate), pct(performance.bullsEye.expectedRate)))}
+    </p>`;
+}
+
+function renderTiming(a, group) {
+  const c = t();
+  if (!a) return '';
+  const r = c.rows;
+  const persisted = (group.selectionNote || {});
+  const line = (label, value) => value == null || value === '' ? '' : `<tr><th>${esc(label)}</th><td class="num">${esc(value)}</td></tr>`;
+
+  return `<h3>${c.timingTitle}</h3>
+  <table><tbody>
+    ${line(r.count, `${fmt(a.count)}`)}
+    ${line(r.last, a.lastAppearanceTime)}
+    ${line(r.since, a.sinceLastMinutes == null ? null : `${fmt(a.sinceLastMinutes)} ${c.minutes}`)}
+    ${line(r.meanGap, a.meanGap == null ? null : `${fmt(a.meanGap)} ${c.draws}`)}
+    ${line(r.medianGap, a.medianGap == null ? null : `${fmt(a.medianGap)} ${c.draws}`)}
+    ${line(r.range, a.minGap == null ? null : `${fmt(a.minGap)}–${fmt(a.maxGap)} ${c.draws}`)}
+    ${line(r.spacing, a.stability)}
+    ${line(r.evidence, fmt(a.gapsObserved))}
+    ${line(r.pvalue, persisted.pValue == null ? null : pFormat(persisted.pValue))}
+    ${line(r.verdict, persisted.verdict)}
+    ${line(r.window, a.expectedFromTime ? `${a.expectedFromTime} – ${a.expectedToTime}` : null)}
+    ${line(r.windowCheck, a.windowOutcome)}
+  </tbody></table>`;
+}
+
+function renderBlocks(reports, currentBlock) {
+  const c = t();
+  if (!reports.length) {
+    return currentBlock ? `<p class="fine">${esc(c.blockProgress(currentBlock.number, currentBlock.have))}</p>` : '';
+  }
+  const head = c.blockCols.map((h) => `<th>${esc(h)}</th>`).join('');
+  const rows = reports.map((b) => `<tr>
+    <td class="num">${fmt(b.block)}</td>
+    <td>${fmt(b.fromDrawId)}–${fmt(b.toDrawId)}</td>
+    <td class="num">${fmt(b.bestHit)}</td>
+    <td class="num">${fmt(b.threePlus)}</td>
+    <td class="num">${fmt(b.fourPlus)}</td>
+    <td class="num">${fmt(b.exact5)}</td>
+    <td class="num">${fmt(b.averageHits)}</td>
+    <td class="num">${fmt(b.bullsEyeMatches)}</td>
+  </tr>`).join('');
+
+  const tail = currentBlock?.finished ? c.blocksDone : c.blockProgress(currentBlock.number, currentBlock.have);
+  return `<h3>${c.blocksTitle}</h3>
+    <table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>
+    <p class="fine" style="margin-top:10px">${esc(tail)}</p>`;
+}
+
+function renderLog(group) {
+  const c = t();
+  const rows = (group.results || []).slice(-12).reverse();
+  if (!rows.length) return '';
+  return `<h3>${c.recentTitle}</h3>` + rows.map((r) => {
+    const hits = new Set(r.hit_numbers || []);
+    const balls = group.numbers.map((n) => {
+      const isBull = r.bulls_eye_match && r.bulls_eye === n;
+      return `<span class="${isBull ? 'bull' : hits.has(n) ? 'on' : ''}">${n}</span>`;
+    }).join('');
+    const bull = r.bulls_eye_match ? c.bullMatch(r.bulls_eye) : (r.bulls_eye == null ? '' : c.bullMiss(r.bulls_eye));
+    return `<div class="log">
+      <div class="log-head"><b>${fmt(r.draw_id)}</b><span>${esc(r.time || '')}</span><span>${fmt(r.hit_count)} / 5</span><span>${esc(bull)}</span></div>
+      <div class="mini">${balls}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderGroup(group, i) {
+  const c = t();
+  const flagged = group.selectionNote?.passesBonferroni;
+  return `<section>
+    <div class="panel-head">
+      <h2>${esc(c.groupTitle(i + 1))}</h2>
+      ${flagged ? `<span class="badge flag">${esc(c.verdictSome)}</span>` : ''}
+    </div>
+    <div class="picks">${group.numbers.map((n) => `<span class="pick ${i === 0 ? 'on' : 'bull'}">${n}</span>`).join('')}</div>
+    ${renderDistribution(group.performance)}
+    ${renderTiming(group.analysis, group)}
+    ${renderBlocks(group.reports || [], group.currentBlock)}
+    ${renderLog(group)}
+  </section>`;
+}
+
+function renderCollection(state) {
+  const c = t();
+  const col = state.collection || { have: 0, need: 180 };
+  const done = Math.min(100, Math.round((col.have / col.need) * 100));
+  return `<section>
+    <h2>${c.collectTitle}</h2>
+    <p>${esc(c.collected(fmt(col.have), fmt(col.need)))}</p>
+    <div class="progress"><i style="width:${done}%"></i></div>
+    <p class="fine">${c.noSelect}
+      ${col.startDrawId ? esc(c.startDraw(fmt(col.startDrawId))) : ''}
+      ${state.latest ? esc(c.latestStored(fmt(state.latest.draw_id), state.latest.draw_time)) : ''}</p>
+  </section>`;
+}
+
+function render(state) {
+  const c = t();
+  const groups = state.groups || [];
+
+  // Attach the persisted selection note to its group so the timing table can
+  // show the p-value the choice was actually made on.
+  const notes = state.selection?.groups || [];
+  groups.forEach((g) => {
+    g.selectionNote = notes.find((n) => (n.numbers || []).join(',') === (g.numbers || []).join(','));
+  });
+
+  const warn = state.workerStale
+    ? `<section class="alert"><h2>${c.workerTitle}</h2><p class="fine">${esc(state.workerMessage || '')}</p></section>`
+    : '';
+
+  let body;
+  if (state.mode === 'collecting' || state.mode === 'preparing') {
+    body = renderCollection(state) + renderBoard(state.board, groups);
+  } else if (groups.length) {
+    body = renderBoard(state.board, groups)
+      + renderSelection(state.selection, state.chanceModel)
+      + groups.map(renderGroup).join('');
+  } else {
+    body = renderCollection(state);
+  }
+
+  el('content').innerHTML = warn + body;
+}
+
+/* --- status + loading ---------------------------------------------------- */
+function setStatus(kind, text, spinning) {
+  el('status').innerHTML = spinning
+    ? `<i class="spin"></i>${esc(text)}`
+    : `<i class="dot ${kind}"></i>${esc(text)}`;
+}
+
+let failures = 0;
+let timer = null;
+let lastState = null;
+
+async function load() {
+  const c = t();
+  setStatus('', c.refreshing, true);
+  try {
+    const response = await fetch(`/api/state?ts=${Date.now()}`, { cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || c.failed);
+
+    lastState = data;
+    failures = 0;
+    render(data);
+    const live = data.mode === 'tracking' || data.mode === 'collecting';
+    setStatus(live ? 'live' : 'wait', c.modes[data.mode] || data.mode, false);
+    el('stamp').textContent = c.updated(new Date().toLocaleTimeString(c.dir === 'rtl' ? 'ar-EG' : 'en-US'));
+  } catch (error) {
+    failures++;
+    // Say what failed and what happens next, rather than only showing a code.
+    setStatus('', `${c.failed}: ${error.message}. ${c.retry}`, false);
+  } finally {
+    schedule();
+  }
+}
+
+/** Back off when the API is unhappy instead of hammering it every four minutes. */
+function schedule() {
+  clearTimeout(timer);
+  const base = 240000;
+  timer = setTimeout(load, failures ? Math.min(base, 5000 * 2 ** Math.min(failures, 5)) : base);
+}
+
+function applyLanguage() {
+  const c = t();
+  document.documentElement.lang = lang;
+  document.documentElement.dir = c.dir;
+  document.title = c.title;
+  for (const node of document.querySelectorAll('[data-t]')) {
+    const value = c[node.dataset.t];
+    if (typeof value === 'string') node.textContent = value;
+  }
+  const button = el('lang');
+  button.textContent = c.label;
+  button.lang = lang === 'en' ? 'ar' : 'en';
+  button.setAttribute('aria-pressed', String(lang === 'ar'));
+  if (lastState) render(lastState);
+}
+
+el('refresh').addEventListener('click', load);
+el('lang').addEventListener('click', () => {
+  lang = lang === 'en' ? 'ar' : 'en';
+  localStorage.setItem('hotspot-lang', lang);
+  applyLanguage();
+});
+
+applyLanguage();
+setStatus('', t().connecting, true);
+load();
+</script>
+</body>
+</html>
