@@ -1,319 +1,53 @@
-'use strict';
+const {getDraw,getMany,score,db,analyzeTopGroups,parseDrawMinutes,californiaNowParts,cycleDateKey}=require('./lib');
+const COLLECTION_DRAWS=180; // 6:00 AM through 5:56 PM = 12 hours of 4-minute draws
+const CONTROL_PREFIX='AUTO_CONTROL_';
+const AUTO_PREFIX='AUTO Group ';
+const MAX_BACKFILL=80;
+const TRACKING_BLOCKS=6;
+const MAX_TRACKED_DRAWS=TRACKING_BLOCKS*20; // 120 draws = the six 20-draw report blocks shown in the UI
 
-const crypto = require('node:crypto');
-const C = require('../lib/config');
-const { Deadline } = require('../lib/http');
-const { getDraw, getDraws, score } = require('../lib/lottery');
-const { selectGroups } = require('../lib/analysis');
-const T = require('../lib/time');
-const DB = require('../lib/db');
+async function store(d){await db('hotspot_draws?on_conflict=draw_id',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:{draw_id:d.id,draw_date:d.date,draw_time:d.time,numbers:d.numbers,bulls_eye:d.bullsEye}})}
+async function cleanupAll(){await db('tracker_results?id=not.is.null',{method:'DELETE',prefer:'return=minimal'});await db('tracker_groups?id=not.is.null',{method:'DELETE',prefer:'return=minimal'});await db('hotspot_draws?draw_id=gt.0',{method:'DELETE',prefer:'return=minimal'})}
+async function getControl(){const rows=await db(`tracker_groups?select=id,name,start_draw_id,last_seen_draw_id,created_at&name=like.${encodeURIComponent(CONTROL_PREFIX+'*')}&order=id.desc&limit=1`);return rows?.[0]||null}
+async function createControl(dateKey,startId){const rows=await db('tracker_groups',{method:'POST',prefer:'return=representation',body:{name:`${CONTROL_PREFIX}${dateKey}`,numbers:[1,2,3,4,5],active:false,start_draw_id:startId,last_seen_draw_id:startId-1}});return rows?.[0]||null}
+async function getAutoGroups(){return await db(`tracker_groups?select=id,name,numbers,start_draw_id,last_seen_draw_id&active=eq.true&name=like.${encodeURIComponent(AUTO_PREFIX+'*')}&order=id.asc`)||[]}
+async function upsertAuto(slot,numbers,collectionEndId){const name=`${AUTO_PREFIX}${slot}`;const old=await db(`tracker_groups?select=id&name=eq.${encodeURIComponent(name)}&order=id.desc&limit=1`);if(old?.[0]){await db(`tracker_results?group_id=eq.${old[0].id}`,{method:'DELETE',prefer:'return=minimal'});await db(`tracker_groups?id=eq.${old[0].id}`,{method:'PATCH',prefer:'return=minimal',body:{numbers,active:true,start_draw_id:collectionEndId,last_seen_draw_id:collectionEndId}});return old[0].id}const x=await db('tracker_groups',{method:'POST',prefer:'return=representation',body:{name,numbers,active:true,start_draw_id:collectionEndId,last_seen_draw_id:collectionEndId}});return x?.[0]?.id}
 
-const LOCK = 'hotspot-worker';
+function drawDateKey(dateText){const d=new Date(String(dateText||'')+' 12:00:00 UTC');if(Number.isNaN(d.getTime()))return null;return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`}
+async function findCycleStart(latest,now){const mins=parseDrawMinutes(latest.time);if(mins==null||mins<360)return null;const estimate=latest.id-Math.floor((mins-360)/4);const from=Math.max(1,estimate-6),to=latest.id;const ids=Array.from({length:to-from+1},(_,i)=>from+i);const ds=await getMany(ids);const candidates=ds.filter(d=>drawDateKey(d.date)===now.dateKey&&parseDrawMinutes(d.time)>=360&&parseDrawMinutes(d.time)<1080);return candidates.sort((a,b)=>a.id-b.id)[0]||null}
+function inCollectionWindow(d,now){const m=parseDrawMinutes(d.draw_time??d.time);return drawDateKey(d.draw_date??d.date)===now.dateKey&&m!=null&&m>=360&&m<1080}
+async function backfill(control,latest){let after=Number(control.last_seen_draw_id??(control.start_draw_id-1));if(after>=latest.id){await store(latest);return 0}const end=Math.min(latest.id,after+MAX_BACKFILL),ids=Array.from({length:end-after},(_,i)=>after+i+1),ds=await getMany(ids);for(const d of ds)await store(d);const last=ds.at(-1)?.id??after;await db(`tracker_groups?id=eq.${control.id}`,{method:'PATCH',prefer:'return=minimal',body:{last_seen_draw_id:last}});control.last_seen_draw_id=last;return ds.length}
+async function processTracking(groups,latest){let processed=0;const details=[];for(const g of groups){const after=Number(g.last_seen_draw_id??g.start_draw_id);const trackingCap=Number(g.start_draw_id)+MAX_TRACKED_DRAWS;if(after>=latest.id||after>=trackingCap){details.push({group:g.name,processed:0,lastSeen:after,capReached:after>=trackingCap});continue}const end=Math.min(latest.id,after+MAX_BACKFILL,trackingCap);let cached=await db(`hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gt.${after}&draw_id=lte.${end}&order=draw_id.asc`)||[];if(cached.length<end-after){const have=new Set(cached.map(d=>d.draw_id)),missing=[];for(let id=after+1;id<=end;id++)if(!have.has(id))missing.push(id);if(missing.length){const ds=await getMany(missing);for(const d of ds)await store(d);cached=await db(`hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gt.${after}&draw_id=lte.${end}&order=draw_id.asc`)||[]}}
+for(const d of cached){const s=score({numbers:d.numbers,bullsEye:d.bulls_eye},g.numbers);await db('tracker_results?on_conflict=group_id,draw_id',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:{group_id:g.id,draw_id:d.draw_id,hit_count:s.count,hit_numbers:s.hit,bulls_eye:s.bullsEye,bulls_eye_match:s.bullsEyeMatch}})}const last=cached.at(-1)?.draw_id??after;await db(`tracker_groups?id=eq.${g.id}`,{method:'PATCH',prefer:'return=minimal',body:{last_seen_draw_id:last}});processed+=cached.length;details.push({group:g.name,processed:cached.length,lastSeen:last})}return {processed,details}}
 
-/** Constant-time secret comparison so the endpoint cannot be probed by timing. */
-function secretMatches(provided, expected) {
-  const a = Buffer.from(String(provided || ''));
-  const b = Buffer.from(String(expected));
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
-}
+module.exports=async(req,res)=>{
+  res.setHeader('Cache-Control','no-store,max-age=0');
+  try{
+    if(process.env.WORKER_SECRET){const token=req.headers['x-worker-secret']||req.query.secret;if(token!==process.env.WORKER_SECRET)return res.status(401).json({ok:false,error:'Unauthorized'})}
+    const now=californiaNowParts();
+    // 2:30 AM cleanup. If the external cron does not call during hour 2, the same stale data is cleaned at 6:00 AM before the new cycle starts.
+    if(now.minutes>=150&&now.minutes<360){await cleanupAll();return res.status(200).json({ok:true,mode:'cleanup',message:'Daily cycle data deleted. Waiting for 6:00 AM.',source:'California Lottery official'})}
+    if(now.minutes>=120&&now.minutes<150)return res.status(200).json({ok:true,mode:'idle',message:'Tracking cycle ended at 2:00 AM. Cleanup is scheduled for 2:30 AM.',source:'California Lottery official'});
 
-/**
- * Work out which draw id opened the 06:00 collection window, using the latest
- * draw as an anchor and the fixed 4-minute cadence.
- *
- * The previous version trusted this blindly. If the source page was lagging and
- * returned last night's final draw, the inferred start id was hundreds of draws
- * off and the whole cycle collected the wrong window. Now an implausible anchor
- * is rejected rather than quietly poisoning the day's data.
- */
-function inferCollectionStartId(latest, now) {
-  const drawMinutes = T.parseDrawMinutes(latest.time);
-  if (drawMinutes == null) return { error: 'Could not read the time of the latest draw' };
+    let control=await getControl();
+    const cycleKey=cycleDateKey(now);
+    if(control&&!String(control.name).endsWith(cycleKey)){await cleanupAll();control=null}
 
-  const sinceSix = drawMinutes >= C.SCHEDULE.collectionStart
-    ? drawMinutes - C.SCHEDULE.collectionStart
-    : drawMinutes + (1440 - C.SCHEDULE.collectionStart);
+    const latest=await getDraw(null);
+    if(!control){const first=await findCycleStart(latest,now);if(!first)return res.status(200).json({ok:true,mode:'collecting',collection:{have:0,need:COLLECTION_DRAWS,remaining:COLLECTION_DRAWS},latest:{id:latest.id,time:latest.time},stored:0,activeGroups:0,processed:0,message:'Waiting for the first official draw at or after 6:00 AM.',source:'California Lottery official'});control=await createControl(cycleKey,first.id)}
+    else if(now.minutes>=360){const startDraw=await getDraw(Number(control.start_draw_id));if(!inCollectionWindow(startDraw,now)){await cleanupAll();const first=await findCycleStart(latest,now);if(!first)return res.status(200).json({ok:true,mode:'collecting',collection:{have:0,need:COLLECTION_DRAWS,remaining:COLLECTION_DRAWS},latest:{id:latest.id,time:latest.time},stored:0,activeGroups:0,processed:0,message:'Waiting for the first official draw at or after 6:00 AM.',source:'California Lottery official'});control=await createControl(cycleKey,first.id)}}
+    const stored=await backfill(control,latest);
+    const rawHistory=await db(`hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gte.${control.start_draw_id}&order=draw_id.asc&limit=220`)||[];
+    const history=rawHistory.filter(d=>inCollectionWindow(d,now));
+    const collectionEndId=history.at(-1)?.draw_id??Number(control.start_draw_id);
 
-  // Hot Spot runs 06:00 to 02:00 — 20 hours, 300 draws. Anything beyond that
-  // means the anchor draw is not from the current cycle.
-  const stepsSinceSix = Math.floor(sinceSix / C.DRAW_INTERVAL_MIN);
-  if (stepsSinceSix > 300) {
-    return { error: `Latest draw is timestamped ${latest.time}, outside the 6:00 AM - 2:00 AM draw window. Waiting for a fresh result.` };
-  }
+    if(now.minutes>=360&&now.minutes<1080){return res.status(200).json({ok:true,mode:'collecting',collection:{have:history.length,need:COLLECTION_DRAWS,remaining:Math.max(0,COLLECTION_DRAWS-history.length)},latest:{id:latest.id,time:latest.time},stored,activeGroups:0,processed:0,source:'California Lottery official'})}
 
-  const nowSinceSix = now.minutes >= C.SCHEDULE.collectionStart
-    ? now.minutes - C.SCHEDULE.collectionStart
-    : now.minutes + (1440 - C.SCHEDULE.collectionStart);
-  const lagMinutes = nowSinceSix - sinceSix;
+    if(history.length===0){return res.status(200).json({ok:true,mode:'preparing',collection:{have:0,need:COLLECTION_DRAWS,remaining:COLLECTION_DRAWS},latest:{id:latest.id,time:latest.time},stored,message:'No official draws were found inside today’s 6:00 AM–6:00 PM collection window.',source:'California Lottery official'})}
 
-  return {
-    startId: latest.id - stepsSinceSix,
-    // A healthy source is at most a couple of draws behind the wall clock.
-    warning: lagMinutes > 30 ? `Source appears ${Math.round(lagMinutes)} minutes behind the California clock.` : null,
-  };
-}
-
-/**
- * Pull missing draws forward from `after` towards `latest`, in chunks, until the
- * window is complete or the time budget runs out. Progress is committed after
- * every chunk, so a run that is cut short still moves the cycle forward.
- */
-async function backfill(control, latestId, deadline, cache) {
-  let after = Number(control.last_seen_draw_id ?? control.start_draw_id - 1);
-  const target = Math.min(latestId, Number(control.start_draw_id) + C.COLLECTION_DRAWS - 1);
-
-  let stored = 0;
-  const failures = [];
-
-  while (after < target && !deadline.spent(6000)) {
-    const chunk = Math.min(C.FETCH_CONCURRENCY * 4, target - after);
-    const ids = Array.from({ length: chunk }, (_, i) => after + i + 1);
-
-    const { draws, failed } = await getDraws(ids, { deadline, cache });
-    failures.push(...failed);
-    if (draws.length) stored += await DB.saveDraws(draws);
-
-    // Only advance the cursor across a contiguous run of successes, otherwise a
-    // transient failure would leave a permanent hole in the window.
-    let cursor = after;
-    const byId = new Map(draws.map((d) => [d.id, d]));
-    while (byId.has(cursor + 1)) cursor++;
-    if (cursor === after) break;
-
-    after = cursor;
-    await DB.updateGroup(control.id, { last_seen_draw_id: after });
-    control.last_seen_draw_id = after;
-  }
-
-  return { stored, failures, cursor: after, complete: after >= target };
-}
-
-/** Score newly available draws against each active group. */
-async function processTracking(groups, latestId, deadline, cache) {
-  const details = [];
-  let processed = 0;
-
-  for (const group of groups) {
-    const after = Number(group.last_seen_draw_id ?? group.start_draw_id);
-    const cap = Number(group.start_draw_id) + C.MAX_TRACKED_DRAWS;
-    if (after >= latestId || after >= cap) {
-      details.push({ group: group.name, processed: 0, lastSeen: after, complete: after >= cap });
-      continue;
-    }
-    if (deadline.spent(6000)) { details.push({ group: group.name, processed: 0, lastSeen: after, deferred: true }); continue; }
-
-    const end = Math.min(latestId, cap, after + C.FETCH_CONCURRENCY * 6);
-    let stored = await DB.getDrawRange(after + 1, end);
-
-    // Fill any gaps from the source, then re-read so ordering is authoritative.
-    if (stored.length < end - after) {
-      const have = new Set(stored.map((d) => d.draw_id));
-      const missing = [];
-      for (let id = after + 1; id <= end; id++) if (!have.has(id)) missing.push(id);
-      if (missing.length) {
-        const { draws } = await getDraws(missing, { deadline, cache });
-        if (draws.length) await DB.saveDraws(draws);
-        stored = await DB.getDrawRange(after + 1, end);
-      }
-    }
-
-    // Same contiguity rule as the backfill: never skip past a hole.
-    const contiguous = [];
-    let expected = after + 1;
-    for (const d of stored) {
-      if (d.draw_id !== expected) break;
-      contiguous.push(d);
-      expected++;
-    }
-    if (!contiguous.length) { details.push({ group: group.name, processed: 0, lastSeen: after }); continue; }
-
-    const rows = contiguous.map((d) => {
-      const s = score({ numbers: d.numbers, bullsEye: d.bulls_eye }, group.numbers);
-      return {
-        group_id: group.id,
-        draw_id: d.draw_id,
-        hit_count: s.count,
-        hit_numbers: s.hit,
-        bulls_eye: s.bullsEye,
-        bulls_eye_match: s.bullsEyeMatch,
-      };
-    });
-
-    await DB.saveResults(rows);
-    const lastSeen = contiguous[contiguous.length - 1].draw_id;
-    await DB.updateGroup(group.id, { last_seen_draw_id: lastSeen });
-    processed += rows.length;
-    details.push({ group: group.name, processed: rows.length, lastSeen });
-  }
-
-  return { processed, details };
-}
-
-async function replaceAutoGroup(slot, numbers, startDrawId) {
-  const name = `${C.AUTO_PREFIX}${slot}`;
-  const existing = await DB.db(`tracker_groups?select=id&name=eq.${encodeURIComponent(name)}&limit=1`);
-  if (existing?.[0]) {
-    await DB.db(`tracker_results?group_id=eq.${existing[0].id}`, { method: 'DELETE', prefer: 'return=minimal' });
-    await DB.updateGroup(existing[0].id, {
-      numbers, active: true, start_draw_id: startDrawId, last_seen_draw_id: startDrawId,
-    });
-    return existing[0].id;
-  }
-  const created = await DB.db('tracker_groups', {
-    method: 'POST',
-    prefer: 'return=representation',
-    body: { name, numbers, active: true, start_draw_id: startDrawId, last_seen_draw_id: startDrawId },
-  });
-  return created?.[0]?.id;
-}
-
-// ---------------------------------------------------------------------------
-
-module.exports = async (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, max-age=0');
-
-  if (process.env.WORKER_SECRET) {
-    const token = req.headers['x-worker-secret'] || req.query?.secret;
-    if (!secretMatches(token, process.env.WORKER_SECRET)) {
-      return res.status(401).json({ ok: false, error: 'Unauthorized' });
-    }
-  }
-
-  const deadline = new Deadline(C.WORKER_BUDGET_MS);
-  const holder = crypto.randomUUID();
-  const cache = new Map();
-  let locked = false;
-
-  try {
-    const now = T.californiaNowParts();
-
-    if (now.minutes >= C.SCHEDULE.cleanup && now.minutes < C.SCHEDULE.collectionStart) {
-      locked = await DB.acquireLock(LOCK, holder);
-      if (!locked) return res.status(200).json({ ok: true, mode: 'cleanup', message: 'Another run is already working.' });
-      await DB.wipeCycle();
-      return res.status(200).json({ ok: true, mode: 'cleanup', message: 'Cycle data cleared. Next collection starts at 6:00 AM.' });
-    }
-
-    if (now.minutes >= C.SCHEDULE.trackingEnd && now.minutes < C.SCHEDULE.cleanup) {
-      return res.status(200).json({ ok: true, mode: 'idle', message: 'Tracking ended at 2:00 AM. Cleanup runs at 2:30 AM.' });
-    }
-
-    locked = await DB.acquireLock(LOCK, holder);
-    if (!locked) {
-      return res.status(200).json({ ok: true, mode: 'busy', message: 'Another worker run is in progress; skipping this tick.' });
-    }
-
-    const cycleKey = T.cycleDateKey(now);
-    const controls = await DB.findGroups(C.CONTROL_PREFIX);
-    let control = controls[controls.length - 1] || null;
-
-    if (control && !String(control.name).endsWith(cycleKey)) {
-      await DB.wipeCycle();
-      control = null;
-    }
-
-    const latest = await getDraw(null, { deadline, cache });
-    cache.set(latest.id, latest);
-
-    let sourceWarning = null;
-    if (!control) {
-      const inferred = inferCollectionStartId(latest, now);
-      if (inferred.error) return res.status(200).json({ ok: true, mode: 'waiting', message: inferred.error, latest: { id: latest.id, time: latest.time } });
-      sourceWarning = inferred.warning;
-      const created = await DB.db('tracker_groups', {
-        method: 'POST',
-        prefer: 'return=representation',
-        body: {
-          name: `${C.CONTROL_PREFIX}${cycleKey}`,
-          numbers: [1, 2, 3, 4, 5],
-          active: false,
-          start_draw_id: inferred.startId,
-          last_seen_draw_id: inferred.startId - 1,
-        },
-      });
-      control = created?.[0];
-      if (!control) throw new Error('Could not create the cycle control record');
-    }
-
-    const filled = await backfill(control, latest.id, deadline, cache);
-    const collectionEndId = Number(control.start_draw_id) + C.COLLECTION_DRAWS - 1;
-    const history = await DB.getDrawRange(control.start_draw_id, collectionEndId, C.COLLECTION_DRAWS);
-
-    const base = {
-      ok: true,
-      cycle: cycleKey,
-      latest: { id: latest.id, time: latest.time },
-      collection: {
-        have: history.length,
-        need: C.COLLECTION_DRAWS,
-        remaining: Math.max(0, C.COLLECTION_DRAWS - history.length),
-        startDrawId: control.start_draw_id,
-      },
-      stored: filled.stored,
-      fetchFailures: filled.failures.slice(0, 5),
-      sourceWarning,
-      budget: { usedMs: deadline.elapsed, remainingMs: deadline.remaining },
-    };
-
-    if (now.minutes >= C.SCHEDULE.collectionStart && now.minutes < C.SCHEDULE.selection) {
-      return res.status(200).json({ ...base, mode: 'collecting' });
-    }
-
-    if (history.length < C.COLLECTION_DRAWS) {
-      return res.status(200).json({
-        ...base,
-        mode: 'preparing',
-        message: 'Finishing the 12-hour window before groups can be selected. Run the worker again to continue.',
-      });
-    }
-
-    let groups = await DB.findGroups(C.AUTO_PREFIX, { activeOnly: true });
-    let selection = null;
-
-    if (groups.length === 0) {
-      selection = selectGroups(history, { limit: 2 });
-      if (selection.groups.length < 2) {
-        return res.status(200).json({ ...base, mode: 'preparing', message: 'No 5-number group repeated out of sample in this window. Nothing will be tracked today.', selection });
-      }
-      // Persist the diagnostics on the control row. Re-running the search on
-      // every dashboard load would be wasteful and could disagree with the
-      // groups actually being tracked.
-      await DB.updateGroup(control.id, {
-        notes: {
-          selectedAt: new Date().toISOString(),
-          diagnostics: selection.diagnostics,
-          groups: selection.groups.map((g) => ({
-            numbers: g.numbers,
-            outOfSampleCount: g.outOfSampleCount,
-            pValue: g.pValue,
-            passesBonferroni: g.passesBonferroni,
-            passesFdr: g.passesFdr,
-            verdict: g.verdict,
-          })),
-        },
-      });
-
-      await replaceAutoGroup(1, selection.groups[0].numbers, collectionEndId);
-      await replaceAutoGroup(2, selection.groups[1].numbers, collectionEndId);
-      groups = await DB.findGroups(C.AUTO_PREFIX, { activeOnly: true });
-    }
-
-    const tracking = await processTracking(groups, latest.id, deadline, cache);
-    return res.status(200).json({
-      ...base,
-      mode: 'tracking',
-      activeGroups: groups.length,
-      selection,
-      processed: tracking.processed,
-      details: tracking.details,
-    });
-  } catch (error) {
-    return res.status(500).json({ ok: false, error: error.message || String(error) });
-  } finally {
-    if (locked) await DB.releaseLock(LOCK, holder);
-  }
+    let groups=await getAutoGroups();let selected=null;
+    if(groups.length===0){selected=analyzeTopGroups(history,2);if(selected.length!==2)throw Error('Could not identify two repeated 5-number groups from the 12-hour window.');await upsertAuto(1,selected[0].numbers,collectionEndId);await upsertAuto(2,selected[1].numbers,collectionEndId);groups=await getAutoGroups()}
+    const tracking=await processTracking(groups,latest);
+    return res.status(200).json({ok:true,mode:'tracking',collection:{have:history.length,need:COLLECTION_DRAWS,remaining:Math.max(0,COLLECTION_DRAWS-history.length)},latest:{id:latest.id,time:latest.time},stored,activeGroups:groups.length,selected,processed:tracking.processed,details:tracking.details,source:'California Lottery official'});
+  }catch(e){res.status(500).json({ok:false,error:e.message||String(e)})}
 };
-
-module.exports.inferCollectionStartId = inferCollectionStartId;
-module.exports.secretMatches = secretMatches;
