@@ -23,7 +23,14 @@ body{
   margin:0;
   background:#f4f5f7;
   color:#17191c;
+  
+  .latestBull{
+  background:#175cd3 !important;
+  color:#fff !important;
+  box-shadow:0 0 0 3px #84adff;
+
 }
+
 
 .wrap{
   max-width:980px;
@@ -983,7 +990,12 @@ function renderSummary(j){
   - manual tracking
 */
 
-function renderLatestDraw(d){
+function nums
+.map(
+  n =>
+    `<span class="ball">${Number(n)}</span>`
+)
+.join('')(d){
 
   const box =
     document.getElementById(
@@ -1138,13 +1150,23 @@ async function loadLatestDraw(){
 
     if(j.latest){
 
-      renderLatestDraw(
+      nums
+.map(
+  n =>
+    `<span class="ball">${Number(n)}</span>`
+)
+.join('')(
         j.latest
       );
 
     }else{
 
-      renderLatestDraw(null);
+      nums
+.map(
+  n =>
+    `<span class="ball">${Number(n)}</span>`
+)
+.join('')(null);
 
     }
 
