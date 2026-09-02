@@ -20,7 +20,6 @@ body{
     "Segoe UI",
     Arial,
     sans-serif;
-
   margin:0;
   background:#f4f5f7;
   color:#17191c;
@@ -37,9 +36,7 @@ h1{
   font-size:26px;
 }
 
-.mut{
-  color:#667085;
-}
+.mut{color:#667085;}
 
 .ok{
   color:#087a3d;
@@ -71,13 +68,8 @@ h1{
 
 .topgrid{
   display:grid;
-
   grid-template-columns:
-    repeat(
-      auto-fit,
-      minmax(150px,1fr)
-    );
-
+    repeat(auto-fit,minmax(150px,1fr));
   gap:8px;
 }
 
@@ -109,14 +101,10 @@ h1{
 .ball{
   width:43px;
   height:43px;
-
   border-radius:50%;
-
   display:grid;
   place-items:center;
-
   background:#eceff3;
-
   font-weight:900;
   font-size:16px;
 }
@@ -137,8 +125,7 @@ h1{
 }
 
 .bull{
-  box-shadow:
-    0 0 0 3px #84adff;
+  box-shadow:0 0 0 3px #84adff;
 }
 
 .result{
@@ -162,30 +149,18 @@ h1{
   font-weight:900;
 }
 
-.score3{
-  color:#175cd3;
-}
-
-.score4{
-  color:#c4320a;
-}
-
-.score5{
-  color:#087a3d;
-}
+.score3{color:#175cd3;}
+.score4{color:#c4320a;}
+.score5{color:#087a3d;}
 
 .btn{
   border:0;
   border-radius:11px;
-
   padding:12px 16px;
-
   font-weight:850;
   font-size:15px;
-
   background:#111;
   color:#fff;
-
   cursor:pointer;
 }
 
@@ -202,25 +177,16 @@ h1{
 
 .spin{
   display:inline-block;
-
   width:15px;
   height:15px;
-
   border:3px solid #bbb;
-
   border-top-color:#111;
-
   border-radius:50%;
-
   animation:r .8s linear infinite;
 }
 
 @keyframes r{
-
-  to{
-    transform:rotate(360deg);
-  }
-
+  to{transform:rotate(360deg);}
 }
 
 .progress{
@@ -239,7 +205,6 @@ h1{
 .manualInputs{
   display:grid;
   grid-template-columns:repeat(5,1fr);
-
   gap:8px;
   margin:12px 0;
 }
@@ -247,17 +212,12 @@ h1{
 .manualInputs input{
   width:100%;
   box-sizing:border-box;
-
   border:1px solid #d0d5dd;
   border-radius:11px;
-
   padding:13px 4px;
-
   text-align:center;
-
   font-size:18px;
   font-weight:900;
-
   outline:none;
 }
 
@@ -269,17 +229,14 @@ h1{
   display:flex;
   justify-content:space-between;
   align-items:center;
-
   gap:8px;
   flex-wrap:wrap;
 }
 
 .empty{
   padding:16px;
-
   border:1px dashed #d0d5dd;
   border-radius:12px;
-
   color:#667085;
   text-align:center;
 }
@@ -290,13 +247,9 @@ h1{
 
 .pill{
   display:inline-block;
-
   padding:5px 9px;
-
   border-radius:999px;
-
   background:#f2f4f7;
-
   font-size:13px;
   font-weight:800;
 }
@@ -323,15 +276,6 @@ h1{
   height:45px;
   font-size:17px;
 }
-
-.latestBull{
-  background:#175cd3;
-  color:white;
-
-  box-shadow:
-    0 0 0 3px #84adff;
-}
-
 
 @media(max-width:520px){
 
@@ -363,19 +307,13 @@ h1{
 }
 
 </style>
-
 </head>
-
 
 <body>
 
 <div class="wrap">
 
-
-<h1>
-  Hot Spot Tracker
-</h1>
-
+<h1>Hot Spot Tracker</h1>
 
 <p class="mut">
   Automatic groups + one manual
@@ -383,7 +321,6 @@ h1{
   Only important results of
   3/5 or better are shown.
 </p>
-
 
 
 <div class="card toolbar">
@@ -404,16 +341,9 @@ h1{
 </div>
 
 
-
 <div id="summary"></div>
 
-
-<!--
-  ONLY ONE LATEST DRAW
-  IS DISPLAYED HERE.
--->
 <div id="latestDraw"></div>
-
 
 
 <div class="card">
@@ -430,7 +360,6 @@ h1{
 
   </div>
 
-
   <p class="mut">
 
     Enter exactly 5 different
@@ -443,41 +372,15 @@ h1{
 
   </p>
 
-
   <div class="manualInputs">
 
-    <input
-      inputmode="numeric"
-      maxlength="2"
-      id="m1"
-    >
-
-    <input
-      inputmode="numeric"
-      maxlength="2"
-      id="m2"
-    >
-
-    <input
-      inputmode="numeric"
-      maxlength="2"
-      id="m3"
-    >
-
-    <input
-      inputmode="numeric"
-      maxlength="2"
-      id="m4"
-    >
-
-    <input
-      inputmode="numeric"
-      maxlength="2"
-      id="m5"
-    >
+    <input inputmode="numeric" maxlength="2" id="m1">
+    <input inputmode="numeric" maxlength="2" id="m2">
+    <input inputmode="numeric" maxlength="2" id="m3">
+    <input inputmode="numeric" maxlength="2" id="m4">
+    <input inputmode="numeric" maxlength="2" id="m5">
 
   </div>
-
 
   <button
     class="btn"
@@ -486,38 +389,27 @@ h1{
     Start Tracking
   </button>
 
-
   <span
     id="manualMsg"
     class="mut small"
   ></span>
-
 
   <div id="manualContent"></div>
 
 </div>
 
 
-
 <div id="autoContent"></div>
-
 
 </div>
 
 
-
 <script>
 
-
 const esc = s =>
-
-  String(
-    s ?? ''
-  )
-
+  String(s ?? '')
   .replace(
     /[&<>"]/g,
-
     c => ({
       '&':'&amp;',
       '<':'&lt;',
@@ -527,29 +419,19 @@ const esc = s =>
   );
 
 
-
 function busy(t){
 
   document
-  .getElementById(
-    'busy'
-  )
-  .innerHTML =
-
-    t
-
-    ? `<span class="spin"></span> ${esc(t)}`
-
-    : '';
+    .getElementById('busy')
+    .innerHTML =
+      t
+      ? `<span class="spin"></span> ${esc(t)}`
+      : '';
 
 }
 
 
-
-async function api(
-  url,
-  options
-){
+async function api(url,options){
 
   const r =
     await fetch(
@@ -560,14 +442,11 @@ async function api(
       }
     );
 
-
   let j;
-
 
   try{
 
-    j =
-      await r.json();
+    j = await r.json();
 
   }catch{
 
@@ -577,11 +456,7 @@ async function api(
 
   }
 
-
-  if(
-    !r.ok ||
-    !j.ok
-  ){
+  if(!r.ok || !j.ok){
 
     throw Error(
       j.error ||
@@ -590,11 +465,9 @@ async function api(
 
   }
 
-
   return j;
 
 }
-
 
 
 function scoreClass(n){
@@ -610,10 +483,7 @@ function scoreClass(n){
 }
 
 
-
-function ballClass(
-  hitCount
-){
+function ballClass(hitCount){
 
   if(hitCount >= 5)
     return 'hit5';
@@ -626,50 +496,33 @@ function ballClass(
 }
 
 
-
 function importantResults(g){
 
-  return (
-    g.results || []
-  )
+  return (g.results || [])
 
-  .filter(
-    r =>
-      Number(
-        r.hit_count
-      ) >= 3
-  )
+    .filter(
+      r =>
+        Number(r.hit_count) >= 3
+    )
 
-  .sort(
-    (a,b) =>
-      Number(
-        b.draw_id
-      ) -
-      Number(
-        a.draw_id
-      )
-  );
+    .sort(
+      (a,b) =>
+        Number(b.draw_id) -
+        Number(a.draw_id)
+    );
 
 }
 
 
-
-function resultCard(
-  r,
-  groupNumbers
-){
+function resultCard(r,groupNumbers){
 
   const hits =
-    r.hit_numbers ||
-    [];
-
+    r.hit_numbers || [];
 
   const hc =
     Number(
-      r.hit_count ||
-      0
+      r.hit_count || 0
     );
-
 
   return `
 
@@ -684,13 +537,10 @@ function resultCard(
           </b>
 
           <span class="mut">
-            — ${esc(
-              r.time || ''
-            )}
+            — ${esc(r.time || '')}
           </span>
 
         </div>
-
 
         <div
           class="
@@ -698,46 +548,36 @@ function resultCard(
             ${scoreClass(hc)}
           "
         >
-
           ${hc}/5
-
         </div>
 
       </div>
-
 
       <div class="balls">
 
         ${
           groupNumbers
-
           .map(
             n => {
 
               const isHit =
                 hits.includes(n);
 
-
               const isBull =
                 r.bulls_eye_match &&
-                Number(
-                  r.bulls_eye
-                ) ===
+                Number(r.bulls_eye) ===
                 Number(n);
-
 
               return `
 
                 <span
                   class="
                     ball
-
                     ${
                       isHit
                       ? ballClass(hc)
                       : ''
                     }
-
                     ${
                       isBull
                       ? 'bull'
@@ -745,27 +585,21 @@ function resultCard(
                     }
                   "
                 >
-
                   ${n}
-
                 </span>
 
               `;
 
             }
           )
-
           .join('')
         }
 
       </div>
 
-
       <div class="small">
 
-        <b>
-          Matched:
-        </b>
+        <b>Matched:</b>
 
         ${
           hits.length
@@ -773,21 +607,14 @@ function resultCard(
           : '—'
         }
 
-
         ${
           r.bulls_eye_match
 
           ? `
-
             &nbsp;
-
             <span class="blue">
-
-              Bulls-eye
-              ${r.bulls_eye}
-
+              Bulls-eye ${r.bulls_eye}
             </span>
-
           `
 
           : ''
@@ -802,36 +629,22 @@ function resultCard(
 }
 
 
-
-function autoGroupCard(
-  g,
-  i
-){
+function autoGroupCard(g,i){
 
   const important =
     importantResults(g);
 
-
   let best = 0;
 
-
-  for(
-    const r of
-    g.results || []
-  ){
+  for(const r of g.results || []){
 
     best =
       Math.max(
         best,
-
-        Number(
-          r.hit_count ||
-          0
-        )
+        Number(r.hit_count || 0)
       );
 
   }
-
 
   return `
 
@@ -840,10 +653,8 @@ function autoGroupCard(
       <div class="sectionTitle">
 
         <div class="title">
-
           Automatic Group
           ${i + 1}
-
         </div>
 
         <span class="ok">
@@ -852,28 +663,20 @@ function autoGroupCard(
 
       </div>
 
-
       <div class="balls">
 
         ${
-          (
-            g.numbers ||
-            []
-          )
-
+          (g.numbers || [])
           .map(
             n =>
               `<span class="ball">${n}</span>`
           )
-
           .join('')
         }
 
       </div>
 
-
       <div class="topgrid">
-
 
         <div class="stat">
 
@@ -885,7 +688,6 @@ function autoGroupCard(
 
         </div>
 
-
         <div class="stat">
 
           3+ Results
@@ -896,37 +698,29 @@ function autoGroupCard(
 
         </div>
 
-
         <div class="stat">
 
           Last Seen
 
           <div class="big">
-
             ${
               g.last_seen_draw_id ||
               '—'
             }
-
           </div>
 
         </div>
 
-
       </div>
-
 
       <h3>
         3/5 or Better
       </h3>
 
-
       ${
-
         important.length
 
         ? important
-
           .map(
             r =>
               resultCard(
@@ -934,20 +728,14 @@ function autoGroupCard(
                 g.numbers || []
               )
           )
-
           .join('')
 
         : `
-
           <div class="empty">
-
             No 3/5 or better
             result yet.
-
           </div>
-
         `
-
       }
 
     </div>
@@ -957,7 +745,6 @@ function autoGroupCard(
 }
 
 
-
 function renderManual(j){
 
   const box =
@@ -965,11 +752,7 @@ function renderManual(j){
       'manualContent'
     );
 
-
-  if(
-    !j ||
-    !j.manual
-  ){
+  if(!j || !j.manual){
 
     box.innerHTML = `
 
@@ -977,10 +760,8 @@ function renderManual(j){
         class="empty"
         style="margin-top:12px"
       >
-
         No manual group is
         currently tracking.
-
       </div>
 
     `;
@@ -989,53 +770,35 @@ function renderManual(j){
 
   }
 
-
-  const m =
-    j.manual;
-
+  const m = j.manual;
 
   const nums =
-    m.numbers ||
-    [];
-
+    m.numbers || [];
 
   const matches =
-    m.matches ||
-    [];
+    m.matches || [];
 
-
-  for(
-    let i = 0;
-    i < 5;
-    i++
-  ){
+  for(let i=0;i<5;i++){
 
     const el =
-      document
-      .getElementById(
+      document.getElementById(
         'm' + (i + 1)
       );
 
-
     if(
-      document.activeElement !==
-      el
+      document.activeElement !== el
     ){
 
       el.value =
-        nums[i] ??
-        '';
+        nums[i] ?? '';
 
     }
 
   }
 
-
   box.innerHTML = `
 
-    <div
-      style="margin-top:14px"
-    >
+    <div style="margin-top:14px">
 
       <div class="sectionTitle">
 
@@ -1051,57 +814,43 @@ function renderManual(j){
 
       </div>
 
-
       <div class="balls">
 
         ${
           nums
-
           .map(
             n =>
               `<span class="ball">${n}</span>`
           )
-
           .join('')
         }
 
       </div>
-
 
       <p class="mut small">
 
         Started after draw
 
         <b>
-          ${
-            m.startDrawId ??
-            '—'
-          }
+          ${m.startDrawId ?? '—'}
         </b>.
 
         Last checked draw
 
         <b>
-          ${
-            m.lastSeenDrawId ??
-            '—'
-          }
+          ${m.lastSeenDrawId ?? '—'}
         </b>.
 
       </p>
-
 
       <h3>
         3/5 or Better
       </h3>
 
-
       ${
-
         matches.length
 
         ? matches
-
           .map(
             r =>
               resultCard(
@@ -1109,20 +858,14 @@ function renderManual(j){
                 nums
               )
           )
-
           .join('')
 
         : `
-
           <div class="empty">
-
             No 3/5 or better
             result yet.
-
           </div>
-
         `
-
       }
 
     </div>
@@ -1130,7 +873,6 @@ function renderManual(j){
   `;
 
 }
-
 
 
 function renderSummary(j){
@@ -1143,129 +885,102 @@ function renderSummary(j){
       remaining:180
     };
 
-
   const pct =
-
     c.need
-
     ? Math.min(
         100,
-
         Math.round(
           c.have /
           c.need *
           100
         )
       )
-
     : 0;
 
-
   document
-  .getElementById(
-    'summary'
-  )
-  .innerHTML = `
+    .getElementById('summary')
+    .innerHTML = `
 
-    <div class="card">
+      <div class="card">
 
-      <div class="topgrid">
+        <div class="topgrid">
 
+          <div class="stat">
 
-        <div class="stat">
+            Mode
 
-          Mode
+            <div class="big">
+              ${esc(j.mode || '—')}
+            </div>
 
-          <div class="big">
+          </div>
 
-            ${
-              esc(
-                j.mode ||
+          <div class="stat">
+
+            Collection
+
+            <div class="big">
+              ${c.have}/${c.need}
+            </div>
+
+          </div>
+
+          <div class="stat">
+
+            Remaining
+
+            <div class="big">
+              ${c.remaining}
+            </div>
+
+          </div>
+
+          <div class="stat">
+
+            Stored Draw
+
+            <div class="big">
+              ${
+                j.latest?.draw_id ||
                 '—'
-              )
-            }
+              }
+            </div>
 
           </div>
 
         </div>
 
+        <div
+          class="progress"
+          style="margin-top:12px"
+        >
 
-        <div class="stat">
-
-          Collection
-
-          <div class="big">
-
-            ${c.have}/${c.need}
-
-          </div>
-
-        </div>
-
-
-        <div class="stat">
-
-          Remaining
-
-          <div class="big">
-
-            ${c.remaining}
-
-          </div>
+          <i
+            style="
+              width:${pct}%
+            "
+          ></i>
 
         </div>
-
-
-        <div class="stat">
-
-          Latest Draw
-
-          <div class="big">
-
-            ${
-              j.latest
-              ?.draw_id ||
-              '—'
-            }
-
-          </div>
-
-        </div>
-
 
       </div>
 
-
-      <div
-        class="progress"
-        style="margin-top:12px"
-      >
-
-        <i
-          style="
-            width:${pct}%
-          "
-        ></i>
-
-      </div>
-
-    </div>
-
-  `;
+    `;
 
 }
 
 
-
 /*
-  NEW DISPLAY
+  LATEST DRAW DISPLAY
 
-  Shows ONLY the most recent
-  draw.
+  This uses /api/track directly.
 
-  It does NOT delete any stored
-  draw and does NOT change the
-  worker, database or analysis.
+  It does NOT change:
+  - storage
+  - collection
+  - analysis
+  - automatic groups
+  - manual tracking
 */
 
 function renderLatestDraw(d){
@@ -1274,7 +989,6 @@ function renderLatestDraw(d){
     document.getElementById(
       'latestDraw'
     );
-
 
   if(!d){
 
@@ -1292,9 +1006,7 @@ function renderLatestDraw(d){
           class="empty"
           style="margin-top:12px"
         >
-
           Waiting for latest draw…
-
         </div>
 
       </div>
@@ -1305,38 +1017,30 @@ function renderLatestDraw(d){
 
   }
 
-
   const nums =
     Array.isArray(d.numbers)
-
     ? d.numbers
-
     : [];
-
 
   const bull =
     d.bullsEye ??
     d.bulls_eye ??
     null;
 
-
   const drawId =
     d.id ??
     d.draw_id ??
     '—';
-
 
   const drawDate =
     d.date ??
     d.draw_date ??
     '';
 
-
   const drawTime =
     d.time ??
     d.draw_time ??
     '';
-
 
   box.innerHTML = `
 
@@ -1351,18 +1055,16 @@ function renderLatestDraw(d){
         </div>
 
         <span class="ok">
-          ● Latest
+          ● Live
         </span>
 
       </div>
-
 
       <div class="latestDrawNumber">
 
         Draw ${drawId}
 
       </div>
-
 
       <div
         class="mut small"
@@ -1379,55 +1081,20 @@ function renderLatestDraw(d){
 
       </div>
 
-
       <div
-        class="
-          balls
-          latestBalls
-        "
+        class="balls latestBalls"
       >
 
         ${
-
           nums
-
           .map(
-            n => {
-
-              const isBull =
-                bull !== null &&
-                Number(n) ===
-                Number(bull);
-
-
-              return `
-
-                <span
-                  class="
-                    ball
-                    ${
-                      isBull
-                      ? 'latestBull'
-                      : ''
-                    }
-                  "
-                >
-
-                  ${n}
-
-                </span>
-
-              `;
-
-            }
+            n =>
+              `<span class="ball">${Number(n)}</span>`
           )
-
           .join('')
-
         }
 
       </div>
-
 
       <div class="small">
 
@@ -1436,12 +1103,7 @@ function renderLatestDraw(d){
         </b>
 
         <span class="blue">
-
-          ${
-            bull ??
-            '—'
-          }
-
+          ${bull ?? '—'}
         </span>
 
       </div>
@@ -1453,155 +1115,45 @@ function renderLatestDraw(d){
 }
 
 
+/*
+  IMPORTANT CHANGE:
 
-async function loadLatestDraw(
-  drawId
-){
+  We no longer use the draw ID
+  from /api/state to decide what
+  to display.
 
-  const box =
-    document.getElementById(
-      'latestDraw'
-    );
+  /api/track.latest is displayed
+  directly.
+*/
 
-
-  if(!drawId){
-
-    renderLatestDraw(null);
-
-    return;
-
-  }
-
+async function loadLatestDraw(){
 
   try{
 
-    /*
-      Ask only for the draw
-      immediately after
-      drawId - 1.
-
-      Therefore the page displays
-      ONE latest draw only.
-    */
-
-    const after =
-      Math.max(
-        0,
-        Number(drawId) - 1
-      );
-
-
     const j =
       await api(
-
-        '/api/track?after=' +
-        after +
-        '&ts=' +
+        '/api/track?after=0&ts=' +
         Date.now()
-
       );
 
+    if(j.latest){
 
-    const rows =
-      j.draws ||
-      [];
-
-
-    let draw =
-      rows.find(
-        d =>
-          Number(
-            d.id ??
-            d.draw_id
-          ) ===
-          Number(drawId)
+      renderLatestDraw(
+        j.latest
       );
-
-
-    /*
-      Fallback:
-      if the exact row is not
-      found, use the newest row
-      returned by the API.
-    */
-
-    if(
-      !draw &&
-      rows.length
-    ){
-
-      draw =
-        [...rows]
-        .sort(
-          (a,b) =>
-
-            Number(
-              b.id ??
-              b.draw_id
-            ) -
-
-            Number(
-              a.id ??
-              a.draw_id
-            )
-        )[0];
-
-    }
-
-
-    if(draw){
-
-      renderLatestDraw(draw);
 
     }else{
 
-      /*
-        Keep draw number visible
-        even if detailed numbers
-        are temporarily unavailable.
-      */
-
-      box.innerHTML = `
-
-        <div
-          class="card latestDrawCard"
-        >
-
-          <div class="sectionTitle">
-
-            <div class="title">
-              Latest Draw
-            </div>
-
-            <span class="ok">
-              ● Latest
-            </span>
-
-          </div>
-
-          <div class="latestDrawNumber">
-
-            Draw ${drawId}
-
-          </div>
-
-          <div
-            class="mut"
-            style="margin-top:10px"
-          >
-
-            Loading draw numbers…
-
-          </div>
-
-        </div>
-
-      `;
+      renderLatestDraw(null);
 
     }
 
-
   }catch(e){
+
+    const box =
+      document.getElementById(
+        'latestDraw'
+      );
 
     box.innerHTML = `
 
@@ -1617,9 +1169,7 @@ async function loadLatestDraw(
           class="bad"
           style="margin-top:12px"
         >
-
           ${esc(e.message)}
-
         </div>
 
       </div>
@@ -1631,72 +1181,52 @@ async function loadLatestDraw(
 }
 
 
-
 async function loadAuto(){
 
   const j =
     await api(
-
       '/api/state?ts=' +
       Date.now()
-
     );
-
 
   renderSummary(j);
 
 
   /*
-    Display only the newest
-    stored draw.
+    Latest visible draw is now
+    independent of /api/state.
   */
 
-  await loadLatestDraw(
-    j.latest?.draw_id
-  );
+  await loadLatestDraw();
 
 
   const S =
-    document
-    .getElementById(
+    document.getElementById(
       'status'
     );
 
-
-  if(
-    j.mode ===
-    'collecting'
-  ){
+  if(j.mode === 'collecting'){
 
     S.innerHTML =
       '<span class="blue">● Collecting</span>';
 
   }
 
-  else if(
-    j.mode ===
-    'preparing'
-  ){
+  else if(j.mode === 'preparing'){
 
     S.innerHTML =
       '<span class="amber">● Waiting for 180/180</span>';
 
   }
 
-  else if(
-    j.mode ===
-    'tracking'
-  ){
+  else if(j.mode === 'tracking'){
 
     S.innerHTML =
       '<span class="ok">● Automatic Tracking</span>';
 
   }
 
-  else if(
-    j.mode ===
-    'cleanup'
-  ){
+  else if(j.mode === 'cleanup'){
 
     S.innerHTML =
       '<span class="blue">● Cleanup</span>';
@@ -1712,51 +1242,42 @@ async function loadAuto(){
 
 
   const groups =
-    j.groups ||
-    [];
-
+    j.groups || [];
 
   document
-  .getElementById(
-    'autoContent'
-  )
-  .innerHTML =
+    .getElementById(
+      'autoContent'
+    )
+    .innerHTML =
 
-    groups.length
+      groups.length
 
-    ? groups
+      ? groups
+        .map(autoGroupCard)
+        .join('')
 
-      .map(
-        autoGroupCard
-      )
+      : `
 
-      .join('')
+        <div class="card">
 
-    : `
+          <div class="title">
+            Automatic Groups
+          </div>
 
-      <div class="card">
-
-        <div class="title">
-          Automatic Groups
-        </div>
-
-        <div
-          class="empty"
-          style="margin-top:12px"
-        >
-
-          Automatic groups
-          have not been
-          selected yet.
+          <div
+            class="empty"
+            style="margin-top:12px"
+          >
+            Automatic groups
+            have not been
+            selected yet.
+          </div>
 
         </div>
 
-      </div>
-
-    `;
+      `;
 
 }
-
 
 
 async function loadManual(){
@@ -1765,68 +1286,53 @@ async function loadManual(){
 
     const j =
       await api(
-
         '/api/group?ts=' +
         Date.now()
-
       );
 
-
     renderManual(j);
-
 
   }catch(e){
 
     document
-    .getElementById(
-      'manualContent'
-    )
-    .innerHTML = `
+      .getElementById(
+        'manualContent'
+      )
+      .innerHTML = `
 
-      <div
-        class="bad"
-        style="margin-top:12px"
-      >
+        <div
+          class="bad"
+          style="margin-top:12px"
+        >
+          ${esc(e.message)}
+        </div>
 
-        ${esc(e.message)}
-
-      </div>
-
-    `;
+      `;
 
   }
 
 }
 
 
-
 async function loadAll(){
 
-  busy(
-    'Refreshing…'
-  );
-
+  busy('Refreshing…');
 
   try{
 
     await Promise.all([
-
       loadAuto(),
       loadManual()
-
     ]);
-
 
   }catch(e){
 
     document
-    .getElementById(
-      'status'
-    )
-    .innerHTML =
-
-      `<span class="bad">${esc(e.message)}</span>`;
-
+      .getElementById(
+        'status'
+      )
+      .innerHTML =
+        `<span class="bad">${esc(e.message)}</span>`;
 
   }finally{
 
@@ -1837,24 +1343,18 @@ async function loadAll(){
 }
 
 
-
 /*
   OWNER KEY
 
   Saved only in this browser.
-
-  It is NOT written inside
-  the website source code.
 */
 
 function getOwnerSecret(){
 
   let secret =
-    localStorage
-    .getItem(
+    localStorage.getItem(
       'hotspot_owner_secret'
     );
-
 
   if(!secret){
 
@@ -1863,7 +1363,6 @@ function getOwnerSecret(){
         'Enter owner key'
       );
 
-
     if(!secret){
 
       throw Error(
@@ -1871,12 +1370,10 @@ function getOwnerSecret(){
       );
 
     }
-
 
     secret =
       secret.trim();
 
-
     if(!secret){
 
       throw Error(
@@ -1885,70 +1382,52 @@ function getOwnerSecret(){
 
     }
 
-
-    localStorage
-    .setItem(
+    localStorage.setItem(
       'hotspot_owner_secret',
       secret
     );
 
   }
 
-
   return secret;
 
 }
 
 
-
 async function startManual(){
 
   const msg =
-    document
-    .getElementById(
+    document.getElementById(
       'manualMsg'
     );
 
-
   const btn =
-    document
-    .getElementById(
+    document.getElementById(
       'manualStart'
     );
-
 
   try{
 
     const nums =
-
       [1,2,3,4,5]
-
       .map(
-        i => {
-
-          return Number(
-
+        i =>
+          Number(
             document
             .getElementById(
               'm' + i
             )
             .value
-
-          );
-
-        }
+          )
       );
 
-
     if(
-
       nums.some(
         n =>
           !Number.isInteger(n) ||
           n < 1 ||
           n > 80
       )
-
     ){
 
       throw Error(
@@ -1957,13 +1436,8 @@ async function startManual(){
 
     }
 
-
     if(
-
-      new Set(nums)
-      .size !==
-      5
-
+      new Set(nums).size !== 5
     ){
 
       throw Error(
@@ -1972,154 +1446,105 @@ async function startManual(){
 
     }
 
-
     const secret =
       getOwnerSecret();
 
-
-    btn.disabled =
-      true;
-
+    btn.disabled = true;
 
     msg.className =
       'mut small';
 
-
     msg.textContent =
       ' Starting…';
 
-
     const j =
       await api(
-
         '/api/group',
-
         {
+          method:'POST',
 
-          method:
-            'POST',
-
-
-          headers: {
-
+          headers:{
             'content-type':
               'application/json',
 
             'x-owner-secret':
               secret
-
           },
-
 
           body:
             JSON.stringify({
-
-              numbers:
-                nums
-
+              numbers:nums
             })
-
         }
-
       );
-
 
     msg.className =
       'ok small';
 
-
     msg.textContent =
-
       ` Tracking started after draw ${j.latest?.id ?? ''}.`;
-
 
     renderManual(j);
 
-
   }catch(e){
 
-
     if(
-
-      String(
-        e.message
-      )
-
+      String(e.message)
       .toLowerCase()
-
-      .includes(
-        'unauthorized'
-      )
-
+      .includes('unauthorized')
     ){
 
-      localStorage
-      .removeItem(
+      localStorage.removeItem(
         'hotspot_owner_secret'
       );
 
-
       msg.className =
         'bad small';
 
-
       msg.textContent =
-
         ' Wrong owner key. Press Start Tracking again and enter the correct key.';
-
 
     }else{
 
-
       msg.className =
         'bad small';
 
-
       msg.textContent =
-        ' ' +
-        e.message;
+        ' ' + e.message;
 
     }
 
-
   }finally{
 
-    btn.disabled =
-      false;
+    btn.disabled = false;
 
   }
 
 }
 
 
-
 document
-.getElementById(
-  'refresh'
-)
+.getElementById('refresh')
 .onclick =
   loadAll;
 
 
-
 document
-.getElementById(
-  'manualStart'
-)
+.getElementById('manualStart')
 .onclick =
   startManual;
 
 
+/*
+  Initial load
+*/
 
 loadAll();
 
 
-
 /*
-  Keep the existing automatic
-  page refresh interval.
-
-  This changes DISPLAY ONLY.
+  Existing automatic refresh:
+  every 4 minutes.
 */
 
 setInterval(
@@ -2127,9 +1552,7 @@ setInterval(
   240000
 );
 
-
 </script>
 
 </body>
-
 </html>
