@@ -3,18 +3,38 @@ const { getDraw, getMany, db, score } = require('./lib');
 const MANUAL_NAME = 'MANUAL Group';
 const MAX_BACKFILL = 80;
 
+function isAuthorized(req) {
+  const expected =
+    process.env.MANUAL_SECRET ||
+    process.env.WORKER_SECRET;
+
+  const supplied =
+    String(
+      req.headers['x-owner-secret'] || ''
+    );
+
+  return (
+    Boolean(expected) &&
+    supplied === expected
+  );
+}
+
 async function store(d) {
-  await db('hotspot_draws?on_conflict=draw_id', {
-    method: 'POST',
-    prefer: 'resolution=merge-duplicates,return=minimal',
-    body: {
-      draw_id: d.id,
-      draw_date: d.date,
-      draw_time: d.time,
-      numbers: d.numbers,
-      bulls_eye: d.bullsEye
+  await db(
+    'hotspot_draws?on_conflict=draw_id',
+    {
+      method: 'POST',
+      prefer:
+        'resolution=merge-duplicates,return=minimal',
+      body: {
+        draw_id: d.id,
+        draw_date: d.date,
+        draw_time: d.time,
+        numbers: d.numbers,
+        bulls_eye: d.bullsEye
+      }
     }
-  });
+  );
 }
 
 async function getManual() {
@@ -28,10 +48,14 @@ async function getManual() {
 }
 
 function validateNumbers(input) {
-  const nums = (Array.isArray(input) ? input : []).map(Number);
+  const nums =
+    (Array.isArray(input) ? input : [])
+      .map(Number);
 
   if (nums.length !== 5) {
-    throw Error('Enter exactly 5 numbers.');
+    throw Error(
+      'Enter exactly 5 numbers.'
+    );
   }
 
   if (
@@ -53,18 +77,21 @@ function validateNumbers(input) {
     );
   }
 
-  return [...nums].sort((a, b) => a - b);
+  return [...nums]
+    .sort((a, b) => a - b);
 }
 
 async function backfillManual(g) {
-  const latest = await getDraw(null);
+  const latest =
+    await getDraw(null);
 
   await store(latest);
 
-  let after = Number(
-    g.last_seen_draw_id ??
+  const after =
+    Number(
+      g.last_seen_draw_id ??
       g.start_draw_id
-  );
+    );
 
   if (after >= latest.id) {
     return {
@@ -73,64 +100,89 @@ async function backfillManual(g) {
     };
   }
 
-  const end = Math.min(
-    latest.id,
-    after + MAX_BACKFILL
-  );
+  const end =
+    Math.min(
+      latest.id,
+      after + MAX_BACKFILL
+    );
 
-  const ids = Array.from(
-    { length: end - after },
-    (_, i) => after + i + 1
-  );
+  const ids =
+    Array.from(
+      {
+        length:
+          end - after
+      },
+      (_, i) =>
+        after + i + 1
+    );
 
-  const draws = await getMany(ids);
+  const draws =
+    await getMany(ids);
 
   for (const d of draws) {
     await store(d);
 
-    const s = score(
-      d,
-      g.numbers
-    );
+    const s =
+      score(
+        d,
+        g.numbers
+      );
 
-    await db(
-      'tracker_results?on_conflict=group_id,draw_id',
-      {
-        method: 'POST',
-        prefer:
-          'resolution=merge-duplicates,return=minimal',
-        body: {
-          group_id: g.id,
-          draw_id: d.id,
-          hit_count: s.count,
-          hit_numbers: s.hit,
-          bulls_eye: s.bullsEye,
-          bulls_eye_match:
-            s.bullsEyeMatch
+    if (s.count >= 3) {
+      await db(
+        'tracker_results?on_conflict=group_id,draw_id',
+        {
+          method: 'POST',
+          prefer:
+            'resolution=merge-duplicates,return=minimal',
+          body: {
+            group_id:
+              g.id,
+
+            draw_id:
+              d.id,
+
+            hit_count:
+              s.count,
+
+            hit_numbers:
+              s.hit,
+
+            bulls_eye:
+              s.bullsEye,
+
+            bulls_eye_match:
+              s.bullsEyeMatch
+          }
         }
-      }
-    );
+      );
+    }
   }
 
   const last =
-    draws.at(-1)?.id ?? after;
+    draws.at(-1)?.id ??
+    after;
 
   await db(
     `tracker_groups?id=eq.${g.id}`,
     {
       method: 'PATCH',
-      prefer: 'return=minimal',
+      prefer:
+        'return=minimal',
       body: {
-        last_seen_draw_id: last
+        last_seen_draw_id:
+          last
       }
     }
   );
 
-  g.last_seen_draw_id = last;
+  g.last_seen_draw_id =
+    last;
 
   return {
     latest,
-    processed: draws.length
+    processed:
+      draws.length
   };
 }
 
@@ -141,7 +193,9 @@ async function readManual(g) {
     )) || [];
 
   const ids =
-    rows.map(r => r.draw_id);
+    rows.map(
+      r => r.draw_id
+    );
 
   let meta = {};
 
@@ -153,40 +207,61 @@ async function readManual(g) {
         )})`
       )) || [];
 
-    meta = Object.fromEntries(
-      ds.map(d => [
-        d.draw_id,
-        d
-      ])
-    );
+    meta =
+      Object.fromEntries(
+        ds.map(
+          d => [
+            d.draw_id,
+            d
+          ]
+        )
+      );
   }
 
-  rows = rows.map(r => ({
-    ...r,
-    date:
-      meta[r.draw_id]
-        ?.draw_date || '',
-    time:
-      meta[r.draw_id]
-        ?.draw_time || ''
-  }));
+  rows =
+    rows.map(
+      r => ({
+        ...r,
+
+        date:
+          meta[r.draw_id]
+            ?.draw_date ||
+          '',
+
+        time:
+          meta[r.draw_id]
+            ?.draw_time ||
+          ''
+      })
+    );
 
   return {
-    id: g.id,
-    numbers: g.numbers,
+    id:
+      g.id,
+
+    numbers:
+      g.numbers,
+
     startDrawId:
       g.start_draw_id,
+
     lastSeenDrawId:
       g.last_seen_draw_id,
-    createdAt: g.created_at,
-    matches: rows
+
+    createdAt:
+      g.created_at,
+
+    matches:
+      rows
   };
 }
 
-module.exports = async (
+module.exports =
+async (
   req,
   res
 ) => {
+
   res.setHeader(
     'Cache-Control',
     'no-store,max-age=0'
@@ -194,27 +269,37 @@ module.exports = async (
 
   try {
 
-    /*
-      START / REPLACE MANUAL GROUP
-    */
-    if (req.method === 'POST') {
+    if (
+      req.method ===
+      'POST'
+    ) {
+
+      if (
+        !isAuthorized(req)
+      ) {
+        return res
+          .status(401)
+          .json({
+            ok: false,
+            error:
+              'Unauthorized'
+          });
+      }
 
       const numbers =
         validateNumbers(
-          req.body?.numbers
+          req.body
+            ?.numbers
         );
 
-      /*
-        IMPORTANT:
-        Tracking starts from the latest
-        completed draw.
-
-        Previous draws are NOT counted.
-      */
       const latest =
-        await getDraw(null);
+        await getDraw(
+          null
+        );
 
-      await store(latest);
+      await store(
+        latest
+      );
 
       const old =
         await getManual();
@@ -223,14 +308,12 @@ module.exports = async (
 
       if (old) {
 
-        /*
-          Remove previous manual
-          tracking results.
-        */
         await db(
           `tracker_results?group_id=eq.${old.id}`,
           {
-            method: 'DELETE',
+            method:
+              'DELETE',
+
             prefer:
               'return=minimal'
           }
@@ -239,18 +322,18 @@ module.exports = async (
         await db(
           `tracker_groups?id=eq.${old.id}`,
           {
-            method: 'PATCH',
+            method:
+              'PATCH',
+
             prefer:
               'return=minimal',
+
             body: {
               numbers,
-              active: true,
 
-              /*
-                This is the key:
-                results begin AFTER
-                this draw.
-              */
+              active:
+                true,
+
               start_draw_id:
                 latest.id,
 
@@ -262,10 +345,15 @@ module.exports = async (
 
         group = {
           ...old,
+
           numbers,
-          active: true,
+
+          active:
+            true,
+
           start_draw_id:
             latest.id,
+
           last_seen_draw_id:
             latest.id
         };
@@ -276,16 +364,24 @@ module.exports = async (
           await db(
             'tracker_groups',
             {
-              method: 'POST',
+              method:
+                'POST',
+
               prefer:
                 'return=representation',
+
               body: {
                 name:
                   MANUAL_NAME,
+
                 numbers,
-                active: true,
+
+                active:
+                  true,
+
                 start_draw_id:
                   latest.id,
+
                 last_seen_draw_id:
                   latest.id
               }
@@ -310,20 +406,21 @@ module.exports = async (
             ),
 
           latest: {
-            id: latest.id,
+            id:
+              latest.id,
+
             date:
               latest.date,
+
             time:
               latest.time
           }
         });
     }
 
-    /*
-      READ + UPDATE MANUAL RESULTS
-    */
     if (
-      req.method !== 'GET'
+      req.method !==
+      'GET'
     ) {
       return res
         .status(405)
@@ -349,10 +446,6 @@ module.exports = async (
         });
     }
 
-    /*
-      Catch up all new draws
-      after manual numbers were entered.
-    */
     const sync =
       await backfillManual(
         group
@@ -374,8 +467,10 @@ module.exports = async (
         latest: {
           id:
             sync.latest.id,
+
           date:
             sync.latest.date,
+
           time:
             sync.latest.time
         }
