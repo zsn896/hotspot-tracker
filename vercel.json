@@ -6,12 +6,6 @@
     "api/state.js": {"maxDuration":30},
     "api/group.js": {"maxDuration":30}
   },
-  "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "*/4 * * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/api/(.*)",
