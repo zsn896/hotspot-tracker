@@ -209,10 +209,6 @@ h1{
   text-decoration:none
 }
 
-.sourceLink:active{
-  opacity:.75
-}
-
 .toolbar{
   display:flex;
   align-items:center;
@@ -435,10 +431,7 @@ h1{
 }
 
 .groupFiveHero{
-  border:2px solid rgba(47,128,255,.55);
-  box-shadow:
-    0 0 28px rgba(47,128,255,.10),
-    var(--shadow)
+  border:2px solid rgba(47,128,255,.55)
 }
 
 .fiveHeader{
@@ -597,6 +590,8 @@ h1{
   background:rgba(7,17,31,.22)
 }
 
+/* MANUAL */
+
 .manualShell{
   border:2px solid rgba(34,197,94,.55)
 }
@@ -695,6 +690,44 @@ h1{
   font-size:12px
 }
 
+/* NEW COMPACT MANUAL SUMMARY */
+
+.manualSummary{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr auto;
+  align-items:center;
+  gap:8px;
+  margin-top:12px;
+  padding:11px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(7,17,31,.30)
+}
+
+.manualMetric{
+  text-align:center
+}
+
+.manualMetricLabel{
+  font-size:11px;
+  color:var(--mut)
+}
+
+.manualMetricValue{
+  margin-top:4px;
+  font-size:18px;
+  font-weight:950
+}
+
+.manualResults{
+  display:none;
+  margin-top:10px
+}
+
+.manualResults.open{
+  display:block
+}
+
 footer{
   margin-top:22px;
   text-align:center;
@@ -746,6 +779,18 @@ footer{
   .groupSummary .groupNameCell,
   .groupSummary .groupNumbersCell{
     grid-column:1/-1
+  }
+
+  .manualSummary{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .manualSummary .manualShowCell{
+    grid-column:1/-1
+  }
+
+  .manualShowCell .toggleBtn{
+    width:100%
   }
 
   .ball{
@@ -1054,12 +1099,8 @@ async function api(
   let j;
 
   try{
-
-    j =
-      await r.json();
-
+    j = await r.json();
   }catch{
-
     throw Error(
       'Invalid server response'
     );
@@ -1070,7 +1111,6 @@ async function api(
     ||
     j?.ok === false
   ){
-
     throw Error(
       j?.error
       ||
@@ -1113,7 +1153,6 @@ function updateClock(){
         }
       );
 }
-
 
 updateClock();
 
@@ -1290,7 +1329,6 @@ function renderSummary(j){
       <div class="stats">
 
         <div class="stat">
-
           <div class="statLabel">
             Mode
           </div>
@@ -1298,11 +1336,9 @@ function renderSummary(j){
           <div class="big cBlue">
             ${esc(j?.mode || '—')}
           </div>
-
         </div>
 
         <div class="stat">
-
           <div class="statLabel">
             Collection
           </div>
@@ -1310,11 +1346,9 @@ function renderSummary(j){
           <div class="big cGreen">
             ${have}/${need}
           </div>
-
         </div>
 
         <div class="stat">
-
           <div class="statLabel">
             Remaining
           </div>
@@ -1322,11 +1356,9 @@ function renderSummary(j){
           <div class="big cOrange">
             ${remaining}
           </div>
-
         </div>
 
         <div class="stat">
-
           <div class="statLabel">
             Stored Draw
           </div>
@@ -1340,7 +1372,6 @@ function renderSummary(j){
               '—'
             }
           </div>
-
         </div>
 
       </div>
@@ -1595,7 +1626,7 @@ function renderLatestDraw(d){
 }
 
 
-/* RESULT HELPERS */
+/* RESULTS */
 
 function scoreClass(n){
 
@@ -1740,20 +1771,6 @@ function resultCard(
           }
         </b>
 
-        ${
-          r.bulls_eye_match
-            ?
-            `
-            &nbsp; • &nbsp;
-
-            <span class="blue">
-              Bulls-eye ${esc(r.bulls_eye)}
-            </span>
-            `
-            :
-            ''
-        }
-
       </div>
 
     </div>
@@ -1785,13 +1802,6 @@ function importantResults(g){
 }
 
 
-/*
-  BEST RESULT
-
-  3/5, 4/5 or 5/5:
-  show the newest time for the highest score reached.
-*/
-
 function bestInfo(results){
 
   const rows =
@@ -1814,10 +1824,6 @@ function bestInfo(results){
       );
   }
 
-  /*
-    No time needed below 3/5.
-  */
-
   if(best < 3){
 
     return {
@@ -1826,11 +1832,6 @@ function bestInfo(results){
       drawId:null
     };
   }
-
-  /*
-    If the same Best happened several times,
-    always show the NEWEST occurrence.
-  */
 
   const match =
     rows
@@ -1915,13 +1916,11 @@ function renderGroupFive(state){
 
     root.innerHTML =
       `
-
       <section class="card groupFiveHero">
 
         <div class="fiveHeader">
 
           <div>
-
             <div class="fiveTitle">
               GROUP FIVE
             </div>
@@ -1929,7 +1928,6 @@ function renderGroupFive(state){
             <div class="fiveRule">
               Analyze latest 50 draws → Track next 20
             </div>
-
           </div>
 
           <span class="pill">
@@ -1941,7 +1939,6 @@ function renderGroupFive(state){
         <div class="fiveStats">
 
           <div class="fiveStat">
-
             <div class="fiveStatLabel">
               Analysis
             </div>
@@ -1949,11 +1946,9 @@ function renderGroupFive(state){
             <div class="fiveStatValue cBlue">
               ${have}/50
             </div>
-
           </div>
 
           <div class="fiveStat">
-
             <div class="fiveStatLabel">
               Remaining
             </div>
@@ -1961,11 +1956,9 @@ function renderGroupFive(state){
             <div class="fiveStatValue cOrange">
               ${remain}
             </div>
-
           </div>
 
           <div class="fiveStat">
-
             <div class="fiveStatLabel">
               Tracking
             </div>
@@ -1973,11 +1966,9 @@ function renderGroupFive(state){
             <div class="fiveStatValue">
               0/20
             </div>
-
           </div>
 
           <div class="fiveStat">
-
             <div class="fiveStatLabel">
               Cycle
             </div>
@@ -1985,7 +1976,6 @@ function renderGroupFive(state){
             <div class="fiveStatValue cPurple">
               ${top.cycle ?? '—'}
             </div>
-
           </div>
 
         </div>
@@ -2057,7 +2047,6 @@ function renderGroupFive(state){
       <div class="fiveHeader">
 
         <div>
-
           <div class="fiveTitle">
             GROUP FIVE
           </div>
@@ -2067,7 +2056,6 @@ function renderGroupFive(state){
             → Track next 20
             → Renew
           </div>
-
         </div>
 
         <span class="pill">
@@ -2098,7 +2086,6 @@ function renderGroupFive(state){
       <div class="fiveStats">
 
         <div class="fiveStat">
-
           <div class="fiveStatLabel">
             Progress
           </div>
@@ -2106,11 +2093,9 @@ function renderGroupFive(state){
           <div class="fiveStatValue cBlue">
             ${tracked}/20
           </div>
-
         </div>
 
         <div class="fiveStat">
-
           <div class="fiveStatLabel">
             Remaining
           </div>
@@ -2118,11 +2103,9 @@ function renderGroupFive(state){
           <div class="fiveStatValue cOrange">
             ${remaining}
           </div>
-
         </div>
 
         <div class="fiveStat">
-
           <div class="fiveStatLabel">
             Best
           </div>
@@ -2144,11 +2127,9 @@ function renderGroupFive(state){
               :
               ''
           }
-
         </div>
 
         <div class="fiveStat">
-
           <div class="fiveStatLabel">
             Cycle
           </div>
@@ -2156,7 +2137,6 @@ function renderGroupFive(state){
           <div class="fiveStatValue cPurple">
             ${cycle}
           </div>
-
         </div>
 
       </div>
@@ -2255,7 +2235,7 @@ function toggleFiveResults(){
 }
 
 
-/* OTHER AUTOMATIC GROUPS */
+/* AUTOMATIC GROUPS */
 
 function groupLabel(
   g,
@@ -2335,14 +2315,7 @@ function automaticRow(
           </div>
 
           <div class="groupName">
-            ${
-              esc(
-                groupLabel(
-                  g,
-                  index
-                )
-              )
-            }
+            ${esc(groupLabel(g,index))}
           </div>
 
         </div>
@@ -2547,7 +2520,9 @@ function renderAutomaticGroups(state){
 }
 
 
-/* MANUAL GROUPS */
+/* =========================================================
+   MANUAL GROUPS - COMPACT VERSION
+========================================================= */
 
 function normalizeManuals(j){
 
@@ -2591,6 +2566,68 @@ function fillInputs(
         '';
     }
   }
+}
+
+
+function manualImportantMatches(m){
+
+  return (
+    Array.isArray(m?.matches)
+      ?
+      m.matches
+      :
+      []
+  )
+    .filter(
+      r =>
+        Number(
+          r.hit_count || 0
+        ) >= 3
+    )
+    .sort(
+      (a,b) =>
+        Number(
+          b.draw_id || 0
+        )
+        -
+        Number(
+          a.draw_id || 0
+        )
+    );
+}
+
+
+function toggleManualResults(slot){
+
+  const box =
+    document.getElementById(
+      `manualResults${slot}`
+    );
+
+  const btn =
+    document.getElementById(
+      `manualToggle${slot}`
+    );
+
+  if(!box || !btn){
+    return;
+  }
+
+  const open =
+    box.classList.contains(
+      'open'
+    );
+
+  box.classList.toggle(
+    'open'
+  );
+
+  btn.textContent =
+    open
+      ?
+      'Show Results'
+      :
+      'Hide Results';
 }
 
 
@@ -2641,18 +2678,6 @@ function renderManualSlot(
       m.numbers || []
     ).map(Number);
 
-  const matches =
-    (
-      m.matches || []
-    )
-    .slice()
-    .sort(
-      (a,b) =>
-        Number(b.draw_id)
-        -
-        Number(a.draw_id)
-    );
-
   fillInputs(
     slot,
     nums
@@ -2683,6 +2708,12 @@ function renderManualSlot(
       '● Stopped';
   }
 
+  const matches =
+    manualImportantMatches(m);
+
+  const bi =
+    bestInfo(matches);
+
   content.innerHTML =
     `
 
@@ -2698,27 +2729,85 @@ function renderManualSlot(
 
     </div>
 
-    <div
-      class="balls"
-      style="margin-top:10px"
-    >
 
-      ${
-        nums
-          .map(
-            n =>
-              `
-              <span class="ball">
-                ${n}
-              </span>
-              `
-          )
-          .join('')
-      }
+    <div class="manualSummary">
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          Best
+        </div>
+
+        <div class="manualMetricValue cGreen">
+          ${bi.best}/5
+        </div>
+
+        ${
+          bi.best >= 3
+          &&
+          bi.time
+            ?
+            `
+            <div class="bestTime">
+              ${esc(bi.time)}
+            </div>
+            `
+            :
+            ''
+        }
+
+      </div>
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          3/5+
+        </div>
+
+        <div class="manualMetricValue cBlue">
+          ${matches.length}
+        </div>
+
+      </div>
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          Last Seen
+        </div>
+
+        <div class="manualMetricValue cPurple">
+          ${
+            m.lastSeenDrawId
+            ??
+            '—'
+          }
+        </div>
+
+      </div>
+
+
+      <div class="manualShowCell">
+
+        <button
+          class="toggleBtn"
+          id="manualToggle${slot}"
+          onclick="toggleManualResults(${slot})"
+        >
+          Show Results
+        </button>
+
+      </div>
 
     </div>
 
-    <div style="margin-top:10px">
+
+    <div
+      class="manualResults"
+      id="manualResults${slot}"
+    >
 
       ${
         matches.length
