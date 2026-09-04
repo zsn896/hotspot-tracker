@@ -20,10 +20,18 @@ const MAX_BACKFILL = 80;
 ========================================================= */
 
 function normalizeSlot(value) {
-  const slot = Number(value ?? 1);
+  const slot =
+    Number(
+      value ?? 1
+    );
 
-  if (slot !== 1 && slot !== 2) {
-    throw new Error('Manual slot must be 1 or 2.');
+  if (
+    slot !== 1 &&
+    slot !== 2
+  ) {
+    throw new Error(
+      'Manual slot must be 1 or 2.'
+    );
   }
 
   return slot;
@@ -31,17 +39,24 @@ function normalizeSlot(value) {
 
 
 function getManualName(slot) {
-  return MANUAL_NAMES[normalizeSlot(slot)];
+  return MANUAL_NAMES[
+    normalizeSlot(slot)
+  ];
 }
 
 
 function validateNumbers(input) {
-  const nums = Array.isArray(input)
-    ? input.map(Number)
-    : [];
+  const nums =
+    Array.isArray(input)
+      ? input.map(Number)
+      : [];
 
-  if (nums.length !== 5) {
-    throw new Error('Enter exactly 5 numbers.');
+  if (
+    nums.length !== 5
+  ) {
+    throw new Error(
+      'Enter exactly 5 numbers.'
+    );
   }
 
   if (
@@ -57,32 +72,48 @@ function validateNumbers(input) {
     );
   }
 
-  if (new Set(nums).size !== 5) {
+  if (
+    new Set(nums).size !== 5
+  ) {
     throw new Error(
       'The 5 numbers must be different.'
     );
   }
 
   return [...nums].sort(
-    (a, b) => a - b
+    (a, b) =>
+      a - b
   );
 }
 
 
 function sameNumbers(a, b) {
-  const aa = Array.isArray(a)
-    ? a.map(Number).sort((x, y) => x - y)
-    : [];
+  const aa =
+    Array.isArray(a)
+      ? a
+          .map(Number)
+          .sort(
+            (x, y) =>
+              x - y
+          )
+      : [];
 
-  const bb = Array.isArray(b)
-    ? b.map(Number).sort((x, y) => x - y)
-    : [];
+  const bb =
+    Array.isArray(b)
+      ? b
+          .map(Number)
+          .sort(
+            (x, y) =>
+              x - y
+          )
+      : [];
 
   return (
     aa.length === 5 &&
     bb.length === 5 &&
     aa.every(
-      (n, i) => n === bb[i]
+      (n, i) =>
+        n === bb[i]
     )
   );
 }
@@ -93,23 +124,36 @@ function sameNumbers(a, b) {
 ========================================================= */
 
 async function storeDraw(draw) {
-  if (!draw?.id) {
+  if (
+    !draw?.id
+  ) {
     return;
   }
 
   await db(
     'hotspot_draws?on_conflict=draw_id',
     {
-      method: 'POST',
+      method:
+        'POST',
+
       prefer:
         'resolution=merge-duplicates,return=minimal',
 
       body: {
-        draw_id: draw.id,
-        draw_date: draw.date,
-        draw_time: draw.time,
-        numbers: draw.numbers,
-        bulls_eye: draw.bullsEye
+        draw_id:
+          draw.id,
+
+        draw_date:
+          draw.date,
+
+        draw_time:
+          draw.time,
+
+        numbers:
+          draw.numbers,
+
+        bulls_eye:
+          draw.bullsEye
       }
     }
   );
@@ -122,7 +166,9 @@ async function storeDraw(draw) {
 
 async function getManual(slot) {
   const name =
-    getManualName(slot);
+    getManualName(
+      slot
+    );
 
   const rows =
     await db(
@@ -131,12 +177,71 @@ async function getManual(slot) {
       )}&order=id.desc&limit=1`
     );
 
-  return rows?.[0] || null;
+  return (
+    rows?.[0] ||
+    null
+  );
+}
+
+
+/* =========================================================
+   SAFE DRAW FETCH
+
+   First try the batch result.
+   If one draw is missing, retry that draw individually.
+========================================================= */
+
+async function getSafeDraw(
+  id,
+  batchMap
+) {
+  const fromBatch =
+    batchMap.get(
+      Number(id)
+    );
+
+  if (
+    fromBatch?.id
+  ) {
+    return fromBatch;
+  }
+
+  try {
+    const direct =
+      await getDraw(
+        Number(id)
+      );
+
+    if (
+      direct?.id ===
+      Number(id)
+    ) {
+      return direct;
+    }
+  } catch (_) {
+    // Stop safely in caller.
+  }
+
+  return null;
 }
 
 
 /* =========================================================
    TRACKING / BACKFILL
+
+   IMPORTANT:
+   last_seen_draw_id can advance ONLY through
+   a continuous sequence of confirmed draws.
+
+   Example:
+   expected: 100,101,102,103
+
+   if 102 is missing:
+   process 100,101
+   STOP
+   last_seen = 101
+
+   Never jump to 103.
 ========================================================= */
 
 async function backfillManual(
@@ -148,66 +253,184 @@ async function backfillManual(
     !group.active
   ) {
     return {
-      latest: suppliedLatest,
-      processed: 0
+      latest:
+        suppliedLatest,
+
+      processed:
+        0,
+
+      stoppedAtMissing:
+        null
     };
   }
+
 
   const latest =
     suppliedLatest ||
-    await getDraw(null);
+    await getDraw(
+      null
+    );
 
-  await storeDraw(latest);
+
+  await storeDraw(
+    latest
+  );
+
 
   const after =
     Number(
-      group.last_seen_draw_id ??
-      group.start_draw_id ??
+      group.last_seen_draw_id
+      ??
+      group.start_draw_id
+      ??
       latest.id
     );
 
+
   if (
     !Number.isFinite(after) ||
-    after >= latest.id
+    after >=
+    Number(latest.id)
   ) {
     return {
       latest,
-      processed: 0
+
+      processed:
+        0,
+
+      stoppedAtMissing:
+        null
     };
   }
+
 
   const end =
     Math.min(
-      latest.id,
-      after + MAX_BACKFILL
+      Number(
+        latest.id
+      ),
+      after +
+      MAX_BACKFILL
     );
 
-  const count =
-    end - after;
 
-  if (count <= 0) {
+  const count =
+    end -
+    after;
+
+
+  if (
+    count <= 0
+  ) {
     return {
       latest,
-      processed: 0
+
+      processed:
+        0,
+
+      stoppedAtMissing:
+        null
     };
   }
 
+
   const ids =
     Array.from(
-      { length: count },
+      {
+        length:
+          count
+      },
       (_, i) =>
-        after + i + 1
+        after +
+        i +
+        1
     );
 
-  const draws =
-    await getMany(ids);
 
-  for (const draw of draws) {
-    if (!draw?.id) {
-      continue;
+  let batchDraws = [];
+
+  try {
+    batchDraws =
+      (
+        await getMany(
+          ids
+        )
+      )
+      ||
+      [];
+  } catch (_) {
+    batchDraws = [];
+  }
+
+
+  const batchMap =
+    new Map(
+      batchDraws
+        .filter(
+          d =>
+            d?.id
+        )
+        .map(
+          d => [
+            Number(d.id),
+            d
+          ]
+        )
+    );
+
+
+  let lastProcessed =
+    after;
+
+  let processed =
+    0;
+
+  let stoppedAtMissing =
+    null;
+
+
+  /*
+    STRICTLY process IDs in order.
+  */
+
+  for (
+    const expectedId
+    of ids
+  ) {
+
+    const draw =
+      await getSafeDraw(
+        expectedId,
+        batchMap
+      );
+
+
+    /*
+      If this exact draw is unavailable:
+      STOP HERE.
+
+      Do NOT process anything after it.
+      Do NOT advance last_seen past it.
+    */
+
+    if (
+      !draw ||
+      Number(draw.id) !==
+      Number(expectedId)
+    ) {
+      stoppedAtMissing =
+        Number(
+          expectedId
+        );
+
+      break;
     }
 
-    await storeDraw(draw);
+
+    await storeDraw(
+      draw
+    );
+
 
     const result =
       score(
@@ -215,60 +438,105 @@ async function backfillManual(
         group.numbers
       );
 
+
+    /*
+      Only 3/5 or better is stored
+      in tracker_results.
+
+      But every confirmed draw still
+      advances last_seen_draw_id.
+    */
+
     if (
-      Number(result?.count || 0) >= 3
+      Number(
+        result?.count || 0
+      ) >= 3
     ) {
       await db(
         'tracker_results?on_conflict=group_id,draw_id',
         {
-          method: 'POST',
+          method:
+            'POST',
 
           prefer:
             'resolution=merge-duplicates,return=minimal',
 
           body: {
-            group_id: group.id,
-            draw_id: draw.id,
+            group_id:
+              group.id,
+
+            draw_id:
+              draw.id,
+
             hit_count:
               result.count,
+
             hit_numbers:
               result.hit,
+
             bulls_eye:
               result.bullsEye,
+
             bulls_eye_match:
               result.bullsEyeMatch
           }
         }
       );
     }
+
+
+    /*
+      Advance exactly one confirmed draw.
+    */
+
+    lastProcessed =
+      Number(
+        draw.id
+      );
+
+    processed++;
   }
 
-  const lastProcessed =
-    draws?.at(-1)?.id ??
-    after;
 
-  await db(
-    `tracker_groups?id=eq.${group.id}`,
-    {
-      method: 'PATCH',
-      prefer: 'return=minimal',
+  /*
+    Only update last_seen when we actually
+    confirmed at least one new sequential draw.
+  */
 
-      body: {
-        last_seen_draw_id:
-          lastProcessed
+  if (
+    lastProcessed >
+    after
+  ) {
+    await db(
+      `tracker_groups?id=eq.${group.id}`,
+      {
+        method:
+          'PATCH',
+
+        prefer:
+          'return=minimal',
+
+        body: {
+          last_seen_draw_id:
+            lastProcessed
+        }
       }
-    }
-  );
+    );
 
-  group.last_seen_draw_id =
-    lastProcessed;
+
+    group.last_seen_draw_id =
+      lastProcessed;
+  }
+
 
   return {
     latest,
-    processed:
-      Array.isArray(draws)
-        ? draws.length
-        : 0
+
+    processed,
+
+    lastProcessed,
+
+    stoppedAtMissing
   };
 }
 
@@ -281,27 +549,42 @@ async function readManual(
   group,
   slot
 ) {
-  if (!group) {
+  if (
+    !group
+  ) {
     return null;
   }
+
 
   let rows =
     (
       await db(
         `tracker_results?select=draw_id,hit_count,hit_numbers,bulls_eye,bulls_eye_match,created_at&group_id=eq.${group.id}&hit_count=gte.3&order=draw_id.desc&limit=100`
       )
-    ) || [];
+    )
+    ||
+    [];
+
 
   const ids =
     rows
       .map(
-        r => Number(r.draw_id)
+        r =>
+          Number(
+            r.draw_id
+          )
       )
-      .filter(Number.isFinite);
+      .filter(
+        Number.isFinite
+      );
+
 
   let meta = {};
 
-  if (ids.length) {
+
+  if (
+    ids.length
+  ) {
     const draws =
       (
         await db(
@@ -309,18 +592,24 @@ async function readManual(
             ','
           )})`
         )
-      ) || [];
+      )
+      ||
+      [];
+
 
     meta =
       Object.fromEntries(
         draws.map(
           draw => [
-            Number(draw.draw_id),
+            Number(
+              draw.draw_id
+            ),
             draw
           ]
         )
       );
   }
+
 
   rows =
     rows.map(
@@ -329,32 +618,46 @@ async function readManual(
 
         date:
           meta[
-            Number(row.draw_id)
+            Number(
+              row.draw_id
+            )
           ]?.draw_date ||
           '',
 
         time:
           meta[
-            Number(row.draw_id)
+            Number(
+              row.draw_id
+            )
           ]?.draw_time ||
           ''
       })
     );
 
+
   return {
-    id: group.id,
+    id:
+      group.id,
 
     slot,
 
-    name: group.name,
+    name:
+      group.name,
 
     numbers:
-      Array.isArray(group.numbers)
-        ? group.numbers.map(Number)
-        : [],
+      Array.isArray(
+        group.numbers
+      )
+        ?
+        group.numbers
+          .map(Number)
+        :
+        [],
 
     active:
-      Boolean(group.active),
+      Boolean(
+        group.active
+      ),
 
     startDrawId:
       group.start_draw_id,
@@ -373,10 +676,15 @@ async function readManual(
 
 async function readAllManuals() {
   const group1 =
-    await getManual(1);
+    await getManual(
+      1
+    );
 
   const group2 =
-    await getManual(2);
+    await getManual(
+      2
+    );
+
 
   return [
     await readManual(
@@ -401,22 +709,28 @@ async function startManual(
   numbers
 ) {
   const latest =
-    await getDraw(null);
+    await getDraw(
+      null
+    );
 
-  await storeDraw(latest);
+
+  await storeDraw(
+    latest
+  );
+
 
   const old =
-    await getManual(slot);
+    await getManual(
+      slot
+    );
 
 
-  /*
-    CASE 1:
-    Same numbers are already ACTIVE.
+  /* =====================================================
+     CASE 1:
+     Same numbers already active.
+     Keep original start and results.
+  ===================================================== */
 
-    Do not reset start draw.
-    Do not delete results.
-    Just synchronize missing future draws.
-  */
   if (
     old &&
     old.active &&
@@ -431,15 +745,20 @@ async function startManual(
         latest
       );
 
+
     const manuals =
       await readAllManuals();
 
+
     return {
-      ok: true,
+      ok:
+        true,
 
-      unchanged: true,
+      unchanged:
+        true,
 
-      resumed: false,
+      resumed:
+        false,
 
       message:
         'These numbers are already being tracked. Original start draw was preserved.',
@@ -447,34 +766,38 @@ async function startManual(
       manuals,
 
       manual:
-        manuals[slot - 1],
+        manuals[
+          slot - 1
+        ],
 
       processed:
         sync.processed,
 
+      stoppedAtMissing:
+        sync.stoppedAtMissing,
+
       latest: {
-        id: latest.id,
-        date: latest.date,
-        time: latest.time
+        id:
+          latest.id,
+
+        date:
+          latest.date,
+
+        time:
+          latest.time
       }
     };
   }
 
 
-  /*
-    CASE 2:
-    Group exists but was STOPPED,
-    and the numbers are the SAME.
+  /* =====================================================
+     CASE 2:
+     Same numbers, but previously stopped.
 
-    Resume tracking WITHOUT:
-    - deleting old results
-    - resetting original start_draw_id
+     Resume from NOW.
+     Draws while stopped are intentionally skipped.
+  ===================================================== */
 
-    Important:
-    last_seen_draw_id becomes latest.id,
-    so draws that happened while stopped
-    are NOT counted.
-  */
   if (
     old &&
     !old.active &&
@@ -486,31 +809,36 @@ async function startManual(
     await db(
       `tracker_groups?id=eq.${old.id}`,
       {
-        method: 'PATCH',
-        prefer: 'return=minimal',
+        method:
+          'PATCH',
+
+        prefer:
+          'return=minimal',
 
         body: {
-          active: true,
+          active:
+            true,
 
-          /*
-            Skip draws that happened
-            while tracking was stopped.
-          */
           last_seen_draw_id:
             latest.id
         }
       }
     );
 
+
     const manuals =
       await readAllManuals();
 
+
     return {
-      ok: true,
+      ok:
+        true,
 
-      unchanged: false,
+      unchanged:
+        false,
 
-      resumed: true,
+      resumed:
+        true,
 
       message:
         'Manual tracking resumed. Previous results were preserved.',
@@ -518,46 +846,65 @@ async function startManual(
       manuals,
 
       manual:
-        manuals[slot - 1],
+        manuals[
+          slot - 1
+        ],
 
       latest: {
-        id: latest.id,
-        date: latest.date,
-        time: latest.time
+        id:
+          latest.id,
+
+        date:
+          latest.date,
+
+        time:
+          latest.time
       }
     };
   }
 
 
-  /*
-    CASE 3:
-    Existing slot but user entered
-    DIFFERENT numbers.
+  /* =====================================================
+     CASE 3:
+     Different numbers in existing slot.
 
-    This is a new manual test for
-    that slot, so old manual results
-    for that slot are removed.
-  */
-  if (old) {
+     New manual test.
+     Delete previous results for this slot.
+  ===================================================== */
+
+  if (
+    old
+  ) {
     await db(
       `tracker_results?group_id=eq.${old.id}`,
       {
-        method: 'DELETE',
-        prefer: 'return=minimal'
+        method:
+          'DELETE',
+
+        prefer:
+          'return=minimal'
       }
     );
+
 
     await db(
       `tracker_groups?id=eq.${old.id}`,
       {
-        method: 'PATCH',
-        prefer: 'return=minimal',
+        method:
+          'PATCH',
+
+        prefer:
+          'return=minimal',
 
         body: {
           numbers,
-          active: true,
+
+          active:
+            true,
+
           start_draw_id:
             latest.id,
+
           last_seen_draw_id:
             latest.id
         }
@@ -566,25 +913,30 @@ async function startManual(
 
   } else {
 
-    /*
-      CASE 4:
-      No group exists in this slot.
-      Create it.
-    */
+    /* ===================================================
+       CASE 4:
+       Empty slot.
+    =================================================== */
+
     await db(
       'tracker_groups',
       {
-        method: 'POST',
+        method:
+          'POST',
+
         prefer:
           'return=representation',
 
         body: {
           name:
-            getManualName(slot),
+            getManualName(
+              slot
+            ),
 
           numbers,
 
-          active: true,
+          active:
+            true,
 
           start_draw_id:
             latest.id,
@@ -596,15 +948,20 @@ async function startManual(
     );
   }
 
+
   const manuals =
     await readAllManuals();
 
+
   return {
-    ok: true,
+    ok:
+      true,
 
-    unchanged: false,
+    unchanged:
+      false,
 
-    resumed: false,
+    resumed:
+      false,
 
     message:
       'Manual tracking started. Only future draws will be counted.',
@@ -612,12 +969,19 @@ async function startManual(
     manuals,
 
     manual:
-      manuals[slot - 1],
+      manuals[
+        slot - 1
+      ],
 
     latest: {
-      id: latest.id,
-      date: latest.date,
-      time: latest.time
+      id:
+        latest.id,
+
+      date:
+        latest.date,
+
+      time:
+        latest.time
     }
   };
 }
@@ -629,14 +993,21 @@ async function startManual(
 
 async function stopManual(slot) {
   const group =
-    await getManual(slot);
+    await getManual(
+      slot
+    );
 
-  if (!group) {
+
+  if (
+    !group
+  ) {
     const manuals =
       await readAllManuals();
 
+
     return {
-      ok: true,
+      ok:
+        true,
 
       message:
         'No manual group exists in this slot.',
@@ -644,24 +1015,41 @@ async function stopManual(slot) {
       manuals,
 
       manual:
-        manuals[slot - 1]
+        manuals[
+          slot - 1
+        ]
     };
   }
 
 
+  let latest =
+    null;
+
+  let processed =
+    0;
+
+  let stoppedAtMissing =
+    null;
+
+
   /*
     Before stopping:
-    synchronize all draws up to the
-    latest completed draw.
+    sync only through continuous confirmed draws.
   */
-  let latest = null;
-  let processed = 0;
 
-  if (group.active) {
+  if (
+    group.active
+  ) {
     latest =
-      await getDraw(null);
+      await getDraw(
+        null
+      );
 
-    await storeDraw(latest);
+
+    await storeDraw(
+      latest
+    );
+
 
     const sync =
       await backfillManual(
@@ -669,27 +1057,40 @@ async function stopManual(slot) {
         latest
       );
 
+
     processed =
       sync.processed;
+
+
+    stoppedAtMissing =
+      sync.stoppedAtMissing;
+
 
     await db(
       `tracker_groups?id=eq.${group.id}`,
       {
-        method: 'PATCH',
-        prefer: 'return=minimal',
+        method:
+          'PATCH',
+
+        prefer:
+          'return=minimal',
 
         body: {
-          active: false
+          active:
+            false
         }
       }
     );
   }
 
+
   const manuals =
     await readAllManuals();
 
+
   return {
-    ok: true,
+    ok:
+      true,
 
     message:
       'Manual tracking stopped. Existing results were kept.',
@@ -697,23 +1098,29 @@ async function stopManual(slot) {
     manuals,
 
     manual:
-      manuals[slot - 1],
+      manuals[
+        slot - 1
+      ],
 
     processed,
 
+    stoppedAtMissing,
+
     latest:
       latest
-        ? {
-            id:
-              latest.id,
+        ?
+        {
+          id:
+            latest.id,
 
-            date:
-              latest.date,
+          date:
+            latest.date,
 
-            time:
-              latest.time
-          }
-        : null
+          time:
+            latest.time
+        }
+        :
+        null
   };
 }
 
@@ -724,42 +1131,46 @@ async function stopManual(slot) {
 
 async function clearManual(slot) {
   const group =
-    await getManual(slot);
+    await getManual(
+      slot
+    );
 
-  if (group) {
 
-    /*
-      Delete only the results
-      belonging to this manual slot.
-    */
+  if (
+    group
+  ) {
     await db(
       `tracker_results?group_id=eq.${group.id}`,
       {
-        method: 'DELETE',
-        prefer: 'return=minimal'
+        method:
+          'DELETE',
+
+        prefer:
+          'return=minimal'
       }
     );
 
 
-    /*
-      Delete only this manual group.
-
-      Automatic groups are never touched.
-    */
     await db(
       `tracker_groups?id=eq.${group.id}`,
       {
-        method: 'DELETE',
-        prefer: 'return=minimal'
+        method:
+          'DELETE',
+
+        prefer:
+          'return=minimal'
       }
     );
   }
 
+
   const manuals =
     await readAllManuals();
 
+
   return {
-    ok: true,
+    ok:
+      true,
 
     message:
       'Manual group cleared.',
@@ -767,7 +1178,9 @@ async function clearManual(slot) {
     manuals,
 
     manual:
-      manuals[slot - 1]
+      manuals[
+        slot - 1
+      ]
   };
 }
 
@@ -778,15 +1191,21 @@ async function clearManual(slot) {
 
 async function getManualState() {
   const group1 =
-    await getManual(1);
+    await getManual(
+      1
+    );
 
   const group2 =
-    await getManual(2);
+    await getManual(
+      2
+    );
+
 
   const groups = [
     group1,
     group2
   ];
+
 
   const activeGroups =
     groups.filter(
@@ -795,23 +1214,38 @@ async function getManualState() {
         group.active
     );
 
-  let latest = null;
-  let processed = 0;
+
+  let latest =
+    null;
+
+  let processed =
+    0;
+
+  const missing = [];
 
 
   /*
-    Only request the latest draw
-    when at least one manual group
-    is active.
+    Only fetch current draw if at least
+    one manual group is active.
   */
-  if (activeGroups.length) {
-    latest =
-      await getDraw(null);
 
-    await storeDraw(latest);
+  if (
+    activeGroups.length
+  ) {
+    latest =
+      await getDraw(
+        null
+      );
+
+
+    await storeDraw(
+      latest
+    );
+
 
     for (
-      const group of activeGroups
+      const group
+      of activeGroups
     ) {
       const sync =
         await backfillManual(
@@ -819,48 +1253,67 @@ async function getManualState() {
           latest
         );
 
+
       processed +=
         Number(
-          sync.processed || 0
+          sync.processed ||
+          0
         );
+
+
+      if (
+        sync.stoppedAtMissing
+      ) {
+        missing.push({
+          groupId:
+            group.id,
+
+          drawId:
+            sync.stoppedAtMissing
+        });
+      }
     }
   }
 
 
   /*
     Re-read after syncing so
-    last_seen_draw_id is current.
+    lastSeenDrawId is always current.
   */
+
   const manuals =
     await readAllManuals();
 
+
   return {
-    ok: true,
+    ok:
+      true,
 
     manuals,
 
-    /*
-      Backward compatibility
-      with the old front-end.
-    */
     manual:
-      manuals[0] || null,
+      manuals[0] ||
+      null,
 
     processed,
 
+    missing,
+
     latest:
       latest
-        ? {
-            id:
-              latest.id,
+        ?
+        {
+          id:
+            latest.id,
 
-            date:
-              latest.date,
+          date:
+            latest.date,
 
-            time:
-              latest.time
-          }
-        : null
+          time:
+            latest.time
+        }
+        :
+        null
   };
 }
 
@@ -879,13 +1332,16 @@ async function handler(
     'no-store,max-age=0'
   );
 
+
   try {
 
-    /* -----------------------------------------------------
+    /* =====================================================
        POST
-    ----------------------------------------------------- */
+    ===================================================== */
+
     if (
-      req.method === 'POST'
+      req.method ===
+      'POST'
     ) {
       const action =
         String(
@@ -895,6 +1351,7 @@ async function handler(
           .trim()
           .toLowerCase();
 
+
       const slot =
         normalizeSlot(
           req.body?.slot ??
@@ -902,21 +1359,17 @@ async function handler(
         );
 
 
-      /*
-        START
+      /* START */
 
-        Old front-end compatibility:
-        POST { numbers:[...] }
-        still works as:
-        slot 1 + action start.
-      */
       if (
-        action === 'start'
+        action ===
+        'start'
       ) {
         const numbers =
           validateNumbers(
             req.body?.numbers
           );
+
 
         const result =
           await startManual(
@@ -924,78 +1377,97 @@ async function handler(
             numbers
           );
 
+
         return res
           .status(200)
-          .json(result);
+          .json(
+            result
+          );
       }
 
 
-      /*
-        STOP
-      */
+      /* STOP */
+
       if (
-        action === 'stop'
+        action ===
+        'stop'
       ) {
         const result =
           await stopManual(
             slot
           );
 
+
         return res
           .status(200)
-          .json(result);
+          .json(
+            result
+          );
       }
 
 
-      /*
-        CLEAR
-      */
+      /* CLEAR */
+
       if (
-        action === 'clear'
+        action ===
+        'clear'
       ) {
         const result =
           await clearManual(
             slot
           );
 
+
         return res
           .status(200)
-          .json(result);
+          .json(
+            result
+          );
       }
 
 
       return res
         .status(400)
         .json({
-          ok: false,
+          ok:
+            false,
+
           error:
             'Unknown manual action.'
         });
     }
 
 
-    /* -----------------------------------------------------
+    /* =====================================================
        GET
-    ----------------------------------------------------- */
+    ===================================================== */
+
     if (
-      req.method === 'GET'
+      req.method ===
+      'GET'
     ) {
       const state =
         await getManualState();
 
+
       return res
         .status(200)
-        .json(state);
+        .json(
+          state
+        );
     }
 
 
-    /* -----------------------------------------------------
+    /* =====================================================
        OTHER METHODS
-    ----------------------------------------------------- */
+    ===================================================== */
+
     return res
       .status(405)
       .json({
-        ok: false,
+        ok:
+          false,
+
         error:
           'Method not allowed'
       });
@@ -1008,14 +1480,18 @@ async function handler(
       error
     );
 
+
     return res
       .status(500)
       .json({
-        ok: false,
+        ok:
+          false,
 
         error:
           error?.message ||
-          String(error)
+          String(
+            error
+          )
       });
   }
 };
