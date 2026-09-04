@@ -135,7 +135,6 @@ h1{
 .amber{color:var(--yellow);font-weight:900}
 .blue{color:#55a2ff;font-weight:900}
 
-/* RED ONLY FOR REQUESTED STATUSES */
 .redStatus{
   color:var(--red)!important;
   font-weight:900
@@ -194,6 +193,24 @@ h1{
   color:#43ea82;
   background:rgba(34,197,94,.14);
   border:1px solid rgba(34,197,94,.24)
+}
+
+.sourceLink{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:7px 11px;
+  border-radius:9px;
+  border:1px solid rgba(47,128,255,.40);
+  background:rgba(47,128,255,.12);
+  color:#69adff;
+  font-size:12px;
+  font-weight:900;
+  text-decoration:none
+}
+
+.sourceLink:active{
+  opacity:.75
 }
 
 .toolbar{
@@ -785,6 +802,7 @@ footer{
 
 </header>
 
+
 <section class="card">
 
   <div class="toolbar">
@@ -819,8 +837,11 @@ footer{
 
 </section>
 
+
 <div id="latestDraw"></div>
+
 <div id="groupFiveContent"></div>
+
 
 <section class="card groupsSection">
 
@@ -839,6 +860,7 @@ footer{
   <div id="autoContent"></div>
 
 </section>
+
 
 <section class="card manualShell">
 
@@ -903,10 +925,15 @@ footer{
 
       </div>
 
-      <div class="manualMsg mut" id="msg1"></div>
+      <div
+        class="manualMsg mut"
+        id="msg1"
+      ></div>
+
       <div id="manualContent1"></div>
 
     </div>
+
 
     <div
       class="manualGroup"
@@ -954,7 +981,11 @@ footer{
 
       </div>
 
-      <div class="manualMsg mut" id="msg2"></div>
+      <div
+        class="manualMsg mut"
+        id="msg2"
+      ></div>
+
       <div id="manualContent2"></div>
 
     </div>
@@ -963,11 +994,13 @@ footer{
 
 </section>
 
+
 <footer>
   © 2026 Hot Spot Tracker
 </footer>
 
 </div>
+
 
 <script>
 
@@ -1081,6 +1114,7 @@ function updateClock(){
       );
 }
 
+
 updateClock();
 
 setInterval(
@@ -1147,7 +1181,6 @@ function renderSyncInfo(sync){
     return;
   }
 
-  /* Requested: Already current = RED */
   el.className =
     'syncInfo good redStatus';
 
@@ -1189,7 +1222,6 @@ function renderStatus(mode){
 
   if(mode === 'tracking'){
 
-    /* Requested: Automatic Tracking = RED */
     el.innerHTML =
       '<span class="redStatus">● Automatic Tracking</span>';
 
@@ -1385,8 +1417,21 @@ function renderLatestDraw(d){
       `
       <section class="card">
 
-        <div class="title">
-          Latest Draw
+        <div class="sectionTitle">
+
+          <div class="title">
+            Latest Draw
+          </div>
+
+          <a
+            class="sourceLink"
+            href="https://www.calottery.com/en/draw-games/hot-spot"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Official Source ↗
+          </a>
+
         </div>
 
         <div class="empty">
@@ -1465,6 +1510,15 @@ function renderLatestDraw(d){
           </span>
 
         </div>
+
+        <a
+          class="sourceLink"
+          href="https://www.calottery.com/en/draw-games/hot-spot"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Official Source ↗
+        </a>
 
       </div>
 
@@ -1731,6 +1785,13 @@ function importantResults(g){
 }
 
 
+/*
+  BEST RESULT
+
+  3/5, 4/5 or 5/5:
+  show the newest time for the highest score reached.
+*/
+
 function bestInfo(results){
 
   const rows =
@@ -1753,7 +1814,11 @@ function bestInfo(results){
       );
   }
 
-  if(best < 4){
+  /*
+    No time needed below 3/5.
+  */
+
+  if(best < 3){
 
     return {
       best,
@@ -1761,6 +1826,11 @@ function bestInfo(results){
       drawId:null
     };
   }
+
+  /*
+    If the same Best happened several times,
+    always show the NEWEST occurrence.
+  */
 
   const match =
     rows
@@ -2062,7 +2132,7 @@ function renderGroupFive(state){
           </div>
 
           ${
-            bi.best >= 4
+            bi.best >= 3
             &&
             bi.time
               ?
@@ -2315,7 +2385,7 @@ function automaticRow(
           </div>
 
           ${
-            bi.best >= 4
+            bi.best >= 3
             &&
             bi.time
               ?
