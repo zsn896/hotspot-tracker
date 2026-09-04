@@ -915,12 +915,16 @@ function autoGroupCard(g,i){
     best = Math.max(best,Number(r.hit_count || 0));
   }
 
+  const isSpecial = String(g?.name || '') === 'AUTO Group Special';
+  const displayName = isSpecial ? 'Special Group' : `Automatic Group ${i+1}`;
+
   return `
     <section class="card groupCard">
       <div class="sectionTitle">
-        <div class="title">Automatic Group ${i+1}</div>
-        <span class="ok">● Tracking</span>
+        <div class="title">${displayName}</div>
+        ${isSpecial ? '<span class="pill">3 + 2 Correlation</span>' : '<span class="ok">● Tracking</span>'}
       </div>
+      ${isSpecial ? '<div class="small mut" style="margin-top:8px">Three correlated numbers from one automatic group + two recurring companion numbers from the other.</div>' : ''}
 
       <div class="balls groupNums">
         ${(g?.numbers || [])
