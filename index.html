@@ -25,24 +25,46 @@
   --yellow:#f6c453;
   --shadow:0 12px 28px rgba(0,0,0,.25);
 }
+
 *{box-sizing:border-box}
-html{background:var(--bg)}
+
+html{
+  background:var(--bg);
+}
+
 body{
   margin:0;
   color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
   background:
-    radial-gradient(circle at 70% 0%,rgba(47,128,255,.08),transparent 26%),
-    linear-gradient(180deg,var(--bg) 0%,#081421 100%);
+    radial-gradient(
+      circle at 70% 0%,
+      rgba(47,128,255,.08),
+      transparent 26%
+    ),
+    linear-gradient(
+      180deg,
+      var(--bg) 0%,
+      #081421 100%
+    );
   min-height:100vh;
 }
-button,input{font:inherit}
-button{touch-action:manipulation}
+
+button,
+input{
+  font:inherit;
+}
+
+button{
+  touch-action:manipulation;
+}
+
 .wrap{
   max-width:1180px;
   margin:0 auto;
   padding:24px 20px 38px;
 }
+
 .header{
   display:flex;
   align-items:flex-start;
@@ -50,35 +72,44 @@ button{touch-action:manipulation}
   gap:18px;
   margin-bottom:20px;
 }
+
 .brandRow{
   display:flex;
   align-items:center;
   gap:12px;
   flex-wrap:wrap;
 }
+
 h1{
   margin:0;
   font-size:36px;
   line-height:1.1;
   letter-spacing:-.7px;
 }
+
 .version{
   display:inline-flex;
   align-items:center;
   padding:7px 12px;
   border-radius:999px;
-  background:linear-gradient(180deg,#3489ff,#1c6fe9);
+  background:linear-gradient(
+    180deg,
+    #3489ff,
+    #1c6fe9
+  );
   color:#fff;
   font-size:14px;
   font-weight:900;
   box-shadow:0 6px 16px rgba(47,128,255,.28);
 }
+
 .subtitle{
   margin:12px 0 0;
   color:var(--mut);
   font-size:16px;
   line-height:1.5;
 }
+
 .headerRight{
   display:flex;
   align-items:stretch;
@@ -87,44 +118,59 @@ h1{
   text-align:right;
   white-space:nowrap;
 }
+
 .autoBox{
   line-height:1.5;
   font-weight:750;
 }
-.autoOn{color:var(--green)}
+
+.autoOn{
+  color:var(--green);
+}
+
 .timeBox{
   padding-left:18px;
   border-left:1px solid var(--line);
 }
+
 #clock{
   font-size:16px;
   font-weight:900;
   color:#fff;
 }
+
 #today{
   margin-top:6px;
   color:var(--mut);
   font-size:14px;
 }
+
 .card{
-  background:linear-gradient(180deg,rgba(19,34,53,.96),rgba(15,29,46,.96));
+  background:linear-gradient(
+    180deg,
+    rgba(19,34,53,.96),
+    rgba(15,29,46,.96)
+  );
   border:1px solid var(--line);
   border-radius:18px;
   padding:20px;
   margin:16px 0;
   box-shadow:var(--shadow);
 }
+
 .cardTitle{
   font-size:24px;
   font-weight:950;
   letter-spacing:-.3px;
 }
+
 .toolbar{
   display:flex;
   align-items:center;
   gap:16px;
   flex-wrap:wrap;
 }
+
 .btn{
   appearance:none;
   border:0;
@@ -134,31 +180,62 @@ h1{
   font-size:15px;
   cursor:pointer;
   color:white;
-  transition:.15s transform,.15s opacity,.15s filter;
+  transition:
+    .15s transform,
+    .15s opacity,
+    .15s filter;
 }
-.btn:hover{filter:brightness(1.05)}
-.btn:active{transform:translateY(1px)}
-.btn:disabled{opacity:.55;cursor:not-allowed}
+
+.btn:hover{
+  filter:brightness(1.05);
+}
+
+.btn:active{
+  transform:translateY(1px);
+}
+
+.btn:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
 .btnBlue{
-  background:linear-gradient(180deg,var(--blue),var(--blue2));
+  background:linear-gradient(
+    180deg,
+    var(--blue),
+    var(--blue2)
+  );
   box-shadow:0 8px 18px rgba(47,128,255,.22);
 }
+
 .btnGreen{
-  background:linear-gradient(180deg,#2bd56f,#18a951);
+  background:linear-gradient(
+    180deg,
+    #2bd56f,
+    #18a951
+  );
   box-shadow:0 8px 18px rgba(34,197,94,.18);
 }
+
 .btnRed{
-  background:linear-gradient(180deg,#ef5555,#c92f37);
+  background:linear-gradient(
+    180deg,
+    #ef5555,
+    #c92f37
+  );
   box-shadow:0 8px 18px rgba(239,68,68,.16);
 }
+
 .btnDark{
   background:#263548;
   border:1px solid #3a4c62;
 }
+
 .statusText{
   font-weight:850;
   color:#d7e2ef;
 }
+
 .dot{
   display:inline-block;
   width:12px;
@@ -169,6 +246,7 @@ h1{
   background:var(--green);
   box-shadow:0 0 14px rgba(34,197,94,.45);
 }
+
 .spin{
   display:inline-block;
   width:16px;
@@ -179,13 +257,20 @@ h1{
   animation:r .8s linear infinite;
   vertical-align:-3px;
 }
-@keyframes r{to{transform:rotate(360deg)}}
+
+@keyframes r{
+  to{
+    transform:rotate(360deg);
+  }
+}
+
 .stats{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:14px;
   margin-top:18px;
 }
+
 .stat{
   min-height:108px;
   display:flex;
@@ -195,24 +280,32 @@ h1{
   text-align:center;
   border:1px solid var(--line);
   border-radius:15px;
-  background:linear-gradient(180deg,#132235,#101d2d);
+  background:linear-gradient(
+    180deg,
+    #132235,
+    #101d2d
+  );
   padding:14px;
 }
+
 .statLabel{
   color:#d2dbe7;
   font-size:14px;
 }
+
 .big{
   margin-top:7px;
   font-size:29px;
   font-weight:950;
   letter-spacing:-.4px;
 }
+
 .cBlue{color:#3f8fff}
 .cGreen{color:#2bd56f}
 .cOrange{color:#ff922b}
 .cPurple{color:#b65cff}
 .cRed{color:#ff5b57}
+
 .progress{
   height:15px;
   margin-top:17px;
@@ -222,12 +315,18 @@ h1{
   border:1px solid #1b2b3d;
   position:relative;
 }
+
 .progress i{
   display:block;
   height:100%;
-  background:linear-gradient(90deg,#3d8cff,#156cff);
+  background:linear-gradient(
+    90deg,
+    #3d8cff,
+    #156cff
+  );
   border-radius:999px;
 }
+
 .progress span{
   position:absolute;
   inset:0;
@@ -236,6 +335,7 @@ h1{
   font-size:11px;
   font-weight:900;
 }
+
 .sectionTitle{
   display:flex;
   align-items:center;
@@ -243,17 +343,21 @@ h1{
   gap:14px;
   flex-wrap:wrap;
 }
+
 .titleLeft{
   display:flex;
   gap:12px;
   align-items:center;
   flex-wrap:wrap;
 }
+
 .title{
   font-size:25px;
   font-weight:950;
 }
-.livePill,.pill{
+
+.livePill,
+.pill{
   display:inline-flex;
   align-items:center;
   padding:7px 12px;
@@ -261,16 +365,19 @@ h1{
   font-size:13px;
   font-weight:900;
 }
+
 .livePill{
   color:#43ea82;
   background:rgba(34,197,94,.16);
   border:1px solid rgba(34,197,94,.25);
 }
+
 .pill{
   color:#52a3ff;
   background:rgba(47,128,255,.14);
   border:1px solid rgba(47,128,255,.25);
 }
+
 .latestMeta{
   display:flex;
   gap:16px;
@@ -279,10 +386,12 @@ h1{
   margin-top:14px;
   color:#afbdd0;
 }
+
 .latestDrawNumber{
   color:white;
   font-weight:850;
 }
+
 .latestLayout{
   display:grid;
   grid-template-columns:minmax(0,1fr) 220px;
@@ -292,11 +401,13 @@ h1{
   padding-top:20px;
   border-top:1px solid var(--line);
 }
+
 .balls{
   display:flex;
   flex-wrap:wrap;
   gap:9px;
 }
+
 .ball{
   width:44px;
   height:44px;
@@ -304,16 +415,28 @@ h1{
   display:grid;
   place-items:center;
   border:1px solid #496078;
-  background:linear-gradient(180deg,#101d2d,#0c1725);
+  background:linear-gradient(
+    180deg,
+    #101d2d,
+    #0c1725
+  );
   color:white;
   font-weight:900;
   font-size:15px;
 }
+
 .latestBull{
-  background:linear-gradient(180deg,#3794ff,#1668e8)!important;
+  background:linear-gradient(
+    180deg,
+    #3794ff,
+    #1668e8
+  )!important;
   border-color:#74b6ff!important;
-  box-shadow:0 0 0 3px rgba(47,128,255,.24),0 0 18px rgba(47,128,255,.35)!important;
+  box-shadow:
+    0 0 0 3px rgba(47,128,255,.24),
+    0 0 18px rgba(47,128,255,.35)!important;
 }
+
 .bullBox{
   border-left:1px solid var(--line);
   display:flex;
@@ -321,28 +444,43 @@ h1{
   align-items:center;
   justify-content:center;
 }
+
 .bullLabel{
   font-weight:800;
   margin-bottom:12px;
 }
+
 .bullCircle{
   width:72px;
   height:72px;
   border-radius:50%;
   display:grid;
   place-items:center;
-  background:linear-gradient(180deg,#ff4343,#e81919);
+  background:linear-gradient(
+    180deg,
+    #ff4343,
+    #e81919
+  );
   color:white;
   font-size:25px;
   font-weight:950;
 }
+
 .source{
   margin-top:17px;
   color:#9fb0c7;
   font-size:13px;
 }
-.source strong{color:var(--green)}
-.source a{color:#48a3ff;text-decoration:none}
+
+.source strong{
+  color:var(--green);
+}
+
+.source a{
+  color:#48a3ff;
+  text-decoration:none;
+}
+
 .manualShell{
   border:2px solid #20c46a;
   box-shadow:
@@ -350,6 +488,7 @@ h1{
     0 0 26px rgba(32,196,106,.08),
     var(--shadow);
 }
+
 .manualTop{
   display:flex;
   align-items:flex-start;
@@ -357,31 +496,42 @@ h1{
   gap:18px;
   flex-wrap:wrap;
 }
+
 .manualTop h2{
   margin:0;
   font-size:28px;
   letter-spacing:-.4px;
 }
+
 .manualTop p{
   margin:8px 0 0;
   color:#aab8ca;
 }
+
 .manualGrid{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:16px;
   margin-top:18px;
 }
+
 .manualGroup{
-  background:linear-gradient(180deg,#0d1a2a,#0b1726);
+  background:linear-gradient(
+    180deg,
+    #0d1a2a,
+    #0b1726
+  );
   border:1px solid #31435a;
   border-radius:16px;
   padding:16px;
 }
+
 .manualGroup.active{
   border-color:#20c46a;
-  box-shadow:inset 0 0 0 1px rgba(32,196,106,.11);
+  box-shadow:
+    inset 0 0 0 1px rgba(32,196,106,.11);
 }
+
 .manualHead{
   display:flex;
   align-items:center;
@@ -389,19 +539,23 @@ h1{
   gap:12px;
   margin-bottom:14px;
 }
+
 .manualName{
   font-weight:950;
   font-size:18px;
 }
+
 .manualState{
   font-size:13px;
   font-weight:900;
 }
+
 .manualInputs{
   display:grid;
   grid-template-columns:repeat(5,1fr);
   gap:8px;
 }
+
 .manualInputs input{
   width:100%;
   min-width:0;
@@ -415,40 +569,50 @@ h1{
   font-size:18px;
   font-weight:900;
 }
+
 .manualInputs input:focus{
   border-color:#20c46a;
-  box-shadow:0 0 0 3px rgba(32,196,106,.11);
+  box-shadow:
+    0 0 0 3px rgba(32,196,106,.11);
 }
+
 .manualActions{
   display:grid;
   grid-template-columns:1.3fr 1fr 1fr;
   gap:9px;
   margin-top:12px;
 }
+
 .manualMsg{
   min-height:20px;
   margin-top:10px;
   font-size:13px;
 }
+
 .manualMeta{
   margin-top:13px;
   color:#98a9bf;
   font-size:13px;
 }
+
 .manualResults{
   margin-top:14px;
 }
+
 .autoGrid{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:16px;
 }
+
 .groupCard{
   margin:0;
 }
+
 .groupNums{
   margin-top:14px;
 }
+
 .result{
   margin-top:12px;
   border:1px solid var(--line);
@@ -456,6 +620,7 @@ h1{
   padding:13px;
   background:rgba(7,17,31,.32);
 }
+
 .resultHead{
   display:flex;
   align-items:center;
@@ -463,25 +628,43 @@ h1{
   gap:12px;
   flex-wrap:wrap;
 }
+
 .score{
   font-size:20px;
   font-weight:950;
 }
+
 .score3{color:#56a0ff}
 .score4{color:#ff9d3b}
 .score5{color:#2bd56f}
+
 .hit3{
-  background:linear-gradient(180deg,#3f8fff,#1d6de0);
+  background:linear-gradient(
+    180deg,
+    #3f8fff,
+    #1d6de0
+  );
   border-color:#74b6ff;
 }
+
 .hit4{
-  background:linear-gradient(180deg,#ff9d3b,#e87611);
+  background:linear-gradient(
+    180deg,
+    #ff9d3b,
+    #e87611
+  );
   border-color:#ffb36a;
 }
+
 .hit5{
-  background:linear-gradient(180deg,#2bd56f,#13a94f);
+  background:linear-gradient(
+    180deg,
+    #2bd56f,
+    #13a94f
+  );
   border-color:#6ae89b;
 }
+
 .empty{
   margin-top:14px;
   padding:16px;
@@ -491,12 +674,14 @@ h1{
   text-align:center;
   background:rgba(7,17,31,.25);
 }
+
 .mut{color:var(--mut)}
 .small{font-size:13px}
 .ok{color:var(--green);font-weight:900}
 .bad{color:#ff6b64;font-weight:900}
 .amber{color:var(--yellow);font-weight:900}
 .blue{color:#55a2ff;font-weight:900}
+
 footer{
   text-align:center;
   color:#8092a8;
@@ -505,729 +690,2747 @@ footer{
 }
 
 @media(max-width:900px){
-  .header{flex-direction:column}
-  .headerRight{align-self:stretch;justify-content:flex-end}
-  .manualGrid,.autoGrid{grid-template-columns:1fr}
-  .latestLayout{grid-template-columns:1fr}
+
+  .header{
+    flex-direction:column;
+  }
+
+  .headerRight{
+    align-self:stretch;
+    justify-content:flex-end;
+  }
+
+  .manualGrid,
+  .autoGrid{
+    grid-template-columns:1fr;
+  }
+
+  .latestLayout{
+    grid-template-columns:1fr;
+  }
+
   .bullBox{
     border-left:0;
     border-top:1px solid var(--line);
     padding-top:18px;
   }
 }
+
 @media(max-width:620px){
-  .wrap{padding:18px 12px 30px}
-  h1{font-size:30px}
+
+  .wrap{
+    padding:18px 12px 30px;
+  }
+
+  h1{
+    font-size:30px;
+  }
+
   .headerRight{
     width:100%;
     justify-content:space-between;
     gap:10px;
     text-align:left;
   }
-  .timeBox{text-align:right;padding-left:12px}
-  .card{padding:15px;border-radius:15px}
-  .stats{grid-template-columns:repeat(2,1fr);gap:9px}
-  .stat{min-height:92px;padding:10px}
-  .big{font-size:24px}
-  .manualTop h2{font-size:24px}
-  .manualInputs{gap:6px}
-  .manualInputs input{height:48px;font-size:16px}
-  .manualActions{grid-template-columns:1fr 1fr 1fr;gap:6px}
-  .manualActions .btn{padding:11px 8px;font-size:13px}
-  .ball{width:39px;height:39px;font-size:13px}
+
+  .timeBox{
+    text-align:right;
+    padding-left:12px;
+  }
+
+  .card{
+    padding:15px;
+    border-radius:15px;
+  }
+
+  .stats{
+    grid-template-columns:repeat(2,1fr);
+    gap:9px;
+  }
+
+  .stat{
+    min-height:92px;
+    padding:10px;
+  }
+
+  .big{
+    font-size:24px;
+  }
+
+  .manualTop h2{
+    font-size:24px;
+  }
+
+  .manualInputs{
+    gap:6px;
+  }
+
+  .manualInputs input{
+    height:48px;
+    font-size:16px;
+  }
+
+  .manualActions{
+    grid-template-columns:1fr 1fr 1fr;
+    gap:6px;
+  }
+
+  .manualActions .btn{
+    padding:11px 8px;
+    font-size:13px;
+  }
+
+  .ball{
+    width:39px;
+    height:39px;
+    font-size:13px;
+  }
 }
 </style>
 </head>
 
 <body>
+
 <div class="wrap">
 
   <header class="header">
+
     <div>
+
       <div class="brandRow">
-        <h1>Hot Spot Automatic 12H</h1>
-        <span class="version">v31 FIXED</span>
+
+        <h1>
+          Hot Spot Automatic 12H
+        </h1>
+
+        <span class="version">
+          v31 FIXED
+        </span>
+
       </div>
+
       <p class="subtitle">
-        Automatic groups remain unchanged. Manual tracking now supports two independent 5-number groups.
+        GROUP FIVE uses a rolling 30 → 30 system.
+        Automatic and manual groups continue tracking independently.
       </p>
+
     </div>
+
 
     <div class="headerRight">
+
       <div class="autoBox">
-        Auto refresh: <span class="autoOn">ON</span><br>
-        Every 4 minutes
+
+        Auto refresh:
+        <span class="autoOn">
+          ON
+        </span>
+
+        <br>
+
+        Every 60 seconds
+
       </div>
+
+
       <div class="timeBox">
-        <div id="clock">--:--:--</div>
-        <div id="today">--</div>
+
+        <div id="clock">
+          --:--:--
+        </div>
+
+        <div id="today">
+          --
+        </div>
+
       </div>
+
     </div>
+
   </header>
 
+
   <section class="card">
+
     <div class="toolbar">
-      <button class="btn btnBlue" id="refresh">↻ Refresh Now</button>
+
+      <button
+        class="btn btnBlue"
+        id="refresh"
+      >
+        ↻ Refresh Now
+      </button>
+
       <span id="busy"></span>
-      <span class="statusText" id="status"><span class="dot"></span>Connecting…</span>
+
+      <span
+        class="statusText"
+        id="status"
+      >
+        <span class="dot"></span>
+        Connecting…
+      </span>
+
     </div>
+
     <div id="summary"></div>
+
   </section>
+
 
   <div id="latestDraw"></div>
 
+
   <section class="card manualShell">
+
     <div class="manualTop">
+
       <div>
-        <h2>Manual Analysis — Two Sets of 5 Numbers</h2>
-        <p>Each group is independent. Start, Stop, and Clear only affect that manual group.</p>
+
+        <h2>
+          Manual Analysis — Two Sets of 5 Numbers
+        </h2>
+
+        <p>
+          Each group is independent.
+          Start, Stop, and Clear only affect that manual group.
+        </p>
+
       </div>
-      <span class="pill">Future draws only</span>
+
+      <span class="pill">
+        Future draws only
+      </span>
+
     </div>
+
 
     <div class="manualGrid">
-      <div class="manualGroup" id="manualGroup1">
+
+
+      <div
+        class="manualGroup"
+        id="manualGroup1"
+      >
+
         <div class="manualHead">
-          <div class="manualName">Manual Group 1</div>
-          <div class="manualState mut" id="manualState1">● Not tracking</div>
+
+          <div class="manualName">
+            Manual Group 1
+          </div>
+
+          <div
+            class="manualState mut"
+            id="manualState1"
+          >
+            ● Not tracking
+          </div>
+
         </div>
+
 
         <div class="manualInputs">
-          <input inputmode="numeric" maxlength="2" id="m1_1" aria-label="Manual group 1 number 1">
-          <input inputmode="numeric" maxlength="2" id="m1_2" aria-label="Manual group 1 number 2">
-          <input inputmode="numeric" maxlength="2" id="m1_3" aria-label="Manual group 1 number 3">
-          <input inputmode="numeric" maxlength="2" id="m1_4" aria-label="Manual group 1 number 4">
-          <input inputmode="numeric" maxlength="2" id="m1_5" aria-label="Manual group 1 number 5">
+
+          <input
+            inputmode="numeric"
+            maxlength="2"
+            id="m1_1"
+            aria-label="Manual group 1 number 1"
+          >
+
+          <input
+            inputmode="numeric"
+            maxlength="2"
+            id="m1_2"
+            aria-label="Manual group 1 number 2"
+          >
+
+          <input
+            inputmode="numeric"
+            maxlength="2"
+            id="m1_3"
+            aria-label="Manual group 1 number 3"
+          >
+
+          <input
+            inputmode="numeric"
+            maxlength="2"
+            id="m1_4"
+            aria-label="Manual group 1 number 4"
+          >
+
+          <input
+            inputmode="numeric"
+            maxlength="2"
+            id="m1_5"
+            aria-label="Manual group 1 number 5"
+          >
+
         </div>
+
 
         <div class="manualActions">
-          <button class="btn btnGreen" id="start1">▶ Start</button>
-          <button class="btn btnRed" id="stop1">■ Stop</button>
-          <button class="btn btnDark" id="clear1">Clear</button>
+
+          <button
+            class="btn btnGreen"
+            id="start1"
+          >
+            ▶ Start
+          </button>
+
+          <button
+            class="btn btnRed"
+            id="stop1"
+          >
+            ■ Stop
+          </button>
+
+          <button
+            class="btn btnDark"
+            id="clear1"
+          >
+            Clear
+          </button>
+
         </div>
 
-        <div class="manualMsg mut" id="msg1"></div>
+
+        <div
+          class="manualMsg mut"
+          id="msg1"
+        ></div>
+
         <div id="manualContent1"></div>
+
       </div>
 
-      <div class="manualGroup" id="manualGroup2">
+
+      <div
+        class="manualGroup"
+        id="manualGroup2"
+      >
+
         <div class="manualHead">
-          <div class="manualName">Manual Group 2</div>
-          <div class="manualState mut" id="manualState2">● Not tracking</div>
+
+          <div class="manualName">
+            Manual Group 2
+          </div>
+
+          <div
+            class="manualState mut"
+            id="manualState2"
+          >
+            ● Not tracking
+          </div>
+
         </div>
+
 
         <div class="manualInputs">
-          <input inputmode="numeric" maxlength="2" id="m2_1" aria-label="Manual group 2 number 1">
-          <input inputmode="numeric" maxlength="2" id="m2_2" aria-label="Manual group 2 number 2">
-          <input inputmode="numeric" maxlength="2" id="m2_3" aria-label="Manual group 2 number 3">
-          <input inputmode="numeric" maxlength="2" id="m2_4" aria-label="Manual group 2 number 4">
-          <input inputmode="numeric" maxlength="2" id="m2_5" aria-label="Manual group 2 number 5">
+
+          <input
+            inputmode="numeric"
+            maxlength="2"
+            id="m2_1"
+            aria-label="Manual group 2 number 1"
+          >
+
+          <input
+            inputmode="numeric"
+            maxlength="2"
+            id="m2_2"
+            aria-label="Manual group 2 number 2"
+          >
+
+          <input
+            inputmode="numeric"
+            maxlength="2"
+            id="m2_3"
+            aria-label="Manual group 2 number 3"
+          >
+
+          <input
+            inputmode="numeric"
+            maxlength="2"
+            id="m2_4"
+            aria-label="Manual group 2 number 4"
+          >
+
+          <input
+            inputmode="numeric"
+            maxlength="2"
+            id="m2_5"
+            aria-label="Manual group 2 number 5"
+          >
+
         </div>
+
 
         <div class="manualActions">
-          <button class="btn btnGreen" id="start2">▶ Start</button>
-          <button class="btn btnRed" id="stop2">■ Stop</button>
-          <button class="btn btnDark" id="clear2">Clear</button>
+
+          <button
+            class="btn btnGreen"
+            id="start2"
+          >
+            ▶ Start
+          </button>
+
+          <button
+            class="btn btnRed"
+            id="stop2"
+          >
+            ■ Stop
+          </button>
+
+          <button
+            class="btn btnDark"
+            id="clear2"
+          >
+            Clear
+          </button>
+
         </div>
 
-        <div class="manualMsg mut" id="msg2"></div>
+
+        <div
+          class="manualMsg mut"
+          id="msg2"
+        ></div>
+
         <div id="manualContent2"></div>
+
       </div>
+
     </div>
+
   </section>
+
 
   <div id="autoContent"></div>
 
-  <footer>© 2026 Hot Spot Tracker</footer>
+
+  <footer>
+    © 2026 Hot Spot Tracker
+  </footer>
+
 </div>
 
+
 <script>
+
 const esc = s =>
-  String(s ?? '').replace(/[&<>"]/g,c=>({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'
-  }[c]));
+  String(
+    s ?? ''
+  ).replace(
+    /[&<>"]/g,
+    c => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;'
+    }[c])
+  );
+
 
 function busy(text){
-  const el = document.getElementById('busy');
-  el.innerHTML = text
-    ? `<span class="spin"></span> <span class="small mut">${esc(text)}</span>`
-    : '';
+
+  const el =
+    document.getElementById(
+      'busy'
+    );
+
+  el.innerHTML =
+    text
+      ?
+      `<span class="spin"></span>
+       <span class="small mut">
+         ${esc(text)}
+       </span>`
+      :
+      '';
 }
 
-async function api(url,options={}){
-  const r = await fetch(url,{cache:'no-store',...options});
+
+async function api(
+  url,
+  options={}
+){
+
+  const r =
+    await fetch(
+      url,
+      {
+        cache:'no-store',
+        ...options
+      }
+    );
+
   let j;
 
+
   try{
-    j = await r.json();
+
+    j =
+      await r.json();
+
   }catch{
-    throw Error('Invalid server response');
+
+    throw Error(
+      'Invalid server response'
+    );
   }
 
-  if(!r.ok || j?.ok === false){
-    throw Error(j?.error || `Request failed (${r.status})`);
+
+  if(
+    !r.ok ||
+    j?.ok === false
+  ){
+
+    throw Error(
+      j?.error ||
+      `Request failed (${r.status})`
+    );
   }
+
 
   return j;
 }
 
+
+/* =========================================================
+   CLOCK
+========================================================= */
+
 function updateClock(){
-  const now = new Date();
 
-  document.getElementById('clock').textContent =
-    now.toLocaleTimeString([],{
-      hour:'2-digit',
-      minute:'2-digit',
-      second:'2-digit'
-    });
+  const now =
+    new Date();
 
-  document.getElementById('today').textContent =
-    now.toLocaleDateString([],{
-      month:'short',
-      day:'numeric',
-      year:'numeric'
-    });
+
+  document
+    .getElementById(
+      'clock'
+    )
+    .textContent =
+
+    now.toLocaleTimeString(
+      [],
+      {
+        hour:'2-digit',
+        minute:'2-digit',
+        second:'2-digit'
+      }
+    );
+
+
+  document
+    .getElementById(
+      'today'
+    )
+    .textContent =
+
+    now.toLocaleDateString(
+      [],
+      {
+        month:'short',
+        day:'numeric',
+        year:'numeric'
+      }
+    );
 }
+
 
 updateClock();
-setInterval(updateClock,1000);
+
+setInterval(
+  updateClock,
+  1000
+);
+
+
+/* =========================================================
+   STATUS
+========================================================= */
 
 function renderStatus(mode){
-  const el = document.getElementById('status');
 
-  if(mode === 'collecting'){
-    el.innerHTML = `<span class="dot"></span>Live: Collecting new draws…`;
+  const el =
+    document.getElementById(
+      'status'
+    );
+
+
+  if(
+    mode ===
+    'collecting'
+  ){
+
+    el.innerHTML =
+      `<span class="dot"></span>
+       Live: Collecting new draws…`;
+
     return;
   }
 
-  if(mode === 'preparing'){
-    el.innerHTML = `<span class="amber">● Waiting for 180/180</span>`;
+
+  if(
+    mode ===
+    'preparing'
+  ){
+
+    el.innerHTML =
+      `<span class="amber">
+         ● Waiting for 180/180
+       </span>`;
+
     return;
   }
 
-  if(mode === 'tracking'){
-    el.innerHTML = `<span class="ok">● Automatic Tracking</span>`;
+
+  if(
+    mode ===
+    'tracking'
+  ){
+
+    el.innerHTML =
+      `<span class="ok">
+         ● Automatic Tracking
+       </span>`;
+
     return;
   }
 
-  if(mode === 'cleanup'){
-    el.innerHTML = `<span class="blue">● Cleanup</span>`;
+
+  if(
+    mode ===
+    'cleanup'
+  ){
+
+    el.innerHTML =
+      `<span class="blue">
+         ● Cleanup
+       </span>`;
+
     return;
   }
 
-  el.innerHTML = `<span class="mut">● Idle</span>`;
+
+  el.innerHTML =
+    `<span class="mut">
+       ● Idle
+     </span>`;
 }
 
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
 function renderSummary(j){
-  const c = j?.collection || {};
-  const have = Number(c.have || 0);
-  const need = Number(c.need || 180);
-  const remaining = Number(c.remaining ?? Math.max(0,need-have));
-  const pct = need ? Math.min(100,Math.round(have/need*100)) : 0;
 
-  document.getElementById('summary').innerHTML = `
-    <div class="stats">
-      <div class="stat">
-        <div class="statLabel">Mode</div>
-        <div class="big cBlue">${esc(j?.mode || '—')}</div>
-      </div>
-      <div class="stat">
-        <div class="statLabel">Collection</div>
-        <div class="big cGreen">${have}/${need}</div>
-      </div>
-      <div class="stat">
-        <div class="statLabel">Remaining</div>
-        <div class="big cOrange">${remaining}</div>
-      </div>
-      <div class="stat">
-        <div class="statLabel">Stored Draw</div>
-        <div class="big cPurple">${j?.latest?.draw_id ?? j?.latest?.id ?? '—'}</div>
-      </div>
-    </div>
+  const c =
+    j?.collection || {};
 
-    <div class="progress">
-      <i style="width:${pct}%"></i>
-      <span>${pct}%</span>
-    </div>
+
+  const have =
+    Number(
+      c.have || 0
+    );
+
+
+  const need =
+    Number(
+      c.need || 180
+    );
+
+
+  const remaining =
+    Number(
+      c.remaining ??
+      Math.max(
+        0,
+        need - have
+      )
+    );
+
+
+  const pct =
+    need
+      ?
+      Math.min(
+        100,
+        Math.round(
+          have /
+          need *
+          100
+        )
+      )
+      :
+      0;
+
+
+  document
+    .getElementById(
+      'summary'
+    )
+    .innerHTML = `
+
+      <div class="stats">
+
+        <div class="stat">
+
+          <div class="statLabel">
+            Mode
+          </div>
+
+          <div class="big cBlue">
+            ${esc(
+              j?.mode || '—'
+            )}
+          </div>
+
+        </div>
+
+
+        <div class="stat">
+
+          <div class="statLabel">
+            Collection
+          </div>
+
+          <div class="big cGreen">
+            ${have}/${need}
+          </div>
+
+        </div>
+
+
+        <div class="stat">
+
+          <div class="statLabel">
+            Remaining
+          </div>
+
+          <div class="big cOrange">
+            ${remaining}
+          </div>
+
+        </div>
+
+
+        <div class="stat">
+
+          <div class="statLabel">
+            Stored Draw
+          </div>
+
+          <div class="big cPurple">
+            ${
+              j?.latest?.draw_id ??
+              j?.latest?.id ??
+              '—'
+            }
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="progress">
+
+        <i
+          style="width:${pct}%"
+        ></i>
+
+        <span>
+          ${pct}%
+        </span>
+
+      </div>
   `;
 }
 
+
+/* =========================================================
+   LATEST DRAW
+========================================================= */
+
 function latestFromTrack(j){
-  if(j?.latest) return j.latest;
+
+  if(
+    j?.latest
+  ){
+
+    return j.latest;
+  }
+
 
   const pool =
-    Array.isArray(j?.draws) && j.draws.length
-      ? j.draws
-      : Array.isArray(j?.rows) && j.rows.length
-        ? j.rows
-        : [];
 
-  if(!pool.length) return null;
+    Array.isArray(
+      j?.draws
+    ) &&
+    j.draws.length
+
+      ?
+
+      j.draws
+
+      :
+
+      Array.isArray(
+        j?.rows
+      ) &&
+      j.rows.length
+
+        ?
+
+        j.rows
+
+        :
+
+        [];
+
+
+  if(
+    !pool.length
+  ){
+
+    return null;
+  }
+
 
   return pool
     .slice()
-    .sort((a,b)=>
-      Number(b.id ?? b.draw_id ?? 0) -
-      Number(a.id ?? a.draw_id ?? 0)
+    .sort(
+      (
+        a,
+        b
+      ) =>
+
+        Number(
+          b.id ??
+          b.draw_id ??
+          0
+        )
+        -
+        Number(
+          a.id ??
+          a.draw_id ??
+          0
+        )
     )[0];
 }
 
-function renderLatestDraw(d){
-  const box = document.getElementById('latestDraw');
 
-  if(!d){
+function renderLatestDraw(d){
+
+  const box =
+    document.getElementById(
+      'latestDraw'
+    );
+
+
+  if(
+    !d
+  ){
+
     box.innerHTML = `
+
       <section class="card">
-        <div class="cardTitle">Latest Draw</div>
-        <div class="empty">Waiting for latest draw…</div>
+
+        <div class="cardTitle">
+          Latest Draw
+        </div>
+
+        <div class="empty">
+          Waiting for latest draw…
+        </div>
+
       </section>
     `;
+
     return;
   }
 
-  const nums = Array.isArray(d.numbers)
-    ? d.numbers.map(Number).filter(Number.isFinite)
-    : [];
 
-  const bullRaw = d.bullsEye ?? d.bulls_eye ?? null;
+  const nums =
+    Array.isArray(
+      d.numbers
+    )
+      ?
+      d.numbers
+        .map(Number)
+        .filter(
+          Number.isFinite
+        )
+      :
+      [];
+
+
+  const bullRaw =
+    d.bullsEye ??
+    d.bulls_eye ??
+    null;
+
+
   const bull =
-    bullRaw === null || bullRaw === undefined || bullRaw === ''
-      ? null
-      : Number(bullRaw);
 
-  const drawId = d.id ?? d.draw_id ?? '—';
-  const drawDate = d.date ?? d.draw_date ?? '';
-  const drawTime = d.time ?? d.draw_time ?? '';
+    bullRaw === null
+    ||
+    bullRaw === undefined
+    ||
+    bullRaw === ''
+
+      ?
+
+      null
+
+      :
+
+      Number(
+        bullRaw
+      );
+
+
+  const drawId =
+    d.id ??
+    d.draw_id ??
+    '—';
+
+
+  const drawDate =
+    d.date ??
+    d.draw_date ??
+    '';
+
+
+  const drawTime =
+    d.time ??
+    d.draw_time ??
+    '';
+
 
   box.innerHTML = `
+
     <section class="card">
+
       <div class="sectionTitle">
+
         <div class="titleLeft">
-          <div class="title">Latest Draw</div>
-          <span class="livePill">LIVE</span>
+
+          <div class="title">
+            Latest Draw
+          </div>
+
+          <span class="livePill">
+            LIVE
+          </span>
+
         </div>
+
       </div>
+
 
       <div class="latestMeta">
-        <span class="latestDrawNumber">Draw #${esc(drawId)}</span>
-        <span>${esc(drawDate)}${drawTime ? ' — ' + esc(drawTime) : ''}</span>
+
+        <span class="latestDrawNumber">
+          Draw #${esc(drawId)}
+        </span>
+
+        <span>
+          ${esc(drawDate)}
+          ${
+            drawTime
+              ?
+              ' — ' +
+              esc(drawTime)
+              :
+              ''
+          }
+        </span>
+
       </div>
+
 
       <div class="latestLayout">
+
         <div>
+
           <div class="balls">
-            ${nums.map(n=>{
-              const isBull = bull !== null && Number(n) === bull;
-              return `<span class="ball ${isBull ? 'latestBull' : ''}">${n}</span>`;
-            }).join('')}
+
+            ${
+              nums.map(
+                n => {
+
+                  const isBull =
+                    bull !== null
+                    &&
+                    Number(n) ===
+                    bull;
+
+                  return `
+                    <span
+                      class="ball ${
+                        isBull
+                          ?
+                          'latestBull'
+                          :
+                          ''
+                      }"
+                    >
+                      ${n}
+                    </span>
+                  `;
+                }
+              ).join('')
+            }
+
           </div>
+
         </div>
+
 
         <div class="bullBox">
-          <div class="bullLabel">Bulls-eye</div>
-          <div class="bullCircle">${bull !== null ? bull : '—'}</div>
+
+          <div class="bullLabel">
+            Bulls-eye
+          </div>
+
+          <div class="bullCircle">
+            ${
+              bull !== null
+                ?
+                bull
+                :
+                '—'
+            }
+          </div>
+
         </div>
+
       </div>
 
+
       <div class="source">
-        <strong>✓</strong> Source:
-        <a href="https://www.calottery.com/en/draw-games/hot-spot" target="_blank" rel="noopener">
+
+        <strong>✓</strong>
+        Source:
+
+        <a
+          href="https://www.calottery.com/en/draw-games/hot-spot"
+          target="_blank"
+          rel="noopener"
+        >
           calottery.com
         </a>
+
       </div>
+
     </section>
   `;
 }
 
+
+/* =========================================================
+   RESULT COLORS
+========================================================= */
+
 function scoreClass(n){
-  if(n >= 5) return 'score5';
-  if(n === 4) return 'score4';
+
+  if(
+    n >= 5
+  ){
+    return 'score5';
+  }
+
+  if(
+    n === 4
+  ){
+    return 'score4';
+  }
+
   return 'score3';
 }
 
+
 function hitClass(n){
-  if(n >= 5) return 'hit5';
-  if(n === 4) return 'hit4';
+
+  if(
+    n >= 5
+  ){
+    return 'hit5';
+  }
+
+  if(
+    n === 4
+  ){
+    return 'hit4';
+  }
+
   return 'hit3';
 }
 
-function resultCard(r,groupNumbers){
-  const hits = (r.hit_numbers || []).map(Number);
-  const hc = Number(r.hit_count || 0);
+
+/* =========================================================
+   RESULT CARD
+========================================================= */
+
+function resultCard(
+  r,
+  groupNumbers
+){
+
+  const hits =
+    (
+      r.hit_numbers ||
+      []
+    ).map(
+      Number
+    );
+
+
+  const hc =
+    Number(
+      r.hit_count || 0
+    );
+
 
   return `
+
     <div class="result">
+
       <div class="resultHead">
+
         <div>
-          <b>Draw ${esc(r.draw_id ?? '—')}</b>
-          <span class="mut">— ${esc(r.time || '')}</span>
+
+          <b>
+            Draw ${
+              esc(
+                r.draw_id ??
+                '—'
+              )
+            }
+          </b>
+
+          <span class="mut">
+            — ${
+              esc(
+                r.time || ''
+              )
+            }
+          </span>
+
         </div>
-        <div class="score ${scoreClass(hc)}">${hc}/5</div>
+
+
+        <div
+          class="score ${
+            scoreClass(hc)
+          }"
+        >
+          ${hc}/5
+        </div>
+
       </div>
+
 
       <div class="balls groupNums">
-        ${(groupNumbers || []).map(n=>{
-          const num = Number(n);
-          const isHit = hits.includes(num);
-          const isBull =
-            Boolean(r.bulls_eye_match) &&
-            Number(r.bulls_eye) === num;
 
-          return `
-            <span class="ball ${isHit ? hitClass(hc) : ''} ${isBull ? 'latestBull' : ''}">
-              ${num}
-            </span>
-          `;
-        }).join('')}
+        ${
+          (
+            groupNumbers ||
+            []
+          ).map(
+            n => {
+
+              const num =
+                Number(n);
+
+
+              const isHit =
+                hits.includes(
+                  num
+                );
+
+
+              const isBull =
+
+                Boolean(
+                  r.bulls_eye_match
+                )
+                &&
+                Number(
+                  r.bulls_eye
+                ) ===
+                num;
+
+
+              return `
+
+                <span
+                  class="ball ${
+                    isHit
+                      ?
+                      hitClass(hc)
+                      :
+                      ''
+                  } ${
+                    isBull
+                      ?
+                      'latestBull'
+                      :
+                      ''
+                  }"
+                >
+                  ${num}
+                </span>
+              `;
+            }
+          ).join('')
+        }
+
       </div>
 
-      <div class="small" style="margin-top:8px">
-        <b>Matched:</b> ${hits.length ? hits.join(', ') : '—'}
+
+      <div
+        class="small"
+        style="margin-top:8px"
+      >
+
+        <b>
+          Matched:
+        </b>
+
+        ${
+          hits.length
+            ?
+            hits.join(', ')
+            :
+            '—'
+        }
+
+
         ${
           r.bulls_eye_match
-            ? ` &nbsp; <span class="blue">Bulls-eye ${esc(r.bulls_eye)}</span>`
-            : ''
+            ?
+            `
+            &nbsp;
+            <span class="blue">
+              Bulls-eye ${
+                esc(
+                  r.bulls_eye
+                )
+              }
+            </span>
+            `
+            :
+            ''
         }
+
       </div>
+
     </div>
   `;
 }
 
+
+/* =========================================================
+   ONLY SHOW 3/5+
+========================================================= */
+
 function importantResults(g){
-  const source = Array.isArray(g?.results)
-    ? g.results
-    : Array.isArray(g?.matches)
-      ? g.matches
-      : [];
+
+  const source =
+
+    Array.isArray(
+      g?.results
+    )
+      ?
+      g.results
+
+      :
+
+      Array.isArray(
+        g?.matches
+      )
+        ?
+        g.matches
+        :
+        [];
+
 
   return source
-    .filter(r=>Number(r.hit_count) >= 3)
-    .sort((a,b)=>Number(b.draw_id)-Number(a.draw_id));
+
+    .filter(
+      r =>
+        Number(
+          r.hit_count
+        ) >= 3
+    )
+
+    .sort(
+      (
+        a,
+        b
+      ) =>
+        Number(
+          b.draw_id
+        )
+        -
+        Number(
+          a.draw_id
+        )
+    );
 }
 
-function autoGroupCard(g,i){
-  const important = importantResults(g);
 
-  const allResults = Array.isArray(g?.results) ? g.results : [];
-  let best = 0;
+/* =========================================================
+   AUTOMATIC GROUP CARD
+========================================================= */
 
-  for(const r of allResults){
-    best = Math.max(best,Number(r.hit_count || 0));
+function autoGroupCard(
+  g,
+  i
+){
+
+  const important =
+    importantResults(
+      g
+    );
+
+
+  const allResults =
+    Array.isArray(
+      g?.results
+    )
+      ?
+      g.results
+      :
+      [];
+
+
+  let best =
+    0;
+
+
+  for(
+    const r of allResults
+  ){
+
+    best =
+      Math.max(
+        best,
+        Number(
+          r.hit_count || 0
+        )
+      );
   }
 
-  const isSpecial = String(g?.name || '') === 'AUTO Group Special';
-  const displayName = isSpecial ? 'Special Group' : `Automatic Group ${i+1}`;
+
+  const name =
+    String(
+      g?.name || ''
+    );
+
+
+  const isFive =
+    name ===
+    'AUTO Group Five';
+
+
+  const isSpecial =
+    name ===
+    'AUTO Group Special';
+
+
+  let displayName =
+    `Automatic Group ${i+1}`;
+
+
+  if(
+    isFive
+  ){
+
+    displayName =
+      'GROUP FIVE';
+  }
+
+
+  if(
+    isSpecial
+  ){
+
+    displayName =
+      'Special Group';
+  }
+
+
+  const five =
+    g?.groupFive || {};
+
+
+  const tracked =
+    Number(
+      five.tracked ??
+      allResults.length ??
+      0
+    );
+
+
+  const remaining =
+    Number(
+      five.remaining ??
+      Math.max(
+        0,
+        30 - tracked
+      )
+    );
+
+
+  const cycle =
+    five.cycle ??
+    '—';
+
+
+  const nextSelection =
+    five.nextSelectionAfterDrawId ??
+    (
+      g?.start_draw_id != null
+        ?
+        Number(
+          g.start_draw_id
+        ) + 30
+        :
+        '—'
+    );
+
+
+  const fiveMeta =
+
+    isFive
+
+      ?
+
+      `
+      <div
+        class="small mut"
+        style="margin-top:8px;line-height:1.6"
+      >
+
+        Cycle
+        <b>${esc(cycle)}</b>
+
+        &nbsp; • &nbsp;
+
+        Progress
+        <b>${tracked}/30</b>
+
+        &nbsp; • &nbsp;
+
+        Remaining
+        <b>${remaining}</b>
+
+        <br>
+
+        Next number selection after draw
+        <b>${esc(nextSelection)}</b>
+
+      </div>
+      `
+
+      :
+
+      '';
+
+
+  const specialMeta =
+
+    isSpecial
+
+      ?
+
+      `
+      <div
+        class="small mut"
+        style="margin-top:8px"
+      >
+        Three correlated numbers from one automatic group
+        + two recurring companion numbers from the other.
+      </div>
+      `
+
+      :
+
+      '';
+
 
   return `
+
     <section class="card groupCard">
+
       <div class="sectionTitle">
-        <div class="title">${displayName}</div>
-        ${isSpecial ? '<span class="pill">3 + 2 Correlation</span>' : '<span class="ok">● Tracking</span>'}
+
+        <div class="title">
+          ${displayName}
+        </div>
+
+
+        ${
+          isFive
+
+            ?
+
+            `
+            <span class="pill">
+              30 → 30 Rolling
+            </span>
+            `
+
+            :
+
+            isSpecial
+
+              ?
+
+              `
+              <span class="pill">
+                3 + 2 Correlation
+              </span>
+              `
+
+              :
+
+              `
+              <span class="ok">
+                ● Tracking
+              </span>
+              `
+        }
+
       </div>
-      ${isSpecial ? '<div class="small mut" style="margin-top:8px">Three correlated numbers from one automatic group + two recurring companion numbers from the other.</div>' : ''}
+
+
+      ${fiveMeta}
+
+      ${specialMeta}
+
 
       <div class="balls groupNums">
-        ${(g?.numbers || [])
-          .map(n=>`<span class="ball">${Number(n)}</span>`)
-          .join('')}
+
+        ${
+          (
+            g?.numbers ||
+            []
+          )
+            .map(
+              n =>
+                `<span class="ball">
+                  ${Number(n)}
+                </span>`
+            )
+            .join('')
+        }
+
       </div>
 
-      <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+
+      <div
+        class="stats"
+        style="grid-template-columns:repeat(3,1fr)"
+      >
+
         <div class="stat">
-          <div class="statLabel">Best Result</div>
-          <div class="big cBlue">${best}/5</div>
+
+          <div class="statLabel">
+            Best Result
+          </div>
+
+          <div class="big cBlue">
+            ${best}/5
+          </div>
+
         </div>
+
+
         <div class="stat">
-          <div class="statLabel">3+ Results</div>
-          <div class="big cGreen">${important.length}</div>
+
+          <div class="statLabel">
+            3+ Results
+          </div>
+
+          <div class="big cGreen">
+            ${important.length}
+          </div>
+
         </div>
+
+
         <div class="stat">
-          <div class="statLabel">Last Seen</div>
-          <div class="big cPurple">${g?.last_seen_draw_id ?? g?.lastSeenDrawId ?? '—'}</div>
+
+          <div class="statLabel">
+
+            ${
+              isFive
+                ?
+                'Progress'
+                :
+                'Last Seen'
+            }
+
+          </div>
+
+
+          <div class="big cPurple">
+
+            ${
+              isFive
+                ?
+                `${tracked}/30`
+                :
+                (
+                  g?.last_seen_draw_id ??
+                  g?.lastSeenDrawId ??
+                  '—'
+                )
+            }
+
+          </div>
+
         </div>
+
       </div>
+
 
       ${
         important.length
-          ? important.map(r=>resultCard(r,g?.numbers || [])).join('')
-          : `<div class="empty">No 3/5 or better result yet.</div>`
+
+          ?
+
+          important
+            .map(
+              r =>
+                resultCard(
+                  r,
+                  g?.numbers || []
+                )
+            )
+            .join('')
+
+          :
+
+          `
+          <div class="empty">
+            No 3/5 or better result yet.
+          </div>
+          `
       }
+
     </section>
   `;
 }
 
-function renderAutomaticGroups(j){
-  const groups = Array.isArray(j?.groups) ? j.groups : [];
 
-  document.getElementById('autoContent').innerHTML = groups.length
-    ? `<div class="autoGrid">${groups.map(autoGroupCard).join('')}</div>`
-    : `
+/* =========================================================
+   GROUP FIVE ALWAYS FIRST
+========================================================= */
+
+function renderAutomaticGroups(j){
+
+  const groups =
+    Array.isArray(
+      j?.groups
+    )
+      ?
+      j.groups.slice()
+      :
+      [];
+
+
+  groups.sort(
+    (
+      a,
+      b
+    ) => {
+
+      const aName =
+        String(
+          a?.name || ''
+        );
+
+
+      const bName =
+        String(
+          b?.name || ''
+        );
+
+
+      if(
+        aName ===
+        'AUTO Group Five'
+        &&
+        bName !==
+        'AUTO Group Five'
+      ){
+
+        return -1;
+      }
+
+
+      if(
+        bName ===
+        'AUTO Group Five'
+        &&
+        aName !==
+        'AUTO Group Five'
+      ){
+
+        return 1;
+      }
+
+
+      return 0;
+    }
+  );
+
+
+  document
+    .getElementById(
+      'autoContent'
+    )
+    .innerHTML =
+
+    groups.length
+
+      ?
+
+      `
+      <div class="autoGrid">
+
+        ${
+          groups
+            .map(
+              (
+                g,
+                i
+              ) =>
+                autoGroupCard(
+                  g,
+                  i
+                )
+            )
+            .join('')
+        }
+
+      </div>
+      `
+
+      :
+
+      `
       <section class="card">
-        <div class="title">Automatic Groups</div>
-        <div class="empty">Automatic groups have not been selected yet.</div>
+
+        <div class="title">
+          Automatic Groups
+        </div>
+
+        <div class="empty">
+          Automatic groups have not been selected yet.
+        </div>
+
       </section>
-    `;
+      `;
 }
+
+
+/* =========================================================
+   MANUAL GROUPS
+========================================================= */
 
 function normalizeManuals(j){
-  if(Array.isArray(j?.manuals)){
-    return [j.manuals[0] || null,j.manuals[1] || null];
+
+  if(
+    Array.isArray(
+      j?.manuals
+    )
+  ){
+
+    return [
+      j.manuals[0] || null,
+      j.manuals[1] || null
+    ];
   }
 
-  return [j?.manual || null,null];
+
+  return [
+    j?.manual || null,
+    null
+  ];
 }
 
-function fillInputs(slot,nums){
-  for(let i=1;i<=5;i++){
-    const el = document.getElementById(`m${slot}_${i}`);
 
-    if(document.activeElement !== el){
-      el.value = nums?.[i-1] ?? '';
+function fillInputs(
+  slot,
+  nums
+){
+
+  for(
+    let i = 1;
+    i <= 5;
+    i++
+  ){
+
+    const el =
+      document.getElementById(
+        `m${slot}_${i}`
+      );
+
+
+    if(
+      document.activeElement !==
+      el
+    ){
+
+      el.value =
+        nums?.[i-1] ??
+        '';
     }
   }
 }
 
-function renderManualSlot(slot,m){
-  const groupBox = document.getElementById(`manualGroup${slot}`);
-  const state = document.getElementById(`manualState${slot}`);
-  const content = document.getElementById(`manualContent${slot}`);
 
-  if(!m){
-    groupBox.classList.remove('active');
-    state.className = 'manualState mut';
-    state.textContent = '● Not tracking';
-    content.innerHTML = `<div class="empty">No manual tracking data yet.</div>`;
+function renderManualSlot(
+  slot,
+  m
+){
+
+  const groupBox =
+    document.getElementById(
+      `manualGroup${slot}`
+    );
+
+
+  const state =
+    document.getElementById(
+      `manualState${slot}`
+    );
+
+
+  const content =
+    document.getElementById(
+      `manualContent${slot}`
+    );
+
+
+  if(
+    !m
+  ){
+
+    groupBox
+      .classList
+      .remove(
+        'active'
+      );
+
+
+    state.className =
+      'manualState mut';
+
+
+    state.textContent =
+      '● Not tracking';
+
+
+    content.innerHTML =
+      `
+      <div class="empty">
+        No manual tracking data yet.
+      </div>
+      `;
+
+
     return;
   }
 
-  const nums = (m.numbers || []).map(Number);
-  const matches = (m.matches || [])
-    .slice()
-    .sort((a,b)=>Number(b.draw_id)-Number(a.draw_id));
 
-  fillInputs(slot,nums);
+  const nums =
+    (
+      m.numbers ||
+      []
+    ).map(
+      Number
+    );
 
-  if(m.active){
-    groupBox.classList.add('active');
-    state.className = 'manualState ok';
-    state.textContent = '● Tracking';
+
+  const matches =
+    (
+      m.matches ||
+      []
+    )
+      .slice()
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          Number(
+            b.draw_id
+          )
+          -
+          Number(
+            a.draw_id
+          )
+      );
+
+
+  fillInputs(
+    slot,
+    nums
+  );
+
+
+  if(
+    m.active
+  ){
+
+    groupBox
+      .classList
+      .add(
+        'active'
+      );
+
+
+    state.className =
+      'manualState ok';
+
+
+    state.textContent =
+      '● Tracking';
+
   }else{
-    groupBox.classList.remove('active');
-    state.className = 'manualState amber';
-    state.textContent = '● Stopped';
+
+    groupBox
+      .classList
+      .remove(
+        'active'
+      );
+
+
+    state.className =
+      'manualState amber';
+
+
+    state.textContent =
+      '● Stopped';
   }
 
+
   content.innerHTML = `
+
     <div class="manualMeta">
-      Started after draw <b>${m.startDrawId ?? '—'}</b>
+
+      Started after draw
+      <b>
+        ${
+          m.startDrawId ??
+          '—'
+        }
+      </b>
+
       &nbsp; • &nbsp;
-      Last checked <b>${m.lastSeenDrawId ?? '—'}</b>
+
+      Last checked
+      <b>
+        ${
+          m.lastSeenDrawId ??
+          '—'
+        }
+      </b>
+
     </div>
+
 
     <div class="balls groupNums">
-      ${nums.map(n=>`<span class="ball">${n}</span>`).join('')}
+
+      ${
+        nums
+          .map(
+            n =>
+              `<span class="ball">
+                ${n}
+              </span>`
+          )
+          .join('')
+      }
+
     </div>
 
+
     <div class="manualResults">
+
       ${
         matches.length
-          ? matches.map(r=>resultCard(r,nums)).join('')
-          : `<div class="empty">No 3/5 or better result yet.</div>`
+
+          ?
+
+          matches
+            .map(
+              r =>
+                resultCard(
+                  r,
+                  nums
+                )
+            )
+            .join('')
+
+          :
+
+          `
+          <div class="empty">
+            No 3/5 or better result yet.
+          </div>
+          `
       }
+
     </div>
   `;
 }
 
-function renderManuals(j){
-  const manuals = normalizeManuals(j);
-  renderManualSlot(1,manuals[0]);
-  renderManualSlot(2,manuals[1]);
-}
 
-function readNumbers(slot){
-  const nums = [1,2,3,4,5].map(i=>
-    Number(document.getElementById(`m${slot}_${i}`).value)
+function renderManuals(j){
+
+  const manuals =
+    normalizeManuals(
+      j
+    );
+
+
+  renderManualSlot(
+    1,
+    manuals[0]
   );
 
-  if(nums.some(n=>!Number.isInteger(n) || n < 1 || n > 80)){
-    throw Error('Enter exactly 5 numbers from 1 to 80.');
+
+  renderManualSlot(
+    2,
+    manuals[1]
+  );
+}
+
+
+function readNumbers(slot){
+
+  const nums =
+    [
+      1,
+      2,
+      3,
+      4,
+      5
+    ].map(
+      i =>
+        Number(
+          document
+            .getElementById(
+              `m${slot}_${i}`
+            )
+            .value
+        )
+    );
+
+
+  if(
+    nums.some(
+      n =>
+        !Number.isInteger(n)
+        ||
+        n < 1
+        ||
+        n > 80
+    )
+  ){
+
+    throw Error(
+      'Enter exactly 5 numbers from 1 to 80.'
+    );
   }
 
-  if(new Set(nums).size !== 5){
-    throw Error('All 5 numbers must be different.');
+
+  if(
+    new Set(
+      nums
+    ).size !== 5
+  ){
+
+    throw Error(
+      'All 5 numbers must be different.'
+    );
   }
+
 
   return nums;
 }
 
-function setManualBusy(slot,isBusy){
-  document.getElementById(`start${slot}`).disabled = isBusy;
-  document.getElementById(`stop${slot}`).disabled = isBusy;
-  document.getElementById(`clear${slot}`).disabled = isBusy;
+
+function setManualBusy(
+  slot,
+  isBusy
+){
+
+  document
+    .getElementById(
+      `start${slot}`
+    )
+    .disabled =
+    isBusy;
+
+
+  document
+    .getElementById(
+      `stop${slot}`
+    )
+    .disabled =
+    isBusy;
+
+
+  document
+    .getElementById(
+      `clear${slot}`
+    )
+    .disabled =
+    isBusy;
 }
+
 
 async function startManual(slot){
-  const msg = document.getElementById(`msg${slot}`);
+
+  const msg =
+    document.getElementById(
+      `msg${slot}`
+    );
+
 
   try{
-    const numbers = readNumbers(slot);
 
-    setManualBusy(slot,true);
-    msg.className = 'manualMsg mut';
-    msg.textContent = 'Starting…';
+    const numbers =
+      readNumbers(
+        slot
+      );
 
-    const j = await api('/api/group',{
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body:JSON.stringify({
-        action:'start',
-        slot,
-        numbers
-      })
-    });
 
-    msg.className = 'manualMsg ok';
+    setManualBusy(
+      slot,
+      true
+    );
 
-    if(j?.unchanged){
+
+    msg.className =
+      'manualMsg mut';
+
+
+    msg.textContent =
+      'Starting…';
+
+
+    const j =
+      await api(
+        '/api/group',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'start',
+              slot,
+              numbers
+            })
+        }
+      );
+
+
+    msg.className =
+      'manualMsg ok';
+
+
+    if(
+      j?.unchanged
+    ){
+
       msg.textContent =
-        `Already tracking. Original start draw ${j?.manual?.startDrawId ?? '—'} was preserved.`;
+        `Already tracking. Original start draw ${
+          j?.manual?.startDrawId ??
+          '—'
+        } was preserved.`;
+
     }else{
+
       msg.textContent =
-        `Tracking started after draw ${j?.latest?.id ?? j?.manual?.startDrawId ?? '—'}.`;
+        `Tracking started after draw ${
+          j?.latest?.id ??
+          j?.manual?.startDrawId ??
+          '—'
+        }.`;
     }
 
-    renderManuals(j);
+
+    renderManuals(
+      j
+    );
+
   }catch(e){
-    msg.className = 'manualMsg bad';
-    msg.textContent = String(e?.message || e);
+
+    msg.className =
+      'manualMsg bad';
+
+
+    msg.textContent =
+      String(
+        e?.message ||
+        e
+      );
+
   }finally{
-    setManualBusy(slot,false);
+
+    setManualBusy(
+      slot,
+      false
+    );
   }
 }
+
 
 async function stopManual(slot){
-  const msg = document.getElementById(`msg${slot}`);
+
+  const msg =
+    document.getElementById(
+      `msg${slot}`
+    );
+
 
   try{
-    setManualBusy(slot,true);
-    msg.className = 'manualMsg mut';
-    msg.textContent = 'Stopping…';
 
-    const j = await api('/api/group',{
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body:JSON.stringify({
-        action:'stop',
-        slot
-      })
-    });
+    setManualBusy(
+      slot,
+      true
+    );
 
-    msg.className = 'manualMsg amber';
-    msg.textContent = 'Tracking stopped. Existing results were kept.';
-    renderManuals(j);
+
+    msg.className =
+      'manualMsg mut';
+
+
+    msg.textContent =
+      'Stopping…';
+
+
+    const j =
+      await api(
+        '/api/group',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'stop',
+              slot
+            })
+        }
+      );
+
+
+    msg.className =
+      'manualMsg amber';
+
+
+    msg.textContent =
+      'Tracking stopped. Existing results were kept.';
+
+
+    renderManuals(
+      j
+    );
+
   }catch(e){
-    msg.className = 'manualMsg bad';
-    msg.textContent = String(e?.message || e);
+
+    msg.className =
+      'manualMsg bad';
+
+
+    msg.textContent =
+      String(
+        e?.message ||
+        e
+      );
+
   }finally{
-    setManualBusy(slot,false);
+
+    setManualBusy(
+      slot,
+      false
+    );
   }
 }
+
 
 async function clearManual(slot){
-  const msg = document.getElementById(`msg${slot}`);
+
+  const msg =
+    document.getElementById(
+      `msg${slot}`
+    );
+
 
   try{
-    setManualBusy(slot,true);
-    msg.className = 'manualMsg mut';
-    msg.textContent = 'Clearing…';
 
-    const j = await api('/api/group',{
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body:JSON.stringify({
-        action:'clear',
-        slot
-      })
-    });
+    setManualBusy(
+      slot,
+      true
+    );
 
-    fillInputs(slot,[]);
-    msg.className = 'manualMsg ok';
-    msg.textContent = 'Manual group cleared.';
-    renderManuals(j);
 
-    fillInputs(slot,[]);
+    msg.className =
+      'manualMsg mut';
+
+
+    msg.textContent =
+      'Clearing…';
+
+
+    const j =
+      await api(
+        '/api/group',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'clear',
+              slot
+            })
+        }
+      );
+
+
+    fillInputs(
+      slot,
+      []
+    );
+
+
+    msg.className =
+      'manualMsg ok';
+
+
+    msg.textContent =
+      'Manual group cleared.';
+
+
+    renderManuals(
+      j
+    );
+
+
+    fillInputs(
+      slot,
+      []
+    );
+
   }catch(e){
-    msg.className = 'manualMsg bad';
-    msg.textContent = String(e?.message || e);
+
+    msg.className =
+      'manualMsg bad';
+
+
+    msg.textContent =
+      String(
+        e?.message ||
+        e
+      );
+
   }finally{
-    setManualBusy(slot,false);
+
+    setManualBusy(
+      slot,
+      false
+    );
   }
 }
+
+
+/* =========================================================
+   LOAD EVERYTHING
+========================================================= */
+
+let loadingAll =
+  false;
+
 
 async function loadAll(){
-  const refreshBtn = document.getElementById('refresh');
 
-  busy('Refreshing…');
-  refreshBtn.disabled = true;
+  /*
+    Prevent overlapping refreshes.
+  */
 
-  const ts = Date.now();
+  if(
+    loadingAll
+  ){
 
-  const [
-    stateResult,
-    trackResult,
-    manualResult
-  ] = await Promise.allSettled([
-    api('/api/state?ts='+ts),
-    api('/api/track?ts='+ts),
-    api('/api/group?ts='+ts)
-  ]);
-
-  if(stateResult.status === 'fulfilled'){
-    const state = stateResult.value;
-    renderSummary(state);
-    renderStatus(state.mode);
-    renderAutomaticGroups(state);
-  }else{
-    document.getElementById('status').innerHTML =
-      `<span class="bad">${esc(stateResult.reason?.message || 'State error')}</span>`;
+    return;
   }
 
-  if(trackResult.status === 'fulfilled'){
-    renderLatestDraw(latestFromTrack(trackResult.value));
-  }else{
-    document.getElementById('latestDraw').innerHTML = `
-      <section class="card">
-        <div class="title">Latest Draw</div>
-        <div class="bad" style="margin-top:14px">
-          ${esc(trackResult.reason?.message || 'Latest draw error')}
-        </div>
-      </section>
-    `;
-  }
 
-  if(manualResult.status === 'fulfilled'){
-    renderManuals(manualResult.value);
-  }else{
-    document.getElementById('manualContent1').innerHTML =
-      `<div class="bad" style="margin-top:14px">${esc(manualResult.reason?.message || 'Manual tracker error')}</div>`;
-    document.getElementById('manualContent2').innerHTML =
-      `<div class="bad" style="margin-top:14px">${esc(manualResult.reason?.message || 'Manual tracker error')}</div>`;
-  }
+  loadingAll =
+    true;
 
-  busy('');
-  refreshBtn.disabled = false;
+
+  const refreshBtn =
+    document.getElementById(
+      'refresh'
+    );
+
+
+  busy(
+    'Refreshing…'
+  );
+
+
+  refreshBtn.disabled =
+    true;
+
+
+  const ts =
+    Date.now();
+
+
+  try{
+
+    const [
+      stateResult,
+      trackResult,
+      manualResult
+    ] =
+
+      await Promise.allSettled([
+
+        api(
+          '/api/state?ts=' +
+          ts
+        ),
+
+        api(
+          '/api/track?ts=' +
+          ts
+        ),
+
+        api(
+          '/api/group?ts=' +
+          ts
+        )
+      ]);
+
+
+    if(
+      stateResult.status ===
+      'fulfilled'
+    ){
+
+      const state =
+        stateResult.value;
+
+
+      renderSummary(
+        state
+      );
+
+
+      renderStatus(
+        state.mode
+      );
+
+
+      renderAutomaticGroups(
+        state
+      );
+
+    }else{
+
+      document
+        .getElementById(
+          'status'
+        )
+        .innerHTML =
+
+        `<span class="bad">
+          ${
+            esc(
+              stateResult
+                .reason
+                ?.message
+              ||
+              'State error'
+            )
+          }
+        </span>`;
+    }
+
+
+    if(
+      trackResult.status ===
+      'fulfilled'
+    ){
+
+      renderLatestDraw(
+        latestFromTrack(
+          trackResult.value
+        )
+      );
+
+    }else{
+
+      document
+        .getElementById(
+          'latestDraw'
+        )
+        .innerHTML = `
+
+          <section class="card">
+
+            <div class="title">
+              Latest Draw
+            </div>
+
+            <div
+              class="bad"
+              style="margin-top:14px"
+            >
+              ${
+                esc(
+                  trackResult
+                    .reason
+                    ?.message
+                  ||
+                  'Latest draw error'
+                )
+              }
+            </div>
+
+          </section>
+        `;
+    }
+
+
+    if(
+      manualResult.status ===
+      'fulfilled'
+    ){
+
+      renderManuals(
+        manualResult.value
+      );
+
+    }else{
+
+      document
+        .getElementById(
+          'manualContent1'
+        )
+        .innerHTML =
+
+        `<div
+          class="bad"
+          style="margin-top:14px"
+        >
+          ${
+            esc(
+              manualResult
+                .reason
+                ?.message
+              ||
+              'Manual tracker error'
+            )
+          }
+        </div>`;
+
+
+      document
+        .getElementById(
+          'manualContent2'
+        )
+        .innerHTML =
+
+        `<div
+          class="bad"
+          style="margin-top:14px"
+        >
+          ${
+            esc(
+              manualResult
+                .reason
+                ?.message
+              ||
+              'Manual tracker error'
+            )
+          }
+        </div>`;
+    }
+
+  }finally{
+
+    busy(
+      ''
+    );
+
+
+    refreshBtn.disabled =
+      false;
+
+
+    loadingAll =
+      false;
+  }
 }
 
-document.getElementById('refresh').addEventListener('click',loadAll);
 
-for(const slot of [1,2]){
-  document.getElementById(`start${slot}`).addEventListener('click',()=>startManual(slot));
-  document.getElementById(`stop${slot}`).addEventListener('click',()=>stopManual(slot));
-  document.getElementById(`clear${slot}`).addEventListener('click',()=>clearManual(slot));
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+document
+  .getElementById(
+    'refresh'
+  )
+  .addEventListener(
+    'click',
+    loadAll
+  );
+
+
+for(
+  const slot of [
+    1,
+    2
+  ]
+){
+
+  document
+    .getElementById(
+      `start${slot}`
+    )
+    .addEventListener(
+      'click',
+      () =>
+        startManual(
+          slot
+        )
+    );
+
+
+  document
+    .getElementById(
+      `stop${slot}`
+    )
+    .addEventListener(
+      'click',
+      () =>
+        stopManual(
+          slot
+        )
+    );
+
+
+  document
+    .getElementById(
+      `clear${slot}`
+    )
+    .addEventListener(
+      'click',
+      () =>
+        clearManual(
+          slot
+        )
+    );
 }
+
+
+/* =========================================================
+   AUTO REFRESH
+
+   Visible page:
+   every 60 seconds.
+
+   iPhone / Safari:
+   when Safari goes to background,
+   JavaScript timers may pause.
+
+   Therefore refresh immediately
+   when user returns.
+========================================================= */
 
 loadAll();
-setInterval(loadAll,240000);
+
+
+setInterval(
+  loadAll,
+  60000
+);
+
+
+/*
+  Refresh immediately when
+  Safari becomes visible again.
+*/
+
+document.addEventListener(
+  'visibilitychange',
+  () => {
+
+    if(
+      document.visibilityState ===
+      'visible'
+    ){
+
+      loadAll();
+    }
+  }
+);
+
+
+/*
+  Refresh when browser window
+  receives focus again.
+*/
+
+window.addEventListener(
+  'focus',
+  loadAll
+);
+
+
+/*
+  Important for Safari page cache.
+*/
+
+window.addEventListener(
+  'pageshow',
+  loadAll
+);
+
 </script>
 
 </body>
