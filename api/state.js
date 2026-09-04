@@ -1,3 +1,5 @@
+'use strict';
+
 const {
   db,
   statsForGroup,
@@ -9,6 +11,10 @@ const {
 const COLLECTION_DRAWS = 180;
 const CONTROL_PREFIX = 'AUTO_CONTROL_';
 const AUTO_PREFIX = 'AUTO Group ';
+const GROUP_FIVE_NAME = 'AUTO Group Five';
+const GROUP_FIVE_ARCHIVE_PREFIX = 'AUTO Group Five Archive ';
+const GROUP_FIVE_ANALYSIS_DRAWS = 30;
+const GROUP_FIVE_TRACK_DRAWS = 20;
 
 
 /* =========================================================
@@ -256,19 +262,6 @@ async (
 
     /* =====================================================
        DAILY CONTROL
-
-       IMPORTANT FIX:
-
-       We read recent AUTO_CONTROL_* rows,
-       but accept ONLY the real daily control:
-
-       AUTO_CONTROL_YYYY-MM-DD
-
-       We ignore markers such as:
-
-       AUTO_CONTROL_SPECIAL_ACTIVE_...
-       AUTO_CONTROL_SPECIAL_ACTIVE_V2_...
-       and any future AUTO_CONTROL marker.
     ===================================================== */
 
     const ctr =
@@ -315,12 +308,6 @@ async (
         ||
         [];
 
-
-      /*
-        Keep the original
-        collection date even
-        after midnight.
-      */
 
       let cycleDateKey =
         now.dateKey;
@@ -382,12 +369,6 @@ async (
               );
 
 
-            /*
-              Collection:
-              6:00 AM through
-              6:00 PM inclusive.
-            */
-
             return (
               dKey ===
                 cycleDateKey
@@ -417,6 +398,26 @@ async (
       )
       ||
       [];
+
+
+    /* =====================================================
+       GROUP FIVE ARCHIVES
+    ===================================================== */
+
+    const groupFiveArchives =
+      (
+        await db(
+          `tracker_groups?select=id,name,start_draw_id,last_seen_draw_id,created_at&name=like.${encodeURIComponent(
+            GROUP_FIVE_ARCHIVE_PREFIX + '*'
+          )}&order=id.asc&limit=100`
+        )
+      )
+      ||
+      [];
+
+
+    const groupFiveCycle =
+      groupFiveArchives.length + 1;
 
 
     const raw =
@@ -526,8 +527,6 @@ async (
 
     /* =====================================================
        STABILITY COMPARISON
-
-       Original behavior preserved.
     ===================================================== */
 
     if (
@@ -610,6 +609,113 @@ async (
       const g of raw
     ) {
 
+      if (
+        g.name ===
+        GROUP_FIVE_NAME
+      ) {
+
+        const haveFive =
+          Math.min(
+            GROUP_FIVE_TRACK_DRAWS,
+            g.results.length
+          );
+
+
+        g.reports =
+          [];
+
+
+        if (
+          g.results.length >=
+          GROUP_FIVE_TRACK_DRAWS
+        ) {
+
+          const r =
+            reportBlock(
+              g.results,
+              1
+            );
+
+          if (
+            r
+          ) {
+
+            r.block =
+              groupFiveCycle;
+
+            g.reports.push(
+              r
+            );
+          }
+        }
+
+
+        g.currentBlock = {
+
+          number:
+            groupFiveCycle,
+
+          have:
+            haveFive,
+
+          need:
+            GROUP_FIVE_TRACK_DRAWS,
+
+          remaining:
+            Math.max(
+              0,
+              GROUP_FIVE_TRACK_DRAWS -
+              haveFive
+            )
+        };
+
+
+        g.groupFive = {
+
+          cycle:
+            groupFiveCycle,
+
+          analysisWindow:
+            GROUP_FIVE_ANALYSIS_DRAWS,
+
+          trackingWindow:
+            GROUP_FIVE_TRACK_DRAWS,
+
+          startDrawId:
+            Number(
+              g.start_draw_id
+            ),
+
+          lastSeenDrawId:
+            Number(
+              g.last_seen_draw_id
+            ),
+
+          tracked:
+            haveFive,
+
+          remaining:
+            Math.max(
+              0,
+              GROUP_FIVE_TRACK_DRAWS -
+              haveFive
+            ),
+
+          nextSelectionAfterDrawId:
+            Number(
+              g.start_draw_id
+            ) +
+            GROUP_FIVE_TRACK_DRAWS,
+
+          rule:
+            'Analyze latest 30 draws, track next 20, then rotate using latest 30.'
+        };
+
+
+        continue;
+      }
+
+
       const completed =
         Math.floor(
           g.results.length /
@@ -689,6 +795,117 @@ async (
 
 
     /* =====================================================
+       GROUP FIVE TOP-LEVEL STATUS
+    ===================================================== */
+
+    const activeGroupFive =
+      raw.find(
+        g =>
+          g.name ===
+          GROUP_FIVE_NAME
+      )
+      ||
+      null;
+
+
+    const collectionHave =
+      Math.min(
+        COLLECTION_DRAWS,
+        history.length
+      );
+
+
+    const groupFive =
+      activeGroupFive
+        ? {
+
+            active:
+              true,
+
+            cycle:
+              groupFiveCycle,
+
+            numbers:
+              activeGroupFive.numbers,
+
+            analysisWindow:
+              GROUP_FIVE_ANALYSIS_DRAWS,
+
+            trackingWindow:
+              GROUP_FIVE_TRACK_DRAWS,
+
+            tracked:
+              activeGroupFive
+                .currentBlock
+                ?.have
+              ||
+              0,
+
+            remaining:
+              activeGroupFive
+                .currentBlock
+                ?.remaining
+              ??
+              GROUP_FIVE_TRACK_DRAWS,
+
+            startDrawId:
+              activeGroupFive
+                .start_draw_id,
+
+            lastSeenDrawId:
+              activeGroupFive
+                .last_seen_draw_id,
+
+            nextSelectionAfterDrawId:
+              Number(
+                activeGroupFive
+                  .start_draw_id
+              ) +
+              GROUP_FIVE_TRACK_DRAWS,
+
+            completedCycles:
+              groupFiveArchives.length
+          }
+        : {
+
+            active:
+              false,
+
+            cycle:
+              groupFiveCycle,
+
+            numbers:
+              null,
+
+            analysisWindow:
+              GROUP_FIVE_ANALYSIS_DRAWS,
+
+            trackingWindow:
+              GROUP_FIVE_TRACK_DRAWS,
+
+            waitingForFirstSelection:
+              collectionHave <
+              GROUP_FIVE_ANALYSIS_DRAWS,
+
+            analysisHave:
+              Math.min(
+                GROUP_FIVE_ANALYSIS_DRAWS,
+                collectionHave
+              ),
+
+            analysisRemaining:
+              Math.max(
+                0,
+                GROUP_FIVE_ANALYSIS_DRAWS -
+                collectionHave
+              ),
+
+            completedCycles:
+              groupFiveArchives.length
+          };
+
+
+    /* =====================================================
        LATEST STORED DRAW
     ===================================================== */
 
@@ -702,21 +919,18 @@ async (
        MODE
     ===================================================== */
 
-    const mode =
-      scheduleMode(
-        now.minutes,
-        raw.length > 0
+    const hasMainAutoGroups =
+      raw.some(
+        g =>
+          g.name !==
+          GROUP_FIVE_NAME
       );
 
 
-    /* =====================================================
-       COLLECTION COUNT
-    ===================================================== */
-
-    const have =
-      Math.min(
-        COLLECTION_DRAWS,
-        history.length
+    const mode =
+      scheduleMode(
+        now.minutes,
+        hasMainAutoGroups
       );
 
 
@@ -745,13 +959,17 @@ async (
             '6:05 PM – 2:00 AM',
 
           cleanup:
-            '2:30 AM'
+            '2:30 AM',
+
+          groupFive:
+            'First 30 draws, then rolling 20-draw tracking cycles using latest 30.'
         },
 
 
         collection: {
 
-          have,
+          have:
+            collectionHave,
 
           need:
             COLLECTION_DRAWS,
@@ -760,7 +978,7 @@ async (
             Math.max(
               0,
               COLLECTION_DRAWS -
-              have
+              collectionHave
             ),
 
           startDrawId:
@@ -769,6 +987,9 @@ async (
             ||
             null
         },
+
+
+        groupFive,
 
 
         groups:
