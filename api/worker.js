@@ -12,10 +12,19 @@ const {
 const COLLECTION_DRAWS = 180;
 const CONTROL_PREFIX = 'AUTO_CONTROL_';
 const AUTO_PREFIX = 'AUTO Group ';
-const MANUAL_NAME = 'MANUAL Group';
+
+/*
+  Both manual groups use this prefix:
+
+  MANUAL Group
+  MANUAL Group 2
+*/
+const MANUAL_PREFIX = 'MANUAL Group';
+
 const MAX_BACKFILL = 80;
 const TRACKING_BLOCKS = 6;
-const MAX_TRACKED_DRAWS = TRACKING_BLOCKS * 20;
+const MAX_TRACKED_DRAWS =
+  TRACKING_BLOCKS * 20;
 
 /*
   Automatic selection starts at
@@ -24,6 +33,11 @@ const MAX_TRACKED_DRAWS = TRACKING_BLOCKS * 20;
   18:05 = 1085 minutes.
 */
 const SELECTION_MINUTES = 1085;
+
+
+/* =========================================================
+   STORE DRAW
+========================================================= */
 
 async function store(d) {
   await db(
@@ -45,16 +59,25 @@ async function store(d) {
   );
 }
 
+
+/* =========================================================
+   AUTOMATIC CLEANUP
+========================================================= */
+
 async function cleanupAutoCycle() {
   const groups =
-    (await db(
-      'tracker_groups?select=id,name'
-    )) || [];
+    (
+      await db(
+        'tracker_groups?select=id,name'
+      )
+    ) || [];
 
   const autoCycleGroups =
     groups.filter(g => {
       const name =
-        String(g.name || '');
+        String(
+          g.name || ''
+        );
 
       return (
         name.startsWith(
@@ -73,6 +96,7 @@ async function cleanupAutoCycle() {
       `tracker_results?group_id=eq.${g.id}`,
       {
         method: 'DELETE',
+
         prefer:
           'return=minimal'
       }
@@ -86,6 +110,7 @@ async function cleanupAutoCycle() {
       `tracker_groups?id=eq.${g.id}`,
       {
         method: 'DELETE',
+
         prefer:
           'return=minimal'
       }
@@ -94,12 +119,22 @@ async function cleanupAutoCycle() {
 
   /*
     IMPORTANT:
+
     Do NOT delete hotspot_draws.
 
     Manual history needs the
     original draw date/time.
+
+    Manual Group and
+    Manual Group 2 are also
+    NOT deleted here.
   */
 }
+
+
+/* =========================================================
+   AUTOMATIC CONTROL
+========================================================= */
 
 async function getControl() {
   const rows =
@@ -111,6 +146,7 @@ async function getControl() {
 
   return rows?.[0] || null;
 }
+
 
 async function createControl(
   dateKey,
@@ -146,25 +182,62 @@ async function createControl(
   return rows?.[0] || null;
 }
 
+
+/* =========================================================
+   AUTOMATIC GROUPS
+========================================================= */
+
 async function getAutoGroups() {
   return (
-    (await db(
-      `tracker_groups?select=id,name,numbers,start_draw_id,last_seen_draw_id&active=eq.true&name=like.${encodeURIComponent(
-        AUTO_PREFIX + '*'
-      )}&order=id.asc`
-    )) || []
+    (
+      await db(
+        `tracker_groups?select=id,name,numbers,start_draw_id,last_seen_draw_id&active=eq.true&name=like.${encodeURIComponent(
+          AUTO_PREFIX + '*'
+        )}&order=id.asc`
+      )
+    ) || []
   );
 }
 
+
+/* =========================================================
+   MANUAL GROUPS
+========================================================= */
+
+/*
+  IMPORTANT CHANGE:
+
+  Previous code used:
+
+  name=eq.MANUAL Group
+
+  so only the first manual group
+  was processed by the worker.
+
+  Now the worker accepts:
+
+  MANUAL Group
+  MANUAL Group 2
+
+  and any future manual group
+  beginning with the same prefix.
+*/
 async function getManualGroups() {
   return (
-    (await db(
-      `tracker_groups?select=id,name,numbers,start_draw_id,last_seen_draw_id&active=eq.true&name=eq.${encodeURIComponent(
-        MANUAL_NAME
-      )}&order=id.asc`
-    )) || []
+    (
+      await db(
+        `tracker_groups?select=id,name,numbers,start_draw_id,last_seen_draw_id&active=eq.true&name=like.${encodeURIComponent(
+          MANUAL_PREFIX + '*'
+        )}&order=id.asc`
+      )
+    ) || []
   );
 }
+
+
+/* =========================================================
+   UPSERT AUTOMATIC GROUP
+========================================================= */
 
 async function upsertAuto(
   slot,
@@ -182,11 +255,11 @@ async function upsertAuto(
     );
 
   if (old?.[0]) {
-
     await db(
       `tracker_results?group_id=eq.${old[0].id}`,
       {
         method: 'DELETE',
+
         prefer:
           'return=minimal'
       }
@@ -202,6 +275,7 @@ async function upsertAuto(
 
         body: {
           numbers,
+
           active: true,
 
           start_draw_id:
@@ -227,7 +301,9 @@ async function upsertAuto(
 
         body: {
           name,
+
           numbers,
+
           active: true,
 
           start_draw_id:
@@ -241,6 +317,11 @@ async function upsertAuto(
 
   return x?.[0]?.id;
 }
+
+
+/* =========================================================
+   DRAW DATE
+========================================================= */
 
 function drawDateKey(
   dateText
@@ -271,6 +352,11 @@ function drawDateKey(
     ).padStart(2, '0')}`
   );
 }
+
+
+/* =========================================================
+   FIND 6:00 AM START
+========================================================= */
 
 async function findCycleStart(
   latest,
@@ -316,6 +402,7 @@ async function findCycleStart(
         length:
           to - from + 1
       },
+
       (_, i) =>
         from + i
     );
@@ -335,11 +422,12 @@ async function findCycleStart(
           d.date
         ) ===
           now.dateKey &&
+
         m != null &&
+
         m >= 360 &&
 
         /*
-          FIX:
           6:00 PM is INCLUDED.
         */
         m <= 1080
@@ -380,6 +468,11 @@ async function findCycleStart(
   );
 }
 
+
+/* =========================================================
+   COLLECTION WINDOW
+========================================================= */
+
 function inCollectionWindow(
   d,
   collectionDateKey
@@ -402,20 +495,16 @@ function inCollectionWindow(
     m >= 360 &&
 
     /*
-      IMPORTANT FIX:
-
-      Previous:
-      m < 1080
-
-      New:
-      m <= 1080
-
-      Therefore the official
-      6:00 PM draw is included.
+      6:00 PM is INCLUDED.
     */
     m <= 1080
   );
 }
+
+
+/* =========================================================
+   COLLECTION BACKFILL
+========================================================= */
 
 async function backfill(
   control,
@@ -434,6 +523,7 @@ async function backfill(
     after >= latest.id
   ) {
     await store(latest);
+
     return 0;
   }
 
@@ -449,6 +539,7 @@ async function backfill(
         length:
           end - after
       },
+
       (_, i) =>
         after + i + 1
     );
@@ -487,6 +578,11 @@ async function backfill(
   return ds.length;
 }
 
+
+/* =========================================================
+   COLLECTION REPAIR
+========================================================= */
+
 async function repairCollection(
   control,
   collectionDateKey
@@ -502,18 +598,21 @@ async function repairCollection(
         length:
           COLLECTION_DRAWS
       },
+
       (_, i) =>
         startId + i
     );
 
   const existing =
-    (await db(
-      `hotspot_draws?select=draw_id,draw_date,draw_time&draw_id=gte.${startId}&draw_id=lte.${
-        startId +
-        COLLECTION_DRAWS -
-        1
-      }&order=draw_id.asc`
-    )) || [];
+    (
+      await db(
+        `hotspot_draws?select=draw_id,draw_date,draw_time&draw_id=gte.${startId}&draw_id=lte.${
+          startId +
+          COLLECTION_DRAWS -
+          1
+        }&order=draw_id.asc`
+      )
+    ) || [];
 
   const have =
     new Set(
@@ -562,6 +661,7 @@ async function repairCollection(
       )
     ) {
       await store(d);
+
       repaired++;
     }
   }
@@ -569,14 +669,21 @@ async function repairCollection(
   return repaired;
 }
 
+
+/* =========================================================
+   LOAD DRAW RANGE
+========================================================= */
+
 async function loadDrawRange(
   after,
   end
 ) {
   let cached =
-    (await db(
-      `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gt.${after}&draw_id=lte.${end}&order=draw_id.asc`
-    )) || [];
+    (
+      await db(
+        `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gt.${after}&draw_id=lte.${end}&order=draw_id.asc`
+      )
+    ) || [];
 
   if (
     cached.length <
@@ -597,7 +704,9 @@ async function loadDrawRange(
     for (
       let id =
         after + 1;
+
       id <= end;
+
       id++
     ) {
       if (
@@ -622,14 +731,21 @@ async function loadDrawRange(
       }
 
       cached =
-        (await db(
-          `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gt.${after}&draw_id=lte.${end}&order=draw_id.asc`
-        )) || [];
+        (
+          await db(
+            `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gt.${after}&draw_id=lte.${end}&order=draw_id.asc`
+          )
+        ) || [];
     }
   }
 
   return cached;
 }
+
+
+/* =========================================================
+   AUTOMATIC TRACKING
+========================================================= */
 
 async function processTracking(
   groups,
@@ -780,6 +896,20 @@ async function processTracking(
   };
 }
 
+
+/* =========================================================
+   MANUAL TRACKING
+========================================================= */
+
+/*
+  This function already works
+  with an ARRAY of manual groups.
+
+  Because getManualGroups()
+  now returns both active manual
+  groups, both are processed here
+  independently.
+*/
 async function processManualTracking(
   groups,
   latest
@@ -897,6 +1027,11 @@ async function processManualTracking(
   return processed;
 }
 
+
+/* =========================================================
+   API HANDLER
+========================================================= */
+
 module.exports =
 async (
   req,
@@ -909,6 +1044,10 @@ async (
   );
 
   try {
+
+    /* =====================================================
+       SECURITY
+    ===================================================== */
 
     if (
       process.env
@@ -938,17 +1077,16 @@ async (
       }
     }
 
+
     const now =
       californiaNowParts();
 
-    /*
-      2:30 AM - 6:00 AM
 
-      Clear ONLY automatic
-      cycle data.
+    /* =====================================================
+       2:30 AM - 6:00 AM
+       CLEAN AUTOMATIC DATA ONLY
+    ===================================================== */
 
-      Manual group survives.
-    */
     if (
       now.minutes >= 150 &&
       now.minutes < 360
@@ -965,16 +1103,18 @@ async (
             'cleanup',
 
           message:
-            'Automatic daily cycle cleared. Manual group and manual 3+/5 history were preserved.',
+            'Automatic daily cycle cleared. Manual groups and manual 3+/5 history were preserved.',
 
           source:
             'California Lottery official'
         });
     }
 
-    /*
-      2:00 AM - 2:30 AM
-    */
+
+    /* =====================================================
+       2:00 AM - 2:30 AM
+    ===================================================== */
+
     if (
       now.minutes >= 120 &&
       now.minutes < 150
@@ -996,15 +1136,18 @@ async (
         });
     }
 
+
     let control =
       await getControl();
 
     const cycleKey =
       cycleDateKey(now);
 
-    /*
-      Midnight protection.
-    */
+
+    /* =====================================================
+       MIDNIGHT PROTECTION
+    ===================================================== */
+
     if (
       control &&
       !String(
@@ -1019,14 +1162,24 @@ async (
       control = null;
     }
 
+
+    /* =====================================================
+       LATEST OFFICIAL DRAW
+    ===================================================== */
+
     const latest =
       await getDraw(null);
 
     await store(latest);
 
-    /*
-      MANUAL TRACKING
-    */
+
+    /* =====================================================
+       MANUAL TRACKING
+
+       Both active manual groups
+       are processed here.
+    ===================================================== */
+
     const manualGroups =
       await getManualGroups();
 
@@ -1036,10 +1189,11 @@ async (
         latest
       );
 
-    /*
-      Create today's automatic
-      control if needed.
-    */
+
+    /* =====================================================
+       CREATE DAILY AUTOMATIC CONTROL
+    ===================================================== */
+
     if (!control) {
 
       const first =
@@ -1101,14 +1255,11 @@ async (
       await store(first);
     }
 
-    /*
-      Verify automatic collection
-      begins at exactly 6:00 AM.
 
-      Verification may continue
-      through the 6:00-6:05 PM
-      waiting period.
-    */
+    /* =====================================================
+       VERIFY COLLECTION START
+    ===================================================== */
+
     if (
       now.minutes >= 360 &&
       now.minutes <
@@ -1207,6 +1358,11 @@ async (
       }
     }
 
+
+    /* =====================================================
+       AUTOMATIC COLLECTION BACKFILL
+    ===================================================== */
+
     const stored =
       await backfill(
         control,
@@ -1223,10 +1379,11 @@ async (
 
     let repaired = 0;
 
-    /*
-      At/after 6 PM verify the
-      complete collection.
-    */
+
+    /* =====================================================
+       VERIFY COMPLETE COLLECTION AT / AFTER 6 PM
+    ===================================================== */
+
     if (
       now.minutes >= 1080
     ) {
@@ -1238,10 +1395,17 @@ async (
         );
     }
 
+
+    /* =====================================================
+       LOAD COLLECTION HISTORY
+    ===================================================== */
+
     const rawHistory =
-      (await db(
-        `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gte.${control.start_draw_id}&order=draw_id.asc&limit=220`
-      )) || [];
+      (
+        await db(
+          `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gte.${control.start_draw_id}&order=draw_id.asc&limit=220`
+        )
+      ) || [];
 
     const history =
       rawHistory.filter(
@@ -1260,18 +1424,18 @@ async (
           .start_draw_id
       );
 
-    /*
-      COLLECTION / WAITING
 
-      6:00 AM through 6:00 PM:
-      collect normally.
+    /* =====================================================
+       COLLECTION / WAITING
 
-      6:00 PM through 6:04 PM:
-      collection is finished,
-      but DO NOT select groups yet.
+       6:00 AM through 6:00 PM:
+       collect normally.
 
-      Selection begins at 6:05 PM.
-    */
+       6:00 PM through 6:04 PM:
+       collection finished but
+       selection waits until 6:05 PM.
+    ===================================================== */
+
     if (
       now.minutes >= 360 &&
       now.minutes <
@@ -1337,13 +1501,14 @@ async (
         });
     }
 
-    /*
-      After 6:05 PM:
 
-      NEVER select automatic
-      groups unless 180/180
-      is actually complete.
-    */
+    /* =====================================================
+       AFTER 6:05 PM:
+
+       NEVER SELECT AUTOMATIC GROUPS
+       UNTIL ALL 180 DRAWS EXIST.
+    ===================================================== */
+
     if (
       history.length <
       COLLECTION_DRAWS
@@ -1395,10 +1560,11 @@ async (
         });
     }
 
-    /*
-      Use exactly the first
-      180 official collection draws.
-    */
+
+    /* =====================================================
+       USE EXACTLY FIRST 180 DRAWS
+    ===================================================== */
+
     const completeHistory =
       history
         .sort(
@@ -1417,16 +1583,16 @@ async (
         ?.draw_id ??
       collectionEndId;
 
+
+    /* =====================================================
+       AUTOMATIC SELECTION
+    ===================================================== */
+
     let groups =
       await getAutoGroups();
 
     let selected = null;
 
-    /*
-      Automatic selection is
-      now allowed only after
-      6:05 PM and 180/180.
-    */
     if (
       groups.length === 0
     ) {
@@ -1462,14 +1628,21 @@ async (
         await getAutoGroups();
     }
 
-    /*
-      Automatic tracking.
-    */
+
+    /* =====================================================
+       AUTOMATIC TRACKING
+    ===================================================== */
+
     const tracking =
       await processTracking(
         groups,
         latest
       );
+
+
+    /* =====================================================
+       RESPONSE
+    ===================================================== */
 
     return res
       .status(200)
@@ -1518,6 +1691,7 @@ async (
         source:
           'California Lottery official'
       });
+
 
   } catch (e) {
 
