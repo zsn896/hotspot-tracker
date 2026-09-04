@@ -9,21 +9,37 @@ const {
 } = require('./lib');
 
 const COLLECTION_DRAWS = 180;
-const CONTROL_PREFIX = 'AUTO_CONTROL_';
-const AUTO_PREFIX = 'AUTO Group ';
 
-const GROUP_FIVE_NAME = 'AUTO Group Five';
-const GROUP_FIVE_ARCHIVE_PREFIX = 'AUTO Group Five Archive ';
+const CONTROL_PREFIX =
+  'AUTO_CONTROL_';
 
-const GROUP_FIVE_ANALYSIS_DRAWS = 30;
-const GROUP_FIVE_TRACK_DRAWS = 30;
+const AUTO_PREFIX =
+  'AUTO Group ';
+
+const GROUP_FIVE_NAME =
+  'AUTO Group Five';
+
+const GROUP_FIVE_ARCHIVE_PREFIX =
+  'AUTO Group Five Archive ';
+
+/*
+  GROUP FIVE
+
+  Analyze latest 50 draws.
+  Track next 20 future draws.
+*/
+
+const GROUP_FIVE_ANALYSIS_DRAWS = 50;
+const GROUP_FIVE_TRACK_DRAWS = 20;
 
 
 /* =========================================================
    DATE
 ========================================================= */
 
-function drawDateKey(dateText) {
+function drawDateKey(
+  dateText
+) {
 
   const d =
     new Date(
@@ -33,22 +49,38 @@ function drawDateKey(dateText) {
       ' 12:00:00 UTC'
     );
 
+
   if (
     Number.isNaN(
       d.getTime()
     )
   ) {
+
     return null;
   }
 
+
   return (
-    `${d.getUTCFullYear()}-` +
+
+    `${d.getUTCFullYear()}-`
+
+    +
+
     `${String(
       d.getUTCMonth() + 1
-    ).padStart(2, '0')}-` +
+    ).padStart(
+      2,
+      '0'
+    )}-`
+
+    +
+
     `${String(
       d.getUTCDate()
-    ).padStart(2, '0')}`
+    ).padStart(
+      2,
+      '0'
+    )}`
   );
 }
 
@@ -56,30 +88,42 @@ function drawDateKey(dateText) {
 /* =========================================================
    REPORT BLOCK
 
-   Default groups = 20 draws.
-   Group Five = 30 draws.
+   Other automatic groups continue using 20 draws.
+
+   Group Five also tracks 20 future draws,
+   so the same report size remains correct.
 ========================================================= */
 
 function reportBlock(
   rows,
-  block,
-  blockSize = 20
+  block
 ) {
 
   const part =
     rows.slice(
-      (block - 1) * blockSize,
-      block * blockSize
+      (block - 1) * 20,
+      block * 20
     );
 
+
   if (
-    part.length < blockSize
+    part.length < 20
   ) {
+
     return null;
   }
 
+
   const hist =
-    [0, 0, 0, 0, 0, 0];
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ];
+
 
   for (
     const r of part
@@ -90,13 +134,17 @@ function reportBlock(
         r.hit_count || 0
       );
 
+
     if (
-      hit >= 0 &&
+      hit >= 0
+      &&
       hit <= 5
     ) {
+
       hist[hit]++;
     }
   }
+
 
   const best =
     Math.max(
@@ -108,23 +156,28 @@ function reportBlock(
       )
     );
 
+
   return {
 
     block,
 
-    blockSize,
-
     fromDrawId:
-      part[0].draw_id,
+      part[0]
+        .draw_id,
 
     toDrawId:
-      part.at(-1).draw_id,
+      part
+        .at(-1)
+        .draw_id,
 
     fromTime:
-      part[0].time,
+      part[0]
+        .time,
 
     toTime:
-      part.at(-1).time,
+      part
+        .at(-1)
+        .time,
 
     bestHit:
       best,
@@ -133,12 +186,15 @@ function reportBlock(
       hist[5],
 
     fourPlus:
-      hist[4] +
+      hist[4]
+      +
       hist[5],
 
     threePlus:
-      hist[3] +
-      hist[4] +
+      hist[3]
+      +
+      hist[4]
+      +
       hist[5],
 
     averageHits:
@@ -148,13 +204,15 @@ function reportBlock(
             s,
             r
           ) =>
-            s +
+            s
+            +
             Number(
               r.hit_count || 0
             ),
           0
-        ) /
-        blockSize
+        )
+        /
+        20
       ).toFixed(2),
 
     bullsEyeMatches:
@@ -199,63 +257,93 @@ function addTimingCheck(
   if (
     !analysis
       ?.expectedFromDrawId
+
     ||
+
     !analysis
       ?.expectedToDrawId
   ) {
+
     return 'Not available';
   }
+
 
   const exact =
     rows.find(
       r =>
-        r.hit_count === 5
+
+        Number(
+          r.hit_count
+        ) === 5
+
         &&
-        r.draw_id >=
+
+        Number(
+          r.draw_id
+        )
+        >=
+        Number(
           analysis
             .expectedFromDrawId
+        )
+
         &&
-        r.draw_id <=
+
+        Number(
+          r.draw_id
+        )
+        <=
+        Number(
           analysis
             .expectedToDrawId
+        )
     );
+
 
   if (
     exact
   ) {
 
     return (
-      `Hit at draw ` +
-      `${exact.draw_id}`
+      `Hit at draw ${exact.draw_id}`
     );
   }
+
 
   const last =
     rows.at(-1)
       ?.draw_id;
 
+
   if (
     !last
     ||
-    last <
+    Number(last)
+    <
+    Number(
       analysis
         .expectedFromDrawId
+    )
   ) {
 
     return 'Pending';
   }
 
+
   if (
-    last >
+    Number(last)
+    >
+    Number(
       analysis
         .expectedToDrawId
+    )
   ) {
 
     return (
-      'Window passed ' +
-      'without 5/5'
+      'Window passed without 5/5'
     );
   }
+
 
   return (
     'Inside expected window'
@@ -277,6 +365,7 @@ async (
     'Cache-Control',
     'no-store,max-age=0'
   );
+
 
   try {
 
@@ -343,9 +432,11 @@ async (
 
             const m =
               parseDrawMinutes(
-                d.draw_time ??
+                d.draw_time
+                ??
                 d.time
               );
+
 
             return (
               m != null
@@ -381,26 +472,35 @@ async (
 
             const m =
               parseDrawMinutes(
-                d.draw_time ??
+                d.draw_time
+                ??
                 d.time
               );
 
 
             const dKey =
               drawDateKey(
-                d.draw_date ??
+                d.draw_date
+                ??
                 d.date
               );
 
 
             return (
+
               dKey ===
-                cycleDateKey
+              cycleDateKey
+
               &&
+
               m != null
+
               &&
+
               m >= 360
+
               &&
+
               m <= 1080
             );
           }
@@ -449,7 +549,7 @@ async (
 
 
     /* =====================================================
-       GROUP RESULTS
+       LOAD RESULTS FOR EACH GROUP
     ===================================================== */
 
     for (
@@ -626,7 +726,7 @@ async (
 
 
     /* =====================================================
-       BLOCK REPORTS
+       REPORTS
     ===================================================== */
 
     for (
@@ -634,7 +734,10 @@ async (
     ) {
 
       /* ===================================================
-         GROUP FIVE = 30 DRAWS
+         GROUP FIVE
+
+         Analyze = 50
+         Track = 20
       =================================================== */
 
       if (
@@ -654,8 +757,8 @@ async (
 
 
         /*
-          Group Five report is now
-          based on exactly 30 results.
+          One complete Group Five
+          cycle contains 20 future results.
         */
 
         if (
@@ -666,8 +769,7 @@ async (
           const r =
             reportBlock(
               g.results,
-              1,
-              GROUP_FIVE_TRACK_DRAWS
+              1
             );
 
 
@@ -677,6 +779,7 @@ async (
 
             r.block =
               groupFiveCycle;
+
 
             g.reports.push(
               r
@@ -699,7 +802,8 @@ async (
           remaining:
             Math.max(
               0,
-              GROUP_FIVE_TRACK_DRAWS -
+              GROUP_FIVE_TRACK_DRAWS
+              -
               haveFive
             )
         };
@@ -715,6 +819,9 @@ async (
 
           trackingWindow:
             GROUP_FIVE_TRACK_DRAWS,
+
+          numbers:
+            g.numbers,
 
           startDrawId:
             Number(
@@ -732,18 +839,20 @@ async (
           remaining:
             Math.max(
               0,
-              GROUP_FIVE_TRACK_DRAWS -
+              GROUP_FIVE_TRACK_DRAWS
+              -
               haveFive
             ),
 
           nextSelectionAfterDrawId:
             Number(
               g.start_draw_id
-            ) +
+            )
+            +
             GROUP_FIVE_TRACK_DRAWS,
 
           rule:
-            'Analyze latest 30 draws, track next 30 future draws, clear old results, then rotate using latest 30.'
+            'Analyze latest 50 draws, select five numbers, track next 20 future draws, clear old cycle results, then analyze latest 50 again.'
         };
 
 
@@ -752,12 +861,13 @@ async (
 
 
       /* ===================================================
-         ORIGINAL AUTOMATIC GROUPS = 20 DRAWS
+         OTHER AUTOMATIC GROUPS
       =================================================== */
 
       const completed =
         Math.floor(
-          g.results.length /
+          g.results.length
+          /
           20
         );
 
@@ -775,8 +885,7 @@ async (
         const r =
           reportBlock(
             g.results,
-            b,
-            20
+            b
           );
 
 
@@ -800,21 +909,27 @@ async (
           ),
 
         have:
-          g.results.length %
+          g.results.length
+          %
           20,
 
         need:
           20,
 
         remaining:
-          g.results.length >=
-          120
+          g.results.length >= 120
+
             ?
+
             0
+
             :
-            20 -
+
+            20
+            -
             (
-              g.results.length %
+              g.results.length
+              %
               20
             )
       };
@@ -835,7 +950,7 @@ async (
 
 
     /* =====================================================
-       GROUP FIVE TOP-LEVEL STATUS
+       GROUP FIVE TOP LEVEL
     ===================================================== */
 
     const activeGroupFive =
@@ -857,98 +972,108 @@ async (
 
     const groupFive =
       activeGroupFive
-        ? {
 
-            active:
-              true,
+        ?
 
-            cycle:
-              groupFiveCycle,
+        {
 
-            numbers:
-              activeGroupFive.numbers,
+          active:
+            true,
 
-            analysisWindow:
-              GROUP_FIVE_ANALYSIS_DRAWS,
+          cycle:
+            groupFiveCycle,
 
-            trackingWindow:
-              GROUP_FIVE_TRACK_DRAWS,
+          numbers:
+            activeGroupFive
+              .numbers,
 
-            tracked:
+          analysisWindow:
+            GROUP_FIVE_ANALYSIS_DRAWS,
+
+          trackingWindow:
+            GROUP_FIVE_TRACK_DRAWS,
+
+          tracked:
+            activeGroupFive
+              .currentBlock
+              ?.have
+            ||
+            0,
+
+          remaining:
+            activeGroupFive
+              .currentBlock
+              ?.remaining
+            ??
+            GROUP_FIVE_TRACK_DRAWS,
+
+          startDrawId:
+            activeGroupFive
+              .start_draw_id,
+
+          lastSeenDrawId:
+            activeGroupFive
+              .last_seen_draw_id,
+
+          nextSelectionAfterDrawId:
+            Number(
               activeGroupFive
-                .currentBlock
-                ?.have
-              ||
+                .start_draw_id
+            )
+            +
+            GROUP_FIVE_TRACK_DRAWS,
+
+          completedCycles:
+            groupFiveArchives.length,
+
+          rule:
+            'Analyze 50 → Track 20 → Clear old results → Analyze latest 50 again.'
+        }
+
+        :
+
+        {
+
+          active:
+            false,
+
+          cycle:
+            groupFiveCycle,
+
+          numbers:
+            null,
+
+          analysisWindow:
+            GROUP_FIVE_ANALYSIS_DRAWS,
+
+          trackingWindow:
+            GROUP_FIVE_TRACK_DRAWS,
+
+          waitingForFirstSelection:
+            collectionHave
+            <
+            GROUP_FIVE_ANALYSIS_DRAWS,
+
+          analysisHave:
+            Math.min(
+              GROUP_FIVE_ANALYSIS_DRAWS,
+              collectionHave
+            ),
+
+          analysisRemaining:
+            Math.max(
               0,
+              GROUP_FIVE_ANALYSIS_DRAWS
+              -
+              collectionHave
+            ),
 
-            remaining:
-              activeGroupFive
-                .currentBlock
-                ?.remaining
-              ??
-              GROUP_FIVE_TRACK_DRAWS,
+          completedCycles:
+            groupFiveArchives.length,
 
-            startDrawId:
-              activeGroupFive
-                .start_draw_id,
-
-            lastSeenDrawId:
-              activeGroupFive
-                .last_seen_draw_id,
-
-            nextSelectionAfterDrawId:
-              Number(
-                activeGroupFive
-                  .start_draw_id
-              ) +
-              GROUP_FIVE_TRACK_DRAWS,
-
-            completedCycles:
-              groupFiveArchives.length,
-
-            rule:
-              'Analyze 30 → Track 30 → Clear old results → Select new five.'
-          }
-        : {
-
-            active:
-              false,
-
-            cycle:
-              groupFiveCycle,
-
-            numbers:
-              null,
-
-            analysisWindow:
-              GROUP_FIVE_ANALYSIS_DRAWS,
-
-            trackingWindow:
-              GROUP_FIVE_TRACK_DRAWS,
-
-            waitingForFirstSelection:
-              collectionHave <
-              GROUP_FIVE_ANALYSIS_DRAWS,
-
-            analysisHave:
-              Math.min(
-                GROUP_FIVE_ANALYSIS_DRAWS,
-                collectionHave
-              ),
-
-            analysisRemaining:
-              Math.max(
-                0,
-                GROUP_FIVE_ANALYSIS_DRAWS -
-                collectionHave
-              ),
-
-            completedCycles:
-              groupFiveArchives.length,
-
-            rule:
-              'Analyze 30 → Track 30 → Clear old results → Select new five.'
-          };
+          rule:
+            'Analyze 50 → Track 20 → Clear old results → Analyze latest 50 again.'
+        };
 
 
     /* =====================================================
@@ -1008,7 +1133,7 @@ async (
             '2:30 AM',
 
           groupFive:
-            'Analyze latest 30 draws, track next 30 future draws, clear old results, then rotate using latest 30.'
+            'Analyze latest 50 draws, select five numbers, then track the next 20 future draws.'
         },
 
 
@@ -1023,7 +1148,8 @@ async (
           remaining:
             Math.max(
               0,
-              COLLECTION_DRAWS -
+              COLLECTION_DRAWS
+              -
               collectionHave
             ),
 
