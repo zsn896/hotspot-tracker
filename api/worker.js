@@ -12,26 +12,14 @@ const {
 const COLLECTION_DRAWS = 180;
 const CONTROL_PREFIX = 'AUTO_CONTROL_';
 const AUTO_PREFIX = 'AUTO Group ';
-
-/*
-  Both manual groups use this prefix:
-
-  MANUAL Group
-  MANUAL Group 2
-*/
 const MANUAL_PREFIX = 'MANUAL Group';
+const SPECIAL_NAME = 'AUTO Group Special';
 
 const MAX_BACKFILL = 80;
 const TRACKING_BLOCKS = 6;
 const MAX_TRACKED_DRAWS =
   TRACKING_BLOCKS * 20;
 
-/*
-  Automatic selection starts at
-  6:05 PM California time.
-
-  18:05 = 1085 minutes.
-*/
 const SELECTION_MINUTES = 1085;
 
 
@@ -65,6 +53,7 @@ async function store(d) {
 ========================================================= */
 
 async function cleanupAutoCycle() {
+
   const groups =
     (
       await db(
@@ -73,29 +62,34 @@ async function cleanupAutoCycle() {
     ) || [];
 
   const autoCycleGroups =
-    groups.filter(g => {
-      const name =
-        String(
-          g.name || ''
-        );
+    groups.filter(
+      g => {
 
-      return (
-        name.startsWith(
-          CONTROL_PREFIX
-        ) ||
-        name.startsWith(
-          AUTO_PREFIX
-        )
-      );
-    });
+        const name =
+          String(
+            g.name || ''
+          );
+
+        return (
+          name.startsWith(
+            CONTROL_PREFIX
+          ) ||
+          name.startsWith(
+            AUTO_PREFIX
+          )
+        );
+      }
+    );
 
   for (
     const g of autoCycleGroups
   ) {
+
     await db(
       `tracker_results?group_id=eq.${g.id}`,
       {
-        method: 'DELETE',
+        method:
+          'DELETE',
 
         prefer:
           'return=minimal'
@@ -106,10 +100,12 @@ async function cleanupAutoCycle() {
   for (
     const g of autoCycleGroups
   ) {
+
     await db(
       `tracker_groups?id=eq.${g.id}`,
       {
-        method: 'DELETE',
+        method:
+          'DELETE',
 
         prefer:
           'return=minimal'
@@ -120,14 +116,17 @@ async function cleanupAutoCycle() {
   /*
     IMPORTANT:
 
-    Do NOT delete hotspot_draws.
+    hotspot_draws is NOT deleted.
 
-    Manual history needs the
-    original draw date/time.
+    Manual Group 1
+    and
+    Manual Group 2
 
-    Manual Group and
-    Manual Group 2 are also
-    NOT deleted here.
+    remain untouched.
+
+    AUTO Group Special is automatic,
+    therefore it is deleted together
+    with the normal automatic cycle.
   */
 }
 
@@ -137,6 +136,7 @@ async function cleanupAutoCycle() {
 ========================================================= */
 
 async function getControl() {
+
   const rows =
     await db(
       `tracker_groups?select=id,name,start_draw_id,last_seen_draw_id,created_at&name=like.${encodeURIComponent(
@@ -144,7 +144,10 @@ async function getControl() {
       )}&order=id.desc&limit=1`
     );
 
-  return rows?.[0] || null;
+  return (
+    rows?.[0] ||
+    null
+  );
 }
 
 
@@ -152,23 +155,27 @@ async function createControl(
   dateKey,
   startId
 ) {
+
   const rows =
     await db(
       'tracker_groups',
       {
-        method: 'POST',
+        method:
+          'POST',
 
         prefer:
           'return=representation',
 
         body: {
+
           name:
             `${CONTROL_PREFIX}${dateKey}`,
 
           numbers:
             [1, 2, 3, 4, 5],
 
-          active: false,
+          active:
+            false,
 
           start_draw_id:
             startId,
@@ -179,7 +186,10 @@ async function createControl(
       }
     );
 
-  return rows?.[0] || null;
+  return (
+    rows?.[0] ||
+    null
+  );
 }
 
 
@@ -188,6 +198,7 @@ async function createControl(
 ========================================================= */
 
 async function getAutoGroups() {
+
   return (
     (
       await db(
@@ -204,25 +215,8 @@ async function getAutoGroups() {
    MANUAL GROUPS
 ========================================================= */
 
-/*
-  IMPORTANT CHANGE:
-
-  Previous code used:
-
-  name=eq.MANUAL Group
-
-  so only the first manual group
-  was processed by the worker.
-
-  Now the worker accepts:
-
-  MANUAL Group
-  MANUAL Group 2
-
-  and any future manual group
-  beginning with the same prefix.
-*/
 async function getManualGroups() {
+
   return (
     (
       await db(
@@ -244,6 +238,7 @@ async function upsertAuto(
   numbers,
   collectionEndId
 ) {
+
   const name =
     `${AUTO_PREFIX}${slot}`;
 
@@ -254,11 +249,15 @@ async function upsertAuto(
       )}&order=id.desc&limit=1`
     );
 
-  if (old?.[0]) {
+  if (
+    old?.[0]
+  ) {
+
     await db(
       `tracker_results?group_id=eq.${old[0].id}`,
       {
-        method: 'DELETE',
+        method:
+          'DELETE',
 
         prefer:
           'return=minimal'
@@ -268,15 +267,18 @@ async function upsertAuto(
     await db(
       `tracker_groups?id=eq.${old[0].id}`,
       {
-        method: 'PATCH',
+        method:
+          'PATCH',
 
         prefer:
           'return=minimal',
 
         body: {
+
           numbers,
 
-          active: true,
+          active:
+            true,
 
           start_draw_id:
             collectionEndId,
@@ -294,17 +296,20 @@ async function upsertAuto(
     await db(
       'tracker_groups',
       {
-        method: 'POST',
+        method:
+          'POST',
 
         prefer:
           'return=representation',
 
         body: {
+
           name,
 
           numbers,
 
-          active: true,
+          active:
+            true,
 
           start_draw_id:
             collectionEndId,
@@ -315,7 +320,712 @@ async function upsertAuto(
       }
     );
 
-  return x?.[0]?.id;
+  return (
+    x?.[0]?.id
+  );
+}
+
+
+/* =========================================================
+   SPECIAL GROUP HELPERS
+========================================================= */
+
+function combinations(
+  values,
+  size
+) {
+
+  const out = [];
+
+  const a =
+    Array.from(
+      new Set(
+        (values || [])
+          .map(Number)
+      )
+    )
+      .filter(
+        Number.isFinite
+      );
+
+  function walk(
+    start,
+    picked
+  ) {
+
+    if (
+      picked.length ===
+      size
+    ) {
+
+      out.push(
+        [...picked]
+      );
+
+      return;
+    }
+
+    for (
+      let i = start;
+      i <=
+      a.length -
+      (
+        size -
+        picked.length
+      );
+      i++
+    ) {
+
+      picked.push(
+        a[i]
+      );
+
+      walk(
+        i + 1,
+        picked
+      );
+
+      picked.pop();
+    }
+  }
+
+  walk(
+    0,
+    []
+  );
+
+  return out;
+}
+
+
+function sameFive(
+  a,
+  b
+) {
+
+  const aa =
+    [
+      ...new Set(
+        (a || [])
+          .map(Number)
+      )
+    ]
+      .sort(
+        (x, y) =>
+          x - y
+      );
+
+  const bb =
+    [
+      ...new Set(
+        (b || [])
+          .map(Number)
+      )
+    ]
+      .sort(
+        (x, y) =>
+          x - y
+      );
+
+  return (
+    aa.length === 5 &&
+    bb.length === 5 &&
+    aa.every(
+      (
+        n,
+        i
+      ) =>
+        n === bb[i]
+    )
+  );
+}
+
+
+function containsAll(
+  draw,
+  numbers
+) {
+
+  const set =
+    new Set(
+      (
+        draw?.numbers ||
+        []
+      ).map(Number)
+    );
+
+  return (
+    numbers.every(
+      n =>
+        set.has(
+          Number(n)
+        )
+    )
+  );
+}
+
+
+/*
+  SPECIAL GROUP LOGIC
+
+  Example:
+
+  Group 1:
+  4 17 49 52 57
+
+  Group 2:
+  40 43 50 60 75
+
+  Search for:
+
+  3 numbers from Group 1
+  +
+  2 numbers from Group 2
+
+  and also:
+
+  3 numbers from Group 2
+  +
+  2 numbers from Group 1
+
+  The 3-number core must appear
+  together at least TWO times.
+
+  Then we examine which two
+  numbers from the other group
+  appear most consistently with it.
+
+  ONLY the completed 180-draw
+  collection is used.
+
+  Future tracking draws are
+  NEVER used to select Special Group.
+*/
+
+function buildSpecialGroup(
+  draws,
+  group1,
+  group2
+) {
+
+  const history =
+    Array.isArray(draws)
+      ? draws
+      : [];
+
+  const g1 =
+    Array.from(
+      new Set(
+        (group1 || [])
+          .map(Number)
+      )
+    )
+      .sort(
+        (a, b) =>
+          a - b
+      );
+
+  const g2 =
+    Array.from(
+      new Set(
+        (group2 || [])
+          .map(Number)
+      )
+    )
+      .sort(
+        (a, b) =>
+          a - b
+      );
+
+  if (
+    g1.length !== 5 ||
+    g2.length !== 5 ||
+    history.length < 2
+  ) {
+
+    return null;
+  }
+
+  const candidates = [];
+
+
+  function analyzeDirection(
+    anchorGroup,
+    otherGroup,
+    anchorName
+  ) {
+
+    for (
+      const triple
+      of combinations(
+        anchorGroup,
+        3
+      )
+    ) {
+
+      const anchorDraws =
+        history.filter(
+          d =>
+            containsAll(
+              d,
+              triple
+            )
+        );
+
+      /*
+        Triple must have appeared
+        together MORE THAN ONCE.
+      */
+      if (
+        anchorDraws.length < 2
+      ) {
+
+        continue;
+      }
+
+
+      /*
+        Prevent duplicate numbers
+        if Group 1 and Group 2 share
+        one or more numbers.
+      */
+      const availableOther =
+        otherGroup.filter(
+          n =>
+            !triple.includes(
+              n
+            )
+        );
+
+
+      for (
+        const pair
+        of combinations(
+          availableOther,
+          2
+        )
+      ) {
+
+        const numbers =
+          [
+            ...triple,
+            ...pair
+          ]
+            .sort(
+              (a, b) =>
+                a - b
+            );
+
+
+        if (
+          new Set(
+            numbers
+          ).size !== 5
+        ) {
+
+          continue;
+        }
+
+
+        /*
+          Special Group must not
+          simply reproduce Group 1
+          or Group 2.
+        */
+        if (
+          sameFive(
+            numbers,
+            g1
+          ) ||
+          sameFive(
+            numbers,
+            g2
+          )
+        ) {
+
+          continue;
+        }
+
+
+        /*
+          Count how often each
+          companion number appears
+          during draws where the
+          anchor triple is present.
+        */
+
+        const firstSupport =
+          anchorDraws.filter(
+            d =>
+              containsAll(
+                d,
+                [pair[0]]
+              )
+          ).length;
+
+
+        const secondSupport =
+          anchorDraws.filter(
+            d =>
+              containsAll(
+                d,
+                [pair[1]]
+              )
+          ).length;
+
+
+        /*
+          Count how many times the
+          TWO companion numbers
+          appeared TOGETHER while
+          the anchor triple was there.
+
+          This equals a complete
+          5-number occurrence of
+          this Special candidate.
+        */
+
+        const pairTogetherDraws =
+          anchorDraws.filter(
+            d =>
+              containsAll(
+                d,
+                pair
+              )
+          );
+
+
+        const pairTogether =
+          pairTogetherDraws.length;
+
+
+        /*
+          Each companion number
+          must have appeared with
+          the anchor triple at least once.
+        */
+
+        if (
+          firstSupport < 1 ||
+          secondSupport < 1
+        ) {
+
+          continue;
+        }
+
+
+        const latestTogetherDrawId =
+          pairTogetherDraws.length
+
+            ? Math.max(
+                ...pairTogetherDraws.map(
+                  d =>
+                    Number(
+                      d.draw_id ??
+                      d.id ??
+                      0
+                    )
+                )
+              )
+
+            : Math.max(
+                ...anchorDraws.map(
+                  d =>
+                    Number(
+                      d.draw_id ??
+                      d.id ??
+                      0
+                    )
+                )
+              );
+
+
+        candidates.push({
+
+          numbers,
+
+          anchorSource:
+            anchorName,
+
+          anchorTriple:
+            [...triple],
+
+          companionPair:
+            [...pair],
+
+          anchorOccurrences:
+            anchorDraws.length,
+
+          companionOccurrences:
+            [
+              firstSupport,
+              secondSupport
+            ],
+
+          pairTogetherOccurrences:
+            pairTogether,
+
+          latestTogetherDrawId,
+
+          minCompanionSupport:
+            Math.min(
+              firstSupport,
+              secondSupport
+            ),
+
+          totalCompanionSupport:
+            firstSupport +
+            secondSupport
+        });
+      }
+    }
+  }
+
+
+  /*
+    Direction 1:
+
+    3 from Group 1
+    +
+    2 from Group 2
+  */
+
+  analyzeDirection(
+    g1,
+    g2,
+    'AUTO Group 1'
+  );
+
+
+  /*
+    Direction 2:
+
+    3 from Group 2
+    +
+    2 from Group 1
+  */
+
+  analyzeDirection(
+    g2,
+    g1,
+    'AUTO Group 2'
+  );
+
+
+  if (
+    !candidates.length
+  ) {
+
+    return null;
+  }
+
+
+  /*
+    A candidate may be produced
+    from both directions.
+
+    Keep only the stronger version.
+  */
+
+  const bestByNumbers =
+    new Map();
+
+
+  function better(
+    a,
+    b
+  ) {
+
+    if (
+      !b
+    ) {
+
+      return true;
+    }
+
+    return (
+
+      a.pairTogetherOccurrences >
+      b.pairTogetherOccurrences
+
+      ||
+
+      (
+        a.pairTogetherOccurrences ===
+        b.pairTogetherOccurrences
+        &&
+        a.minCompanionSupport >
+        b.minCompanionSupport
+      )
+
+      ||
+
+      (
+        a.pairTogetherOccurrences ===
+        b.pairTogetherOccurrences
+        &&
+        a.minCompanionSupport ===
+        b.minCompanionSupport
+        &&
+        a.totalCompanionSupport >
+        b.totalCompanionSupport
+      )
+
+      ||
+
+      (
+        a.pairTogetherOccurrences ===
+        b.pairTogetherOccurrences
+        &&
+        a.minCompanionSupport ===
+        b.minCompanionSupport
+        &&
+        a.totalCompanionSupport ===
+        b.totalCompanionSupport
+        &&
+        a.anchorOccurrences >
+        b.anchorOccurrences
+      )
+
+      ||
+
+      (
+        a.pairTogetherOccurrences ===
+        b.pairTogetherOccurrences
+        &&
+        a.minCompanionSupport ===
+        b.minCompanionSupport
+        &&
+        a.totalCompanionSupport ===
+        b.totalCompanionSupport
+        &&
+        a.anchorOccurrences ===
+        b.anchorOccurrences
+        &&
+        a.latestTogetherDrawId >
+        b.latestTogetherDrawId
+      )
+    );
+  }
+
+
+  for (
+    const candidate
+    of candidates
+  ) {
+
+    const key =
+      candidate
+        .numbers
+        .join(',');
+
+    const old =
+      bestByNumbers.get(
+        key
+      );
+
+    if (
+      better(
+        candidate,
+        old
+      )
+    ) {
+
+      bestByNumbers.set(
+        key,
+        candidate
+      );
+    }
+  }
+
+
+  /*
+    Ranking priority:
+
+    1. How many times all five
+       appeared together.
+
+    2. Minimum support of the
+       two companion numbers.
+
+    3. Total companion support.
+
+    4. How often the anchor
+       triple appeared.
+
+    5. Most recent supporting draw.
+  */
+
+  const ranked =
+    [
+      ...bestByNumbers.values()
+    ]
+      .sort(
+        (
+          a,
+          b
+        ) => {
+
+          if (
+            b.pairTogetherOccurrences !==
+            a.pairTogetherOccurrences
+          ) {
+
+            return (
+              b.pairTogetherOccurrences -
+              a.pairTogetherOccurrences
+            );
+          }
+
+
+          if (
+            b.minCompanionSupport !==
+            a.minCompanionSupport
+          ) {
+
+            return (
+              b.minCompanionSupport -
+              a.minCompanionSupport
+            );
+          }
+
+
+          if (
+            b.totalCompanionSupport !==
+            a.totalCompanionSupport
+          ) {
+
+            return (
+              b.totalCompanionSupport -
+              a.totalCompanionSupport
+            );
+          }
+
+
+          if (
+            b.anchorOccurrences !==
+            a.anchorOccurrences
+          ) {
+
+            return (
+              b.anchorOccurrences -
+              a.anchorOccurrences
+            );
+          }
+
+
+          return (
+            b.latestTogetherDrawId -
+            a.latestTogetherDrawId
+          );
+        }
+      );
+
+
+  return (
+    ranked[0] ||
+    null
+  );
 }
 
 
@@ -326,6 +1036,7 @@ async function upsertAuto(
 function drawDateKey(
   dateText
 ) {
+
   const d =
     new Date(
       String(
@@ -339,6 +1050,7 @@ function drawDateKey(
       d.getTime()
     )
   ) {
+
     return null;
   }
 
@@ -362,6 +1074,7 @@ async function findCycleStart(
   latest,
   now
 ) {
+
   const mins =
     parseDrawMinutes(
       latest.time
@@ -371,14 +1084,20 @@ async function findCycleStart(
     mins == null ||
     mins < 360
   ) {
+
     return null;
   }
+
 
   const estimate =
     latest.id -
     Math.floor(
-      (mins - 360) / 4
+      (
+        mins -
+        360
+      ) / 4
     );
+
 
   const from =
     Math.max(
@@ -386,53 +1105,69 @@ async function findCycleStart(
       estimate - 20
     );
 
+
   const to =
     Math.min(
       latest.id,
       estimate + 20
     );
 
-  if (to < from) {
+
+  if (
+    to < from
+  ) {
+
     return null;
   }
+
 
   const ids =
     Array.from(
       {
         length:
-          to - from + 1
+          to -
+          from +
+          1
       },
 
-      (_, i) =>
+      (
+        _,
+        i
+      ) =>
         from + i
     );
 
+
   const ds =
-    await getMany(ids);
+    await getMany(
+      ids
+    );
+
 
   const candidates =
-    ds.filter(d => {
-      const m =
-        parseDrawMinutes(
-          d.time
+    ds.filter(
+      d => {
+
+        const m =
+          parseDrawMinutes(
+            d.time
+          );
+
+        return (
+          drawDateKey(
+            d.date
+          ) ===
+            now.dateKey
+          &&
+          m != null
+          &&
+          m >= 360
+          &&
+          m <= 1080
         );
+      }
+    );
 
-      return (
-        drawDateKey(
-          d.date
-        ) ===
-          now.dateKey &&
-
-        m != null &&
-
-        m >= 360 &&
-
-        /*
-          6:00 PM is INCLUDED.
-        */
-        m <= 1080
-      );
-    });
 
   const exactSix =
     candidates.find(
@@ -442,14 +1177,23 @@ async function findCycleStart(
         ) === 360
     );
 
-  if (exactSix) {
+
+  if (
+    exactSix
+  ) {
+
     return exactSix;
   }
+
 
   return (
     candidates
       .sort(
-        (a, b) => {
+        (
+          a,
+          b
+        ) => {
+
           const ma =
             parseDrawMinutes(
               a.time
@@ -460,11 +1204,18 @@ async function findCycleStart(
               b.time
             );
 
-          return ma !== mb
-            ? ma - mb
-            : a.id - b.id;
+          return (
+            ma !== mb
+
+              ? ma - mb
+
+              : a.id -
+                b.id
+          );
         }
-      )[0] || null
+      )[0]
+    ||
+    null
   );
 }
 
@@ -477,26 +1228,32 @@ function inCollectionWindow(
   d,
   collectionDateKey
 ) {
+
   const m =
     parseDrawMinutes(
       d.draw_time ??
       d.time
     );
 
+
   return (
+
     drawDateKey(
       d.draw_date ??
       d.date
     ) ===
-      collectionDateKey &&
+      collectionDateKey
 
-    m != null &&
+    &&
 
-    m >= 360 &&
+    m != null
 
-    /*
-      6:00 PM is INCLUDED.
-    */
+    &&
+
+    m >= 360
+
+    &&
+
     m <= 1080
   );
 }
@@ -510,57 +1267,85 @@ async function backfill(
   control,
   latest
 ) {
+
   let after =
     Number(
-      control.last_seen_draw_id ??
+      control
+        .last_seen_draw_id
+      ??
       (
-        control.start_draw_id -
+        control
+          .start_draw_id -
         1
       )
     );
 
+
   if (
     after >= latest.id
   ) {
-    await store(latest);
+
+    await store(
+      latest
+    );
 
     return 0;
   }
 
+
   const end =
     Math.min(
       latest.id,
-      after + MAX_BACKFILL
+      after +
+      MAX_BACKFILL
     );
+
 
   const ids =
     Array.from(
       {
         length:
-          end - after
+          end -
+          after
       },
 
-      (_, i) =>
-        after + i + 1
+      (
+        _,
+        i
+      ) =>
+        after +
+        i +
+        1
     );
 
+
   const ds =
-    await getMany(ids);
+    await getMany(
+      ids
+    );
+
 
   for (
-    const d of ds
+    const d
+    of ds
   ) {
-    await store(d);
+
+    await store(
+      d
+    );
   }
+
 
   const last =
     ds.at(-1)?.id ??
     after;
 
+
   await db(
     `tracker_groups?id=eq.${control.id}`,
     {
-      method: 'PATCH',
+      method:
+        'PATCH',
 
       prefer:
         'return=minimal',
@@ -572,10 +1357,14 @@ async function backfill(
     }
   );
 
+
   control.last_seen_draw_id =
     last;
 
-  return ds.length;
+
+  return (
+    ds.length
+  );
 }
 
 
@@ -587,10 +1376,13 @@ async function repairCollection(
   control,
   collectionDateKey
 ) {
+
   const startId =
     Number(
-      control.start_draw_id
+      control
+        .start_draw_id
     );
+
 
   const expectedIds =
     Array.from(
@@ -599,9 +1391,14 @@ async function repairCollection(
           COLLECTION_DRAWS
       },
 
-      (_, i) =>
-        startId + i
+      (
+        _,
+        i
+      ) =>
+        startId +
+        i
     );
+
 
   const existing =
     (
@@ -614,8 +1411,10 @@ async function repairCollection(
       )
     ) || [];
 
+
   const have =
     new Set(
+
       existing
         .filter(
           d =>
@@ -632,39 +1431,54 @@ async function repairCollection(
         )
     );
 
+
   const missing =
     expectedIds.filter(
       id =>
-        !have.has(id)
+        !have.has(
+          id
+        )
     );
+
 
   if (
     !missing.length
   ) {
+
     return 0;
   }
+
 
   const ds =
     await getMany(
       missing
     );
 
-  let repaired = 0;
+
+  let repaired =
+    0;
+
 
   for (
-    const d of ds
+    const d
+    of ds
   ) {
+
     if (
       inCollectionWindow(
         d,
         collectionDateKey
       )
     ) {
-      await store(d);
+
+      await store(
+        d
+      );
 
       repaired++;
     }
   }
+
 
   return repaired;
 }
@@ -678,6 +1492,7 @@ async function loadDrawRange(
   after,
   end
 ) {
+
   let cached =
     (
       await db(
@@ -685,10 +1500,13 @@ async function loadDrawRange(
       )
     ) || [];
 
+
   if (
     cached.length <
-    end - after
+    end -
+    after
   ) {
+
     const have =
       new Set(
         cached.map(
@@ -699,7 +1517,10 @@ async function loadDrawRange(
         )
       );
 
-    const missing = [];
+
+    const missing =
+      [];
+
 
     for (
       let id =
@@ -709,26 +1530,40 @@ async function loadDrawRange(
 
       id++
     ) {
+
       if (
-        !have.has(id)
+        !have.has(
+          id
+        )
       ) {
-        missing.push(id);
+
+        missing.push(
+          id
+        );
       }
     }
+
 
     if (
       missing.length
     ) {
+
       const ds =
         await getMany(
           missing
         );
 
+
       for (
-        const d of ds
+        const d
+        of ds
       ) {
-        await store(d);
+
+        await store(
+          d
+        );
       }
+
 
       cached =
         (
@@ -738,6 +1573,7 @@ async function loadDrawRange(
         ) || [];
     }
   }
+
 
   return cached;
 }
@@ -751,30 +1587,44 @@ async function processTracking(
   groups,
   latest
 ) {
-  let processed = 0;
 
-  const details = [];
+  let processed =
+    0;
+
+
+  const details =
+    [];
+
 
   for (
-    const g of groups
+    const g
+    of groups
   ) {
+
     const after =
       Number(
-        g.last_seen_draw_id ??
+        g.last_seen_draw_id
+        ??
         g.start_draw_id
       );
+
 
     const trackingCap =
       Number(
         g.start_draw_id
-      ) +
+      )
+      +
       MAX_TRACKED_DRAWS;
 
+
     if (
-      after >= latest.id ||
+      after >= latest.id
+      ||
       after >= trackingCap
     ) {
+
       details.push({
+
         group:
           g.name,
 
@@ -789,18 +1639,21 @@ async function processTracking(
           trackingCap
       });
 
+
       continue;
     }
+
 
     const end =
       Math.min(
         latest.id,
 
         after +
-          MAX_BACKFILL,
+        MAX_BACKFILL,
 
         trackingCap
       );
+
 
     const cached =
       await loadDrawRange(
@@ -808,9 +1661,12 @@ async function processTracking(
         end
       );
 
+
     for (
-      const d of cached
+      const d
+      of cached
     ) {
+
       const s =
         score(
           {
@@ -824,15 +1680,18 @@ async function processTracking(
           g.numbers
         );
 
+
       await db(
         'tracker_results?on_conflict=group_id,draw_id',
         {
-          method: 'POST',
+          method:
+            'POST',
 
           prefer:
             'resolution=merge-duplicates,return=minimal',
 
           body: {
+
             group_id:
               g.id,
 
@@ -855,15 +1714,19 @@ async function processTracking(
       );
     }
 
+
     const last =
       cached.at(-1)
-        ?.draw_id ??
+        ?.draw_id
+      ??
       after;
+
 
     await db(
       `tracker_groups?id=eq.${g.id}`,
       {
-        method: 'PATCH',
+        method:
+          'PATCH',
 
         prefer:
           'return=minimal',
@@ -875,10 +1738,13 @@ async function processTracking(
       }
     );
 
+
     processed +=
       cached.length;
 
+
     details.push({
+
       group:
         g.name,
 
@@ -889,6 +1755,7 @@ async function processTracking(
         last
     });
   }
+
 
   return {
     processed,
@@ -901,43 +1768,44 @@ async function processTracking(
    MANUAL TRACKING
 ========================================================= */
 
-/*
-  This function already works
-  with an ARRAY of manual groups.
-
-  Because getManualGroups()
-  now returns both active manual
-  groups, both are processed here
-  independently.
-*/
 async function processManualTracking(
   groups,
   latest
 ) {
-  let processed = 0;
+
+  let processed =
+    0;
+
 
   for (
-    const g of groups
+    const g
+    of groups
   ) {
+
     const after =
       Number(
-        g.last_seen_draw_id ??
+        g.last_seen_draw_id
+        ??
         g.start_draw_id
       );
+
 
     if (
       after >= latest.id
     ) {
+
       continue;
     }
+
 
     const end =
       Math.min(
         latest.id,
 
         after +
-          MAX_BACKFILL
+        MAX_BACKFILL
       );
+
 
     const cached =
       await loadDrawRange(
@@ -945,9 +1813,12 @@ async function processManualTracking(
         end
       );
 
+
     for (
-      const d of cached
+      const d
+      of cached
     ) {
+
       const s =
         score(
           {
@@ -961,22 +1832,27 @@ async function processManualTracking(
           g.numbers
         );
 
+
       /*
         Manual history stores
         ONLY 3/5 or better.
       */
+
       if (
         s.count >= 3
       ) {
+
         await db(
           'tracker_results?on_conflict=group_id,draw_id',
           {
-            method: 'POST',
+            method:
+              'POST',
 
             prefer:
               'resolution=merge-duplicates,return=minimal',
 
             body: {
+
               group_id:
                 g.id,
 
@@ -1000,15 +1876,19 @@ async function processManualTracking(
       }
     }
 
+
     const last =
       cached.at(-1)
-        ?.draw_id ??
+        ?.draw_id
+      ??
       after;
+
 
     await db(
       `tracker_groups?id=eq.${g.id}`,
       {
-        method: 'PATCH',
+        method:
+          'PATCH',
 
         prefer:
           'return=minimal',
@@ -1020,9 +1900,11 @@ async function processManualTracking(
       }
     );
 
+
     processed +=
       cached.length;
   }
+
 
   return processed;
 }
@@ -1038,12 +1920,15 @@ async (
   res
 ) => {
 
+
   res.setHeader(
     'Cache-Control',
     'no-store,max-age=0'
   );
 
+
   try {
+
 
     /* =====================================================
        SECURITY
@@ -1057,8 +1942,10 @@ async (
       const token =
         req.headers[
           'x-worker-secret'
-        ] ||
+        ]
+        ||
         req.query.secret;
+
 
       if (
         token !==
@@ -1069,7 +1956,9 @@ async (
         return res
           .status(401)
           .json({
-            ok: false,
+
+            ok:
+              false,
 
             error:
               'Unauthorized'
@@ -1088,16 +1977,20 @@ async (
     ===================================================== */
 
     if (
-      now.minutes >= 150 &&
+      now.minutes >= 150
+      &&
       now.minutes < 360
     ) {
 
       await cleanupAutoCycle();
 
+
       return res
         .status(200)
         .json({
-          ok: true,
+
+          ok:
+            true,
 
           mode:
             'cleanup',
@@ -1116,14 +2009,17 @@ async (
     ===================================================== */
 
     if (
-      now.minutes >= 120 &&
+      now.minutes >= 120
+      &&
       now.minutes < 150
     ) {
 
       return res
         .status(200)
         .json({
-          ok: true,
+
+          ok:
+            true,
 
           mode:
             'idle',
@@ -1140,8 +2036,11 @@ async (
     let control =
       await getControl();
 
+
     const cycleKey =
-      cycleDateKey(now);
+      cycleDateKey(
+        now
+      );
 
 
     /* =====================================================
@@ -1149,7 +2048,8 @@ async (
     ===================================================== */
 
     if (
-      control &&
+      control
+      &&
       !String(
         control.name
       ).endsWith(
@@ -1159,7 +2059,8 @@ async (
 
       await cleanupAutoCycle();
 
-      control = null;
+      control =
+        null;
     }
 
 
@@ -1168,20 +2069,23 @@ async (
     ===================================================== */
 
     const latest =
-      await getDraw(null);
+      await getDraw(
+        null
+      );
 
-    await store(latest);
+
+    await store(
+      latest
+    );
 
 
     /* =====================================================
        MANUAL TRACKING
-
-       Both active manual groups
-       are processed here.
     ===================================================== */
 
     const manualGroups =
       await getManualGroups();
+
 
     const manualProcessed =
       await processManualTracking(
@@ -1194,7 +2098,9 @@ async (
        CREATE DAILY AUTOMATIC CONTROL
     ===================================================== */
 
-    if (!control) {
+    if (
+      !control
+    ) {
 
       const first =
         await findCycleStart(
@@ -1202,18 +2108,25 @@ async (
           now
         );
 
-      if (!first) {
+
+      if (
+        !first
+      ) {
 
         return res
           .status(200)
           .json({
-            ok: true,
+
+            ok:
+              true,
 
             mode:
               'collecting',
 
             collection: {
-              have: 0,
+
+              have:
+                0,
 
               need:
                 COLLECTION_DRAWS,
@@ -1223,6 +2136,7 @@ async (
             },
 
             latest: {
+
               id:
                 latest.id,
 
@@ -1230,11 +2144,14 @@ async (
                 latest.time
             },
 
-            stored: 0,
+            stored:
+              0,
 
-            activeGroups: 0,
+            activeGroups:
+              0,
 
-            processed: 0,
+            processed:
+              0,
 
             manualProcessed,
 
@@ -1246,13 +2163,17 @@ async (
           });
       }
 
+
       control =
         await createControl(
           cycleKey,
           first.id
         );
 
-      await store(first);
+
+      await store(
+        first
+      );
     }
 
 
@@ -1261,9 +2182,10 @@ async (
     ===================================================== */
 
     if (
-      now.minutes >= 360 &&
+      now.minutes >= 360
+      &&
       now.minutes <
-        SELECTION_MINUTES
+      SELECTION_MINUTES
     ) {
 
       const controlDateKey =
@@ -1274,6 +2196,7 @@ async (
           ''
         );
 
+
       const startDraw =
         await getDraw(
           Number(
@@ -1282,21 +2205,24 @@ async (
           )
         );
 
+
       const startMinutes =
         parseDrawMinutes(
           startDraw.time
         );
 
+
       if (
         !inCollectionWindow(
           startDraw,
           controlDateKey
-        ) ||
-        startMinutes !==
-          360
+        )
+        ||
+        startMinutes !== 360
       ) {
 
         await cleanupAutoCycle();
+
 
         const first =
           await findCycleStart(
@@ -1304,18 +2230,25 @@ async (
             now
           );
 
-        if (!first) {
+
+        if (
+          !first
+        ) {
 
           return res
             .status(200)
             .json({
-              ok: true,
+
+              ok:
+                true,
 
               mode:
                 'collecting',
 
               collection: {
-                have: 0,
+
+                have:
+                  0,
 
                 need:
                   COLLECTION_DRAWS,
@@ -1325,6 +2258,7 @@ async (
               },
 
               latest: {
+
                 id:
                   latest.id,
 
@@ -1332,11 +2266,14 @@ async (
                   latest.time
               },
 
-              stored: 0,
+              stored:
+                0,
 
-              activeGroups: 0,
+              activeGroups:
+                0,
 
-              processed: 0,
+              processed:
+                0,
 
               manualProcessed,
 
@@ -1348,13 +2285,17 @@ async (
             });
         }
 
+
         control =
           await createControl(
             cycleKey,
             first.id
           );
 
-        await store(first);
+
+        await store(
+          first
+        );
       }
     }
 
@@ -1369,6 +2310,7 @@ async (
         latest
       );
 
+
     const collectionDateKey =
       String(
         control.name
@@ -1377,7 +2319,9 @@ async (
         ''
       );
 
-    let repaired = 0;
+
+    let repaired =
+      0;
 
 
     /* =====================================================
@@ -1405,7 +2349,10 @@ async (
         await db(
           `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gte.${control.start_draw_id}&order=draw_id.asc&limit=220`
         )
-      ) || [];
+      )
+      ||
+      [];
+
 
     const history =
       rawHistory.filter(
@@ -1416,9 +2363,11 @@ async (
           )
       );
 
+
     const collectionEndId =
       history.at(-1)
-        ?.draw_id ??
+        ?.draw_id
+      ??
       Number(
         control
           .start_draw_id
@@ -1432,14 +2381,14 @@ async (
        collect normally.
 
        6:00 PM through 6:04 PM:
-       collection finished but
-       selection waits until 6:05 PM.
+       wait until 6:05 PM.
     ===================================================== */
 
     if (
-      now.minutes >= 360 &&
+      now.minutes >= 360
+      &&
       now.minutes <
-        SELECTION_MINUTES
+      SELECTION_MINUTES
     ) {
 
       const have =
@@ -1448,17 +2397,23 @@ async (
           COLLECTION_DRAWS
         );
 
+
       return res
         .status(200)
         .json({
-          ok: true,
+
+          ok:
+            true,
 
           mode:
             now.minutes < 1080
-              ? 'collecting'
-              : 'preparing',
+              ?
+              'collecting'
+              :
+              'preparing',
 
           collection: {
+
             have,
 
             need:
@@ -1474,6 +2429,7 @@ async (
           },
 
           latest: {
+
             id:
               latest.id,
 
@@ -1485,16 +2441,20 @@ async (
 
           repaired,
 
-          activeGroups: 0,
+          activeGroups:
+            0,
 
-          processed: 0,
+          processed:
+            0,
 
           manualProcessed,
 
           message:
             now.minutes >= 1080
-              ? 'Collection finished. Waiting until 6:05 PM before automatic selection.'
-              : undefined,
+              ?
+              'Collection finished. Waiting until 6:05 PM before automatic selection.'
+              :
+              undefined,
 
           source:
             'California Lottery official'
@@ -1503,10 +2463,9 @@ async (
 
 
     /* =====================================================
-       AFTER 6:05 PM:
+       AFTER 6:05 PM
 
-       NEVER SELECT AUTOMATIC GROUPS
-       UNTIL ALL 180 DRAWS EXIST.
+       REQUIRE COMPLETE 180 DRAWS
     ===================================================== */
 
     if (
@@ -1517,12 +2476,15 @@ async (
       return res
         .status(200)
         .json({
-          ok: true,
+
+          ok:
+            true,
 
           mode:
             'preparing',
 
           collection: {
+
             have:
               history.length,
 
@@ -1535,6 +2497,7 @@ async (
           },
 
           latest: {
+
             id:
               latest.id,
 
@@ -1546,9 +2509,11 @@ async (
 
           repaired,
 
-          activeGroups: 0,
+          activeGroups:
+            0,
 
-          processed: 0,
+          processed:
+            0,
 
           manualProcessed,
 
@@ -1568,7 +2533,10 @@ async (
     const completeHistory =
       history
         .sort(
-          (a, b) =>
+          (
+            a,
+            b
+          ) =>
             a.draw_id -
             b.draw_id
         )
@@ -1577,24 +2545,63 @@ async (
           COLLECTION_DRAWS
         );
 
+
     const finalCollectionEndId =
       completeHistory
         .at(-1)
-        ?.draw_id ??
+        ?.draw_id
+      ??
       collectionEndId;
 
 
     /* =====================================================
-       AUTOMATIC SELECTION
+       AUTOMATIC GROUP 1 + GROUP 2
     ===================================================== */
 
     let groups =
       await getAutoGroups();
 
-    let selected = null;
+
+    let selected =
+      null;
+
+
+    let specialSelected =
+      null;
+
+
+    let group1 =
+      groups.find(
+        g =>
+          g.name ===
+          `${AUTO_PREFIX}1`
+      )
+      ||
+      null;
+
+
+    let group2 =
+      groups.find(
+        g =>
+          g.name ===
+          `${AUTO_PREFIX}2`
+      )
+      ||
+      null;
+
+
+    /*
+      IMPORTANT:
+
+      The original algorithm
+      for Group 1 and Group 2
+      is unchanged.
+    */
 
     if (
-      groups.length === 0
+      !group1
+      ||
+      !group2
     ) {
 
       selected =
@@ -1602,6 +2609,7 @@ async (
           completeHistory,
           2
         );
+
 
       if (
         selected.length !== 2
@@ -1612,11 +2620,13 @@ async (
         );
       }
 
+
       await upsertAuto(
         1,
         selected[0].numbers,
         finalCollectionEndId
       );
+
 
       await upsertAuto(
         2,
@@ -1624,13 +2634,101 @@ async (
         finalCollectionEndId
       );
 
+
       groups =
         await getAutoGroups();
+
+
+      group1 =
+        groups.find(
+          g =>
+            g.name ===
+            `${AUTO_PREFIX}1`
+        )
+        ||
+        null;
+
+
+      group2 =
+        groups.find(
+          g =>
+            g.name ===
+            `${AUTO_PREFIX}2`
+        )
+        ||
+        null;
+    }
+
+
+    /* =====================================================
+       SPECIAL GROUP
+    ===================================================== */
+
+    /*
+      Special Group is selected
+      ONLY after Group 1 and Group 2
+      exist.
+
+      It uses ONLY the completed
+      180-draw collection.
+
+      No future draw is used.
+    */
+
+    const existingSpecial =
+      groups.find(
+        g =>
+          g.name ===
+          SPECIAL_NAME
+      )
+      ||
+      null;
+
+
+    if (
+      !existingSpecial
+      &&
+      group1
+      &&
+      group2
+    ) {
+
+      specialSelected =
+        buildSpecialGroup(
+          completeHistory,
+          group1.numbers,
+          group2.numbers
+        );
+
+
+      if (
+        specialSelected
+          ?.numbers
+          ?.length === 5
+      ) {
+
+        await upsertAuto(
+          'Special',
+          specialSelected.numbers,
+          finalCollectionEndId
+        );
+
+
+        groups =
+          await getAutoGroups();
+      }
     }
 
 
     /* =====================================================
        AUTOMATIC TRACKING
+
+       Group 1
+       Group 2
+       Special Group
+
+       all start AFTER the
+       completed collection.
     ===================================================== */
 
     const tracking =
@@ -1647,12 +2745,15 @@ async (
     return res
       .status(200)
       .json({
-        ok: true,
+
+        ok:
+          true,
 
         mode:
           'tracking',
 
         collection: {
+
           have:
             completeHistory.length,
 
@@ -1664,6 +2765,7 @@ async (
         },
 
         latest: {
+
           id:
             latest.id,
 
@@ -1680,6 +2782,8 @@ async (
 
         selected,
 
+        specialSelected,
+
         processed:
           tracking.processed,
 
@@ -1693,15 +2797,20 @@ async (
       });
 
 
-  } catch (e) {
+  } catch (
+    e
+  ) {
 
     res
       .status(500)
       .json({
-        ok: false,
+
+        ok:
+          false,
 
         error:
-          e.message ||
+          e.message
+          ||
           String(e)
       });
   }
