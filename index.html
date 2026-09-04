@@ -135,6 +135,12 @@ h1{
 .amber{color:var(--yellow);font-weight:900}
 .blue{color:#55a2ff;font-weight:900}
 
+/* RED ONLY FOR REQUESTED STATUSES */
+.redStatus{
+  color:var(--red)!important;
+  font-weight:900
+}
+
 .btn{
   appearance:none;
   border:0;
@@ -465,7 +471,6 @@ h1{
   font-weight:950
 }
 
-/* وقت أحدث Best */
 .bestTime{
   margin-top:4px;
   font-size:11px;
@@ -780,7 +785,6 @@ footer{
 
 </header>
 
-
 <section class="card">
 
   <div class="toolbar">
@@ -815,11 +819,8 @@ footer{
 
 </section>
 
-
 <div id="latestDraw"></div>
-
 <div id="groupFiveContent"></div>
-
 
 <section class="card groupsSection">
 
@@ -838,7 +839,6 @@ footer{
   <div id="autoContent"></div>
 
 </section>
-
 
 <section class="card manualShell">
 
@@ -889,38 +889,24 @@ footer{
 
       <div class="manualActions">
 
-        <button
-          class="btn btnGreen"
-          id="start1"
-        >
+        <button class="btn btnGreen" id="start1">
           ▶ Start
         </button>
 
-        <button
-          class="btn btnRed"
-          id="stop1"
-        >
+        <button class="btn btnRed" id="stop1">
           ■ Stop
         </button>
 
-        <button
-          class="btn btnDark"
-          id="clear1"
-        >
+        <button class="btn btnDark" id="clear1">
           Clear
         </button>
 
       </div>
 
-      <div
-        class="manualMsg mut"
-        id="msg1"
-      ></div>
-
+      <div class="manualMsg mut" id="msg1"></div>
       <div id="manualContent1"></div>
 
     </div>
-
 
     <div
       class="manualGroup"
@@ -954,34 +940,21 @@ footer{
 
       <div class="manualActions">
 
-        <button
-          class="btn btnGreen"
-          id="start2"
-        >
+        <button class="btn btnGreen" id="start2">
           ▶ Start
         </button>
 
-        <button
-          class="btn btnRed"
-          id="stop2"
-        >
+        <button class="btn btnRed" id="stop2">
           ■ Stop
         </button>
 
-        <button
-          class="btn btnDark"
-          id="clear2"
-        >
+        <button class="btn btnDark" id="clear2">
           Clear
         </button>
 
       </div>
 
-      <div
-        class="manualMsg mut"
-        id="msg2"
-      ></div>
-
+      <div class="manualMsg mut" id="msg2"></div>
       <div id="manualContent2"></div>
 
     </div>
@@ -990,13 +963,11 @@ footer{
 
 </section>
 
-
 <footer>
   © 2026 Hot Spot Tracker
 </footer>
 
 </div>
-
 
 <script>
 
@@ -1110,7 +1081,6 @@ function updateClock(){
       );
 }
 
-
 updateClock();
 
 setInterval(
@@ -1177,8 +1147,9 @@ function renderSyncInfo(sync){
     return;
   }
 
+  /* Requested: Already current = RED */
   el.className =
-    'syncInfo good';
+    'syncInfo good redStatus';
 
   el.textContent =
     `✓ Already current — official draw #${
@@ -1218,8 +1189,9 @@ function renderStatus(mode){
 
   if(mode === 'tracking'){
 
+    /* Requested: Automatic Tracking = RED */
     el.innerHTML =
-      '<span class="ok">● Automatic Tracking</span>';
+      '<span class="redStatus">● Automatic Tracking</span>';
 
     return;
   }
@@ -1759,11 +1731,6 @@ function importantResults(g){
 }
 
 
-/* =========================================================
-   NEW:
-   Finds Best result and newest time it happened.
-========================================================= */
-
 function bestInfo(results){
 
   const rows =
@@ -1786,11 +1753,6 @@ function bestInfo(results){
       );
   }
 
-  /*
-    User only wants a time shown
-    when Best is 4/5 or 5/5.
-  */
-
   if(best < 4){
 
     return {
@@ -1799,11 +1761,6 @@ function bestInfo(results){
       drawId:null
     };
   }
-
-  /*
-    If Best occurred several times,
-    choose the NEWEST occurrence.
-  */
 
   const match =
     rows
