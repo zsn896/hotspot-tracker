@@ -1,183 +1,122 @@
 'use strict';
 
-const {
-  getDraw,
-  db
-} = require('./lib');
+const { getDraw, db } = require('./lib');
+const cron = require('./cron');
 
-const cron =
-  require('./cron');
-
-const GROUP_FIVE_NAME =
-  'AUTO Group Five';
-
-
-/* =========================================================
-   RESPONSE COLLECTOR
-
-   Allows us to run the protected cron internally
-   without exposing CRON_SECRET to the browser.
-========================================================= */
+const GROUP_FIVE_NAME = 'AUTO Group Five';
+const GROUP_FIVE_TRACK_DRAWS = 20;
 
 function createCollector() {
-
   return {
+    statusCode: 200,
+    payload: null,
+    headers: {},
 
-    statusCode:
-      200,
-
-    payload:
-      null,
-
-    headers:
-      {},
-
-
-    setHeader(
-      name,
-      value
-    ) {
-
-      this.headers[name] =
-        value;
-
+    setHeader(name, value) {
+      this.headers[name] = value;
       return this;
     },
 
-
-    status(
-      code
-    ) {
-
-      this.statusCode =
-        code;
-
+    status(code) {
+      this.statusCode = code;
       return this;
     },
 
-
-    json(
-      value
-    ) {
-
-      this.payload =
-        value;
-
+    json(value) {
+      this.payload = value;
       return value;
     }
   };
 }
 
-
-/* =========================================================
-   GET ACTIVE GROUP FIVE
-
-   Important:
-   Smart Sync must verify not only that the draw
-   itself is stored, but also that Group Five has
-   processed that draw.
-========================================================= */
-
 async function getActiveGroupFive() {
-
-  const rows =
-    await db(
-      `tracker_groups?select=id,name,start_draw_id,last_seen_draw_id,active&name=eq.${encodeURIComponent(
-        GROUP_FIVE_NAME
-      )}&active=eq.true&order=id.desc&limit=1`
-    );
-
-  return (
-    rows?.[0]
-    ||
-    null
+  const rows = await db(
+    `tracker_groups?select=id,name,start_draw_id,last_seen_draw_id,active&name=eq.${encodeURIComponent(
+      GROUP_FIVE_NAME
+    )}&active=eq.true&order=id.desc&limit=1`
   );
+
+  return rows?.[0] || null;
 }
 
-
-/* =========================================================
-   GROUP FIVE TARGET
-
-   Group Five tracks only the next 20 future draws.
-
-   Example:
-   start_draw_id = 3298310
-   valid tracking draws:
-   3298311 ... 3298330
-
-   If official draw is already beyond the cutoff,
-   Group Five only needs to process through the cutoff.
-========================================================= */
-
-function groupFiveTargetId(
-  group,
-  officialId
-) {
-
-  if (
-    !group
-  ) {
-
-    return 0;
+function groupFiveStatus(group, officialId) {
+  if (!group) {
+    return {
+      active: false,
+      startId: 0,
+      lastSeenId: 0,
+      cutoffId: 0,
+      targetId: 0,
+      trackingLag: 0,
+      rotationDue: false,
+      needsWork: false
+    };
   }
 
   const startId =
     Number(
-      group.start_draw_id
-      ||
+      group.start_draw_id || 0
+    );
+
+  const lastSeenId =
+    Number(
+      group.last_seen_draw_id ??
+      startId ??
       0
     );
 
-  if (
-    !startId
-  ) {
+  const cutoffId =
+    startId +
+    GROUP_FIVE_TRACK_DRAWS;
 
-    return 0;
-  }
+  const targetId =
+    Math.min(
+      Number(officialId || 0),
+      cutoffId
+    );
 
-  const cutoff =
-    startId + 20;
+  const trackingLag =
+    Math.max(
+      0,
+      targetId - lastSeenId
+    );
 
-  return Math.min(
-    Number(
-      officialId
-      ||
-      0
-    ),
-    cutoff
-  );
+  /*
+    IMPORTANT:
+
+    At exactly 20/20 Group Five must rotate.
+
+    Old behavior:
+    lastSeen == cutoff
+    trackingLag == 0
+
+    Smart Sync incorrectly thought everything
+    was current.
+
+    New behavior:
+    reaching cutoff itself means the old group
+    must be rotated immediately.
+  */
+
+  const rotationDue =
+    startId > 0 &&
+    Number(officialId || 0) >= cutoffId &&
+    lastSeenId >= cutoffId;
+
+  return {
+    active: true,
+    startId,
+    lastSeenId,
+    cutoffId,
+    targetId,
+    trackingLag,
+    rotationDue,
+
+    needsWork:
+      trackingLag > 0 ||
+      rotationDue
+  };
 }
-
-
-/* =========================================================
-   MAIN SYNC ENDPOINT
-
-   FIXED LOGIC:
-
-   Before:
-   If latest stored draw == official latest draw,
-   Smart Sync stopped immediately.
-
-   Problem:
-   Group Five could still be behind even though the draw
-   was already stored.
-
-   Now:
-   Smart Sync checks BOTH:
-
-   1. Draw storage lag
-   2. Group Five tracking lag
-
-   If either is behind, run the full cron.
-
-   This updates:
-   - stored draws
-   - automatic groups
-   - manual groups
-   - GROUP FIVE
-   - Special Group
-   - Advanced Group
-========================================================= */
 
 module.exports =
 async (
@@ -190,36 +129,22 @@ async (
     'no-store,max-age=0'
   );
 
-
   try {
-
-    /* =====================================================
-       ONLY ALLOW GET / POST
-    ===================================================== */
 
     const method =
       String(
-        req.method
-        ||
-        'GET'
+        req.method || 'GET'
       ).toUpperCase();
 
-
     if (
-      method !== 'GET'
-      &&
+      method !== 'GET' &&
       method !== 'POST'
     ) {
 
       return res
-        .status(
-          405
-        )
+        .status(405)
         .json({
-
-          ok:
-            false,
-
+          ok: false,
           error:
             'Method not allowed'
         });
@@ -227,36 +152,23 @@ async (
 
 
     /* =====================================================
-       GET OFFICIAL LATEST DRAW DIRECTLY
+       OFFICIAL DRAW
     ===================================================== */
 
     const official =
-      await getDraw(
-        null
-      );
-
+      await getDraw(null);
 
     const officialId =
       Number(
-        official?.id
-        ||
-        0
+        official?.id || 0
       );
 
-
-    if (
-      !officialId
-    ) {
+    if (!officialId) {
 
       return res
-        .status(
-          502
-        )
+        .status(502)
         .json({
-
-          ok:
-            false,
-
+          ok: false,
           error:
             'Unable to read official latest draw'
         });
@@ -264,7 +176,7 @@ async (
 
 
     /* =====================================================
-       GET OUR LATEST STORED DRAW
+       STORED DRAW
     ===================================================== */
 
     const storedRows =
@@ -272,112 +184,49 @@ async (
         'hotspot_draws?select=draw_id,draw_date,draw_time&order=draw_id.desc&limit=1'
       );
 
-
-    const stored =
-      storedRows?.[0]
-      ||
-      null;
-
-
     const storedId =
       Number(
-        stored?.draw_id
-        ||
-        0
+        storedRows?.[0]
+          ?.draw_id || 0
       );
-
 
     const drawLag =
       Math.max(
         0,
-        officialId
-        -
+        officialId -
         storedId
       );
 
 
     /* =====================================================
-       CHECK GROUP FIVE LAG
+       GROUP FIVE STATUS
     ===================================================== */
 
     const groupFiveBefore =
       await getActiveGroupFive();
 
-
-    const groupFiveStartBefore =
-      Number(
-        groupFiveBefore?.start_draw_id
-        ||
-        0
-      );
-
-
-    const groupFiveLastSeenBefore =
-      Number(
-        groupFiveBefore?.last_seen_draw_id
-        ??
-        groupFiveStartBefore
-        ??
-        0
-      );
-
-
-    const groupFiveTargetBefore =
-      groupFiveTargetId(
+    const gfBefore =
+      groupFiveStatus(
         groupFiveBefore,
         officialId
       );
 
 
-    const groupFiveLagBefore =
-      groupFiveBefore
-      &&
-      groupFiveTargetBefore >
-        groupFiveLastSeenBefore
-
-        ?
-
-        (
-          groupFiveTargetBefore
-          -
-          groupFiveLastSeenBefore
-        )
-
-        :
-
-        0;
-
-
     /* =====================================================
-       TRULY ALREADY CURRENT
-
-       We may return early ONLY when:
-
-       1. Stored draw is current
-       2. Group Five is also current
-
-       This fixes the previous bug.
+       REALLY CURRENT?
     ===================================================== */
 
     if (
-      storedId >=
-        officialId
-      &&
-      groupFiveLagBefore ===
-        0
+      storedId >= officialId &&
+      !gfBefore.needsWork
     ) {
 
       return res
-        .status(
-          200
-        )
+        .status(200)
         .json({
+          ok: true,
 
-          ok:
-            true,
-
-          synced:
-            false,
+          synced: false,
 
           reason:
             'already-current',
@@ -388,45 +237,42 @@ async (
           storedDrawId:
             storedId,
 
-          lag:
-            0,
+          lag: 0,
 
-          drawLag:
-            0,
+          drawLag: 0,
 
           groupFive: {
-
             active:
-              Boolean(
-                groupFiveBefore
-              ),
+              gfBefore.active,
 
             startDrawId:
-              groupFiveStartBefore
-              ||
+              gfBefore.startId ||
               null,
 
             lastSeenDrawId:
-              groupFiveLastSeenBefore
-              ||
+              gfBefore.lastSeenId ||
               null,
 
             targetDrawId:
-              groupFiveTargetBefore
-              ||
+              gfBefore.targetId ||
+              null,
+
+            cutoffDrawId:
+              gfBefore.cutoffId ||
               null,
 
             lag:
-              0
+              gfBefore.trackingLag,
+
+            rotationDue:
+              gfBefore.rotationDue
           }
         });
     }
 
 
     /* =====================================================
-       SAFETY CHECK
-
-       Required server secrets must exist.
+       SECRETS
     ===================================================== */
 
     if (
@@ -435,13 +281,9 @@ async (
     ) {
 
       return res
-        .status(
-          500
-        )
+        .status(500)
         .json({
-
-          ok:
-            false,
+          ok: false,
 
           error:
             'CRON_SECRET is not configured'
@@ -455,13 +297,9 @@ async (
     ) {
 
       return res
-        .status(
-          500
-        )
+        .status(500)
         .json({
-
-          ok:
-            false,
+          ok: false,
 
           error:
             'WORKER_SECRET is not configured'
@@ -470,13 +308,7 @@ async (
 
 
     /* =====================================================
-       RUN FULL CRON INTERNALLY
-
-       This runs if:
-
-       - draw storage is behind
-       OR
-       - Group Five tracking is behind
+       RUN CRON
     ===================================================== */
 
     const collector =
@@ -490,9 +322,7 @@ async (
       headers: {
 
         ...(
-          req.headers
-          ||
-          {}
+          req.headers || {}
         ),
 
         authorization:
@@ -508,27 +338,21 @@ async (
 
 
     if (
-      collector.statusCode >=
-        400
-      ||
-      collector.payload?.ok ===
-        false
+      collector.statusCode >= 400 ||
+      collector.payload?.ok === false
     ) {
 
       return res
         .status(
-          collector.statusCode
-          ||
+          collector.statusCode ||
           500
         )
         .json({
-
-          ok:
-            false,
+          ok: false,
 
           error:
-            collector.payload?.error
-            ||
+            collector.payload
+              ?.error ||
             'Internal sync failed',
 
           officialDrawId:
@@ -540,13 +364,16 @@ async (
           drawLag,
 
           groupFiveLag:
-            groupFiveLagBefore
+            gfBefore.trackingLag,
+
+          groupFiveRotationDue:
+            gfBefore.rotationDue
         });
     }
 
 
     /* =====================================================
-       VERIFY STORED DRAW AFTER SYNC
+       VERIFY STORED DRAW
     ===================================================== */
 
     const afterRows =
@@ -554,105 +381,46 @@ async (
         'hotspot_draws?select=draw_id,draw_date,draw_time&order=draw_id.desc&limit=1'
       );
 
-
-    const after =
-      afterRows?.[0]
-      ||
-      null;
-
-
     const afterId =
       Number(
-        after?.draw_id
-        ||
-        0
+        afterRows?.[0]
+          ?.draw_id || 0
       );
-
 
     const remainingDrawLag =
       Math.max(
         0,
-        officialId
-        -
+        officialId -
         afterId
       );
 
 
     /* =====================================================
-       VERIFY GROUP FIVE AFTER SYNC
+       VERIFY GROUP FIVE
     ===================================================== */
 
     const groupFiveAfter =
       await getActiveGroupFive();
 
-
-    const groupFiveStartAfter =
-      Number(
-        groupFiveAfter?.start_draw_id
-        ||
-        0
-      );
-
-
-    const groupFiveLastSeenAfter =
-      Number(
-        groupFiveAfter?.last_seen_draw_id
-        ??
-        groupFiveStartAfter
-        ??
-        0
-      );
-
-
-    const groupFiveTargetAfter =
-      groupFiveTargetId(
+    const gfAfter =
+      groupFiveStatus(
         groupFiveAfter,
         officialId
       );
 
 
-    const remainingGroupFiveLag =
-      groupFiveAfter
-      &&
-      groupFiveTargetAfter >
-        groupFiveLastSeenAfter
-
-        ?
-
-        (
-          groupFiveTargetAfter
-          -
-          groupFiveLastSeenAfter
-        )
-
-        :
-
-        0;
-
-
     const fullyCaughtUp =
-      afterId >=
-        officialId
-      &&
-      remainingGroupFiveLag ===
-        0;
+      afterId >= officialId &&
+      !gfAfter.needsWork;
 
-
-    /* =====================================================
-       FINAL RESPONSE
-    ===================================================== */
 
     return res
-      .status(
-        200
-      )
+      .status(200)
       .json({
 
-        ok:
-          true,
+        ok: true,
 
-        synced:
-          true,
+        synced: true,
 
         officialDrawId:
           officialId,
@@ -678,35 +446,39 @@ async (
         groupFive: {
 
           active:
-            Boolean(
-              groupFiveAfter
-            ),
+            gfAfter.active,
 
           startDrawId:
-            groupFiveStartAfter
-            ||
+            gfAfter.startId ||
             null,
 
           lastSeenBefore:
-            groupFiveLastSeenBefore
-            ||
+            gfBefore.lastSeenId ||
             null,
 
           lastSeenDrawId:
-            groupFiveLastSeenAfter
-            ||
+            gfAfter.lastSeenId ||
             null,
 
           targetDrawId:
-            groupFiveTargetAfter
-            ||
+            gfAfter.targetId ||
+            null,
+
+          cutoffDrawId:
+            gfAfter.cutoffId ||
             null,
 
           lagBefore:
-            groupFiveLagBefore,
+            gfBefore.trackingLag,
 
           lagAfter:
-            remainingGroupFiveLag
+            gfAfter.trackingLag,
+
+          rotationDueBefore:
+            gfBefore.rotationDue,
+
+          rotationDueAfter:
+            gfAfter.rotationDue
         },
 
         caughtUp:
@@ -715,37 +487,27 @@ async (
         worker: {
 
           mode:
-            collector.payload?.mode
-            ||
+            collector.payload
+              ?.mode ||
             null,
 
           groupFive:
-            collector.payload?.groupFive
-            ||
+            collector.payload
+              ?.groupFive ||
             null
         }
       });
 
-
-  } catch (
-    e
-  ) {
+  } catch (e) {
 
     return res
-      .status(
-        500
-      )
+      .status(500)
       .json({
-
-        ok:
-          false,
+        ok: false,
 
         error:
-          e.message
-          ||
-          String(
-            e
-          )
+          e.message ||
+          String(e)
       });
   }
 };
