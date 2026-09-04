@@ -3,6 +3,7 @@ name: HotSpot Worker Cron
 on:
   schedule:
     - cron: '2-59/5 * * * *'
+
   workflow_dispatch:
 
 concurrency:
@@ -12,16 +13,22 @@ concurrency:
 jobs:
   run-worker:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
 
     steps:
+
       - name: Call protected cron endpoint
         run: |
           echo "Calling HotSpot cron endpoint..."
 
-          curl --fail --silent --show-error \
-            --retry 2 \
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 5 \
             --retry-delay 5 \
+            --retry-all-errors \
+            --connect-timeout 15 \
             --max-time 55 \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             https://zsn896hotspottrackerlatest.vercel.app/api/cron
