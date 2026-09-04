@@ -11,10 +11,12 @@ const {
 const COLLECTION_DRAWS = 180;
 const CONTROL_PREFIX = 'AUTO_CONTROL_';
 const AUTO_PREFIX = 'AUTO Group ';
+
 const GROUP_FIVE_NAME = 'AUTO Group Five';
 const GROUP_FIVE_ARCHIVE_PREFIX = 'AUTO Group Five Archive ';
+
 const GROUP_FIVE_ANALYSIS_DRAWS = 30;
-const GROUP_FIVE_TRACK_DRAWS = 20;
+const GROUP_FIVE_TRACK_DRAWS = 30;
 
 
 /* =========================================================
@@ -53,21 +55,25 @@ function drawDateKey(dateText) {
 
 /* =========================================================
    REPORT BLOCK
+
+   Default groups = 20 draws.
+   Group Five = 30 draws.
 ========================================================= */
 
 function reportBlock(
   rows,
-  block
+  block,
+  blockSize = 20
 ) {
 
   const part =
     rows.slice(
-      (block - 1) * 20,
-      block * 20
+      (block - 1) * blockSize,
+      block * blockSize
     );
 
   if (
-    part.length < 20
+    part.length < blockSize
   ) {
     return null;
   }
@@ -78,20 +84,35 @@ function reportBlock(
   for (
     const r of part
   ) {
-    hist[r.hit_count]++;
+
+    const hit =
+      Number(
+        r.hit_count || 0
+      );
+
+    if (
+      hit >= 0 &&
+      hit <= 5
+    ) {
+      hist[hit]++;
+    }
   }
 
   const best =
     Math.max(
       ...part.map(
         r =>
-          r.hit_count
+          Number(
+            r.hit_count || 0
+          )
       )
     );
 
   return {
 
     block,
+
+    blockSize,
 
     fromDrawId:
       part[0].draw_id,
@@ -128,9 +149,12 @@ function reportBlock(
             r
           ) =>
             s +
-            r.hit_count,
+            Number(
+              r.hit_count || 0
+            ),
           0
-        ) / 20
+        ) /
+        blockSize
       ).toFixed(2),
 
     bullsEyeMatches:
@@ -609,6 +633,10 @@ async (
       const g of raw
     ) {
 
+      /* ===================================================
+         GROUP FIVE = 30 DRAWS
+      =================================================== */
+
       if (
         g.name ===
         GROUP_FIVE_NAME
@@ -625,6 +653,11 @@ async (
           [];
 
 
+        /*
+          Group Five report is now
+          based on exactly 30 results.
+        */
+
         if (
           g.results.length >=
           GROUP_FIVE_TRACK_DRAWS
@@ -633,8 +666,10 @@ async (
           const r =
             reportBlock(
               g.results,
-              1
+              1,
+              GROUP_FIVE_TRACK_DRAWS
             );
+
 
           if (
             r
@@ -708,13 +743,17 @@ async (
             GROUP_FIVE_TRACK_DRAWS,
 
           rule:
-            'Analyze latest 30 draws, track next 20, then rotate using latest 30.'
+            'Analyze latest 30 draws, track next 30 future draws, clear old results, then rotate using latest 30.'
         };
 
 
         continue;
       }
 
+
+      /* ===================================================
+         ORIGINAL AUTOMATIC GROUPS = 20 DRAWS
+      =================================================== */
 
       const completed =
         Math.floor(
@@ -736,7 +775,8 @@ async (
         const r =
           reportBlock(
             g.results,
-            b
+            b,
+            20
           );
 
 
@@ -864,7 +904,10 @@ async (
               GROUP_FIVE_TRACK_DRAWS,
 
             completedCycles:
-              groupFiveArchives.length
+              groupFiveArchives.length,
+
+            rule:
+              'Analyze 30 → Track 30 → Clear old results → Select new five.'
           }
         : {
 
@@ -901,7 +944,10 @@ async (
               ),
 
             completedCycles:
-              groupFiveArchives.length
+              groupFiveArchives.length,
+
+            rule:
+              'Analyze 30 → Track 30 → Clear old results → Select new five.'
           };
 
 
@@ -962,7 +1008,7 @@ async (
             '2:30 AM',
 
           groupFive:
-            'First 30 draws, then rolling 20-draw tracking cycles using latest 30.'
+            'Analyze latest 30 draws, track next 30 future draws, clear old results, then rotate using latest 30.'
         },
 
 
