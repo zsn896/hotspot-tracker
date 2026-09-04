@@ -1,130 +1,281 @@
 'use strict';
 
-const worker = require('./worker');
+const worker =
+  require('./worker');
 
 const {
   runActiveDensitySpecial
-} = require('../lib/special-active');
+} =
+  require('../lib/special-active');
 
 const {
   runAdvanced
-} = require('../lib/advanced');
+} =
+  require('../lib/advanced');
+
+const {
+  runGroupFive
+} =
+  require('../lib/group-five');
 
 
 function createCollector() {
+
   return {
-    statusCode: 200,
-    payload: null,
-    headers: {},
 
-    setHeader(name, value) {
-      this.headers[name] = value;
+    statusCode:
+      200,
+
+    payload:
+      null,
+
+    headers:
+      {},
+
+
+    setHeader(
+      name,
+      value
+    ) {
+
+      this.headers[
+        name
+      ] =
+        value;
+
       return this;
     },
 
-    status(code) {
-      this.statusCode = code;
+
+    status(
+      code
+    ) {
+
+      this.statusCode =
+        code;
+
       return this;
     },
 
-    json(value) {
-      this.payload = value;
+
+    json(
+      value
+    ) {
+
+      this.payload =
+        value;
+
       return value;
     }
   };
 }
 
 
-module.exports = async (req, res) => {
+module.exports =
+async (
+  req,
+  res
+) => {
 
   res.setHeader(
     'Cache-Control',
     'no-store,max-age=0'
   );
 
+
   const cronSecret =
-    process.env.CRON_SECRET;
+    process.env
+      .CRON_SECRET;
+
 
   const auth =
     String(
-      req.headers.authorization ||
+      req.headers
+        .authorization
+      ||
       ''
     );
 
+
   if (
-    !cronSecret ||
-    auth !== `Bearer ${cronSecret}`
+    !cronSecret
+    ||
+    auth !==
+      `Bearer ${cronSecret}`
   ) {
+
     return res
-      .status(401)
+      .status(
+        401
+      )
       .json({
-        ok: false,
-        error: 'Unauthorized'
+
+        ok:
+          false,
+
+        error:
+          'Unauthorized'
       });
   }
 
+
   if (
-    !process.env.WORKER_SECRET
+    !process.env
+      .WORKER_SECRET
   ) {
+
     return res
-      .status(500)
+      .status(
+        500
+      )
       .json({
-        ok: false,
+
+        ok:
+          false,
+
         error:
           'WORKER_SECRET is not configured'
       });
   }
 
+
   req.headers[
     'x-worker-secret'
   ] =
-    process.env.WORKER_SECRET;
+    process.env
+      .WORKER_SECRET;
 
 
-  /*
-    تشغيل النظام الأصلي أولاً.
+  /* =======================================================
+     ORIGINAL SYSTEM FIRST
 
-    worker.js يبقى بدون أي تعديل:
-    - Collection
-    - Group 1
-    - Group 2
-    - Manual Groups
-    - Tracking
-    - Cleanup
-  */
+     DO NOT CHANGE ORIGINAL WORKER.
+
+     It continues to handle:
+
+     - Official California data
+     - Collection
+     - Group 1
+     - Group 2
+     - Manual Groups
+     - Tracking
+     - Cleanup
+  ======================================================= */
 
   const collector =
     createCollector();
+
 
   await worker(
     req,
     collector
   );
 
+
   const workerPayload =
-    collector.payload || {
-      ok: false,
+    collector.payload
+    ||
+    {
+
+      ok:
+        false,
+
       error:
         'Worker returned no JSON payload'
     };
 
 
-  let specialActive = null;
-  let advanced = null;
+  let groupFive =
+    null;
+
+  let specialActive =
+    null;
+
+  let advanced =
+    null;
 
 
-  /*
-    بعد اكتمال Collection
-    ودخول النظام إلى Tracking:
+  /* =======================================================
+     GROUP FIVE
 
-    1. نشغّل Special Active Density
-    2. نشغّل Advanced
-  */
+     Independent rolling engine.
+
+     It runs DURING collection as well.
+
+     First:
+     30 draws analysis.
+
+     Then:
+     20 future draws tracking.
+
+     Then:
+     latest 30 analysis.
+
+     Repeat continuously.
+  ======================================================= */
 
   if (
-    collector.statusCode < 400 &&
-    workerPayload?.ok !== false &&
-    workerPayload?.mode === 'tracking'
+    collector.statusCode < 400
+    &&
+    workerPayload?.ok !== false
+    &&
+    (
+      workerPayload?.mode ===
+        'collecting'
+      ||
+      workerPayload?.mode ===
+        'preparing'
+      ||
+      workerPayload?.mode ===
+        'tracking'
+    )
+  ) {
+
+    try {
+
+      groupFive =
+        await runGroupFive();
+
+    } catch (
+      e
+    ) {
+
+      groupFive = {
+
+        ok:
+          false,
+
+        active:
+          false,
+
+        error:
+          e.message
+          ||
+          String(
+            e
+          )
+      };
+    }
+  }
+
+
+  /* =======================================================
+     SPECIAL + ADVANCED
+
+     Preserve current successful behavior.
+
+     They run only after the
+     normal 180-draw collection is complete
+     and original worker enters Tracking.
+  ======================================================= */
+
+  if (
+    collector.statusCode < 400
+    &&
+    workerPayload?.ok !== false
+    &&
+    workerPayload?.mode ===
+      'tracking'
   ) {
 
     try {
@@ -132,14 +283,24 @@ module.exports = async (req, res) => {
       specialActive =
         await runActiveDensitySpecial();
 
-    } catch (e) {
+    } catch (
+      e
+    ) {
 
       specialActive = {
-        ok: false,
-        replaced: false,
+
+        ok:
+          false,
+
+        replaced:
+          false,
+
         error:
-          e.message ||
-          String(e)
+          e.message
+          ||
+          String(
+            e
+          )
       };
     }
 
@@ -149,14 +310,24 @@ module.exports = async (req, res) => {
       advanced =
         await runAdvanced();
 
-    } catch (e) {
+    } catch (
+      e
+    ) {
 
       advanced = {
-        ok: false,
-        created: false,
+
+        ok:
+          false,
+
+        created:
+          false,
+
         error:
-          e.message ||
-          String(e)
+          e.message
+          ||
+          String(
+            e
+          )
       };
     }
   }
@@ -167,7 +338,10 @@ module.exports = async (req, res) => {
       collector.statusCode
     )
     .json({
+
       ...workerPayload,
+
+      groupFive,
 
       specialActive,
 
