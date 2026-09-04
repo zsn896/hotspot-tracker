@@ -117,12 +117,6 @@ async function cleanupAutoCycle() {
 
 /* =========================================================
    AUTOMATIC CONTROL
-
-   IMPORTANT FIX:
-   Only AUTO_CONTROL_YYYY-MM-DD is a real daily control.
-
-   Special/Advanced marker rows that merely start with
-   AUTO_CONTROL_ are ignored.
 ========================================================= */
 
 async function getControl() {
@@ -908,7 +902,7 @@ function drawDateKey(
 
 
 /* =========================================================
-   FIND 6:00 AM START
+   FIND FIRST DRAW AFTER 6:00 AM
 ========================================================= */
 
 async function findCycleStart(
@@ -996,13 +990,6 @@ async function findCycleStart(
     );
 
   return (
-    candidates.find(
-      d =>
-        parseDrawMinutes(
-          d.time
-        ) === 360
-    )
-    ||
     candidates
       .sort(
         (
@@ -1837,7 +1824,7 @@ async (
             manualProcessed,
 
             message:
-              'Waiting for the official 6:00 AM draw.',
+              'Waiting for the first official draw after 6:00 AM.',
 
             source:
               'California Lottery official'
@@ -1858,7 +1845,14 @@ async (
 
 
     /* =====================================================
-       VALIDATE 6:00 AM CONTROL
+       VALIDATE FIRST DRAW AFTER 6:00 AM
+
+       IMPORTANT:
+       Do NOT require exactly 6:00 AM.
+
+       Hot Spot can start at 6:04 AM.
+       The first valid official draw at/after 6:00
+       is the correct daily anchor.
     ===================================================== */
 
     if (
@@ -1893,7 +1887,9 @@ async (
           controlDateKey
         )
         ||
-        startMinutes !== 360
+        startMinutes == null
+        ||
+        startMinutes < 360
       ) {
 
         await cleanupAutoCycle();
@@ -1930,6 +1926,7 @@ async (
               },
 
               latest: {
+
                 id:
                   latest.id,
 
@@ -1949,7 +1946,7 @@ async (
               manualProcessed,
 
               message:
-                'Waiting for the exact official 6:00 AM draw.',
+                'Waiting for the first official draw after 6:00 AM.',
 
               source:
                 'California Lottery official'
@@ -2351,12 +2348,6 @@ async (
 
     /* =====================================================
        AUTOMATIC TRACKING
-
-       This tracks ALL active automatic groups:
-       Group 1
-       Group 2
-       Special
-       Advanced
     ===================================================== */
 
     const tracking =
@@ -2365,10 +2356,6 @@ async (
         latest
       );
 
-
-    /* =====================================================
-       RESPONSE
-    ===================================================== */
 
     return res
       .status(200)
