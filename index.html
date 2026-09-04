@@ -1,22 +1,11 @@
 <!doctype html>
 <html lang="en" dir="ltr">
-
 <head>
-
 <meta charset="utf-8">
-
-<meta
-  name="viewport"
-  content="width=device-width,initial-scale=1,viewport-fit=cover"
->
-
-<title>
-  Hot Spot Automatic 12H
-</title>
-
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hot Spot Automatic 12H</title>
 
 <style>
-
 :root{
   --bg:#07111f;
   --panel:#101d2d;
@@ -30,82 +19,51 @@
   --purple:#b35cff;
   --red:#ef4444;
   --yellow:#f6c453;
-  --shadow:0 12px 28px rgba(0,0,0,.24);
+  --shadow:0 12px 28px rgba(0,0,0,.24)
 }
 
-*{
-  box-sizing:border-box;
-}
+*{box-sizing:border-box}
 
-html{
-  background:var(--bg);
-}
+html{background:var(--bg)}
 
 body{
   margin:0;
   color:var(--text);
-
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Arial,
-    sans-serif;
-
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
   background:
-    radial-gradient(
-      circle at 70% 0%,
-      rgba(47,128,255,.08),
-      transparent 28%
-    ),
-    linear-gradient(
-      180deg,
-      #07111f,
-      #091522
-    );
-
-  min-height:100vh;
+    radial-gradient(circle at 70% 0%,rgba(47,128,255,.08),transparent 28%),
+    linear-gradient(180deg,#07111f,#091522);
+  min-height:100vh
 }
 
-button,
-input{
-  font:inherit;
-}
-
-button{
-  touch-action:manipulation;
-}
+button,input{font:inherit}
+button{touch-action:manipulation}
 
 .wrap{
   max-width:1120px;
   margin:0 auto;
-  padding:20px 16px 40px;
+  padding:20px 16px 40px
 }
-
-
-/* =========================================================
-   HEADER
-========================================================= */
 
 .header{
   display:flex;
   justify-content:space-between;
   align-items:flex-start;
   gap:20px;
-  margin-bottom:18px;
+  margin-bottom:18px
 }
 
 .brandRow{
   display:flex;
   align-items:center;
   gap:10px;
-  flex-wrap:wrap;
+  flex-wrap:wrap
 }
 
 h1{
   margin:0;
   font-size:34px;
-  letter-spacing:-.6px;
+  letter-spacing:-.6px
 }
 
 .version{
@@ -113,19 +71,13 @@ h1{
   border-radius:999px;
   font-size:13px;
   font-weight:900;
-
-  background:
-    linear-gradient(
-      180deg,
-      #3489ff,
-      #1d6de0
-    );
+  background:linear-gradient(180deg,#3489ff,#1d6de0)
 }
 
 .subtitle{
   margin:10px 0 0;
   color:var(--mut);
-  line-height:1.5;
+  line-height:1.5
 }
 
 .headerRight{
@@ -133,87 +85,55 @@ h1{
   align-items:stretch;
   gap:16px;
   color:#cbd5e1;
-  white-space:nowrap;
+  white-space:nowrap
 }
 
 .autoBox{
   font-size:14px;
   line-height:1.5;
-  font-weight:800;
+  font-weight:800
 }
 
-.autoOn{
-  color:var(--green);
-}
+.autoOn{color:var(--green)}
 
 .timeBox{
   border-left:1px solid var(--line);
   padding-left:16px;
-  text-align:right;
+  text-align:right
 }
 
-#clock{
-  font-weight:950;
-}
+#clock{font-weight:950}
 
 #today{
   margin-top:5px;
   font-size:13px;
-  color:var(--mut);
+  color:var(--mut)
 }
 
-
-/* =========================================================
-   COMMON
-========================================================= */
-
 .card{
-  background:
-    linear-gradient(
-      180deg,
-      rgba(19,34,53,.96),
-      rgba(15,29,46,.96)
-    );
-
+  background:linear-gradient(
+    180deg,
+    rgba(19,34,53,.96),
+    rgba(15,29,46,.96)
+  );
   border:1px solid var(--line);
   border-radius:17px;
   padding:18px;
   margin:14px 0;
-  box-shadow:var(--shadow);
+  box-shadow:var(--shadow)
 }
 
 .title{
   font-size:23px;
-  font-weight:950;
+  font-weight:950
 }
 
-.small{
-  font-size:13px;
-}
-
-.mut{
-  color:var(--mut);
-}
-
-.ok{
-  color:var(--green);
-  font-weight:900;
-}
-
-.bad{
-  color:#ff6b64;
-  font-weight:900;
-}
-
-.amber{
-  color:var(--yellow);
-  font-weight:900;
-}
-
-.blue{
-  color:#55a2ff;
-  font-weight:900;
-}
+.small{font-size:13px}
+.mut{color:var(--mut)}
+.ok{color:var(--green);font-weight:900}
+.bad{color:#ff6b64;font-weight:900}
+.amber{color:var(--yellow);font-weight:900}
+.blue{color:#55a2ff;font-weight:900}
 
 .btn{
   appearance:none;
@@ -223,85 +143,61 @@ h1{
   font-size:14px;
   font-weight:900;
   color:white;
-  cursor:pointer;
+  cursor:pointer
 }
 
 .btn:disabled{
   opacity:.5;
-  cursor:not-allowed;
+  cursor:not-allowed
 }
 
 .btnBlue{
-  background:
-    linear-gradient(
-      180deg,
-      #3489ff,
-      #176be3
-    );
+  background:linear-gradient(180deg,#3489ff,#176be3)
 }
 
 .btnGreen{
-  background:
-    linear-gradient(
-      180deg,
-      #2bd56f,
-      #18a951
-    );
+  background:linear-gradient(180deg,#2bd56f,#18a951)
 }
 
 .btnRed{
-  background:
-    linear-gradient(
-      180deg,
-      #ef5555,
-      #c92f37
-    );
+  background:linear-gradient(180deg,#ef5555,#c92f37)
 }
 
 .btnDark{
   background:#263548;
-  border:1px solid #3a4c62;
+  border:1px solid #3a4c62
 }
 
-.pill{
-  display:inline-flex;
-  align-items:center;
-  padding:6px 10px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:900;
-  color:#55a2ff;
-  background:rgba(47,128,255,.13);
-  border:1px solid rgba(47,128,255,.25);
-}
-
+.pill,
 .livePill{
   display:inline-flex;
   align-items:center;
   padding:6px 10px;
   border-radius:999px;
   font-size:12px;
-  font-weight:900;
-  color:#43ea82;
-  background:rgba(34,197,94,.14);
-  border:1px solid rgba(34,197,94,.24);
+  font-weight:900
 }
 
+.pill{
+  color:#55a2ff;
+  background:rgba(47,128,255,.13);
+  border:1px solid rgba(47,128,255,.25)
+}
 
-/* =========================================================
-   TOOLBAR
-========================================================= */
+.livePill{
+  color:#43ea82;
+  background:rgba(34,197,94,.14);
+  border:1px solid rgba(34,197,94,.24)
+}
 
 .toolbar{
   display:flex;
   align-items:center;
   gap:14px;
-  flex-wrap:wrap;
+  flex-wrap:wrap
 }
 
-.statusText{
-  font-weight:850;
-}
+.statusText{font-weight:850}
 
 .dot{
   display:inline-block;
@@ -309,34 +205,22 @@ h1{
   height:11px;
   margin-right:7px;
   border-radius:50%;
-  background:var(--green);
+  background:var(--green)
 }
 
 .spin{
   display:inline-block;
   width:15px;
   height:15px;
-
-  border:
-    3px solid rgba(255,255,255,.2);
-
+  border:3px solid rgba(255,255,255,.2);
   border-top-color:white;
   border-radius:50%;
-
-  animation:
-    spin .8s linear infinite;
+  animation:spin .8s linear infinite
 }
 
 @keyframes spin{
-  to{
-    transform:rotate(360deg);
-  }
+  to{transform:rotate(360deg)}
 }
-
-
-/* =========================================================
-   SYNC STATUS
-========================================================= */
 
 .syncInfo{
   margin-top:12px;
@@ -345,34 +229,29 @@ h1{
   background:rgba(7,17,31,.30);
   border:1px solid var(--line);
   font-size:12px;
-  color:var(--mut);
+  color:var(--mut)
 }
 
 .syncInfo.good{
   color:#57df88;
-  border-color:rgba(34,197,94,.35);
+  border-color:rgba(34,197,94,.35)
 }
 
 .syncInfo.working{
   color:#55a2ff;
-  border-color:rgba(47,128,255,.35);
+  border-color:rgba(47,128,255,.35)
 }
 
 .syncInfo.warn{
   color:#ffb14e;
-  border-color:rgba(255,146,43,.35);
+  border-color:rgba(255,146,43,.35)
 }
-
-
-/* =========================================================
-   SUMMARY
-========================================================= */
 
 .stats{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:10px;
-  margin-top:16px;
+  margin-top:16px
 }
 
 .stat{
@@ -382,41 +261,27 @@ h1{
   justify-content:center;
   align-items:center;
   text-align:center;
-
-  background:
-    rgba(7,17,31,.35);
-
+  background:rgba(7,17,31,.35);
   border:1px solid var(--line);
   border-radius:13px;
-  padding:10px;
+  padding:10px
 }
 
 .statLabel{
   font-size:13px;
-  color:#d2dbe7;
+  color:#d2dbe7
 }
 
 .big{
   margin-top:6px;
   font-size:25px;
-  font-weight:950;
+  font-weight:950
 }
 
-.cBlue{
-  color:#55a2ff;
-}
-
-.cGreen{
-  color:#2bd56f;
-}
-
-.cOrange{
-  color:#ff922b;
-}
-
-.cPurple{
-  color:#b65cff;
-}
+.cBlue{color:#55a2ff}
+.cGreen{color:#2bd56f}
+.cOrange{color:#ff922b}
+.cPurple{color:#b65cff}
 
 .progress{
   position:relative;
@@ -425,19 +290,13 @@ h1{
   border-radius:999px;
   overflow:hidden;
   background:#07111f;
-  border:1px solid #1b2b3d;
+  border:1px solid #1b2b3d
 }
 
 .progress i{
   display:block;
   height:100%;
-
-  background:
-    linear-gradient(
-      90deg,
-      #3d8cff,
-      #156cff
-    );
+  background:linear-gradient(90deg,#3d8cff,#156cff)
 }
 
 .progress span{
@@ -446,18 +305,13 @@ h1{
   display:grid;
   place-items:center;
   font-size:10px;
-  font-weight:900;
+  font-weight:900
 }
-
-
-/* =========================================================
-   BALLS
-========================================================= */
 
 .balls{
   display:flex;
   flex-wrap:wrap;
-  gap:8px;
+  gap:8px
 }
 
 .ball{
@@ -466,88 +320,49 @@ h1{
   display:grid;
   place-items:center;
   border-radius:50%;
-
-  border:
-    1px solid #496078;
-
-  background:
-    linear-gradient(
-      180deg,
-      #101d2d,
-      #0c1725
-    );
-
+  border:1px solid #496078;
+  background:linear-gradient(180deg,#101d2d,#0c1725);
   color:white;
   font-size:14px;
-  font-weight:900;
+  font-weight:900
 }
 
 .hit3{
-  background:
-    linear-gradient(
-      180deg,
-      #3f8fff,
-      #1d6de0
-    );
-
-  border-color:#74b6ff;
+  background:linear-gradient(180deg,#3f8fff,#1d6de0);
+  border-color:#74b6ff
 }
 
 .hit4{
-  background:
-    linear-gradient(
-      180deg,
-      #ff9d3b,
-      #e87611
-    );
-
-  border-color:#ffb36a;
+  background:linear-gradient(180deg,#ff9d3b,#e87611);
+  border-color:#ffb36a
 }
 
 .hit5{
-  background:
-    linear-gradient(
-      180deg,
-      #2bd56f,
-      #13a94f
-    );
-
-  border-color:#6ae89b;
+  background:linear-gradient(180deg,#2bd56f,#13a94f);
+  border-color:#6ae89b
 }
 
 .latestBull{
-  background:
-    linear-gradient(
-      180deg,
-      #3794ff,
-      #1668e8
-    )!important;
-
+  background:linear-gradient(180deg,#3794ff,#1668e8)!important;
   border-color:#74b6ff!important;
-
   box-shadow:
     0 0 0 2px rgba(47,128,255,.22),
-    0 0 14px rgba(47,128,255,.3)!important;
+    0 0 14px rgba(47,128,255,.3)!important
 }
-
-
-/* =========================================================
-   LATEST DRAW
-========================================================= */
 
 .sectionTitle{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:12px;
-  flex-wrap:wrap;
+  flex-wrap:wrap
 }
 
 .titleLeft{
   display:flex;
   align-items:center;
   gap:10px;
-  flex-wrap:wrap;
+  flex-wrap:wrap
 }
 
 .latestMeta{
@@ -555,12 +370,12 @@ h1{
   color:#afbdd0;
   display:flex;
   gap:12px;
-  flex-wrap:wrap;
+  flex-wrap:wrap
 }
 
 .latestDrawNumber{
   color:white;
-  font-weight:850;
+  font-weight:850
 }
 
 .latestCompact{
@@ -570,18 +385,18 @@ h1{
   gap:18px;
   margin-top:15px;
   padding-top:15px;
-  border-top:1px solid var(--line);
+  border-top:1px solid var(--line)
 }
 
 .bullMini{
   min-width:82px;
-  text-align:center;
+  text-align:center
 }
 
 .bullMiniLabel{
   font-size:12px;
   color:var(--mut);
-  margin-bottom:6px;
+  margin-bottom:6px
 }
 
 .bullMiniCircle{
@@ -591,30 +406,16 @@ h1{
   display:grid;
   place-items:center;
   border-radius:50%;
-
-  background:
-    linear-gradient(
-      180deg,
-      #ff4343,
-      #e81919
-    );
-
+  background:linear-gradient(180deg,#ff4343,#e81919);
   font-size:20px;
-  font-weight:950;
+  font-weight:950
 }
 
-
-/* =========================================================
-   GROUP FIVE HERO
-========================================================= */
-
 .groupFiveHero{
-  border:
-    2px solid rgba(47,128,255,.55);
-
+  border:2px solid rgba(47,128,255,.55);
   box-shadow:
     0 0 28px rgba(47,128,255,.10),
-    var(--shadow);
+    var(--shadow)
 }
 
 .fiveHeader{
@@ -622,29 +423,27 @@ h1{
   align-items:flex-start;
   justify-content:space-between;
   gap:12px;
-  flex-wrap:wrap;
+  flex-wrap:wrap
 }
 
 .fiveTitle{
   font-size:26px;
-  font-weight:950;
+  font-weight:950
 }
 
 .fiveRule{
   margin-top:6px;
   color:#aebdd0;
-  font-size:13px;
+  font-size:13px
 }
 
-.fiveNumbers{
-  margin-top:16px;
-}
+.fiveNumbers{margin-top:16px}
 
 .fiveStats{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:9px;
-  margin-top:15px;
+  margin-top:15px
 }
 
 .fiveStat{
@@ -652,28 +451,29 @@ h1{
   text-align:center;
   background:rgba(7,17,31,.34);
   border:1px solid var(--line);
-  border-radius:12px;
+  border-radius:12px
 }
 
 .fiveStatLabel{
   font-size:12px;
-  color:#aab8ca;
+  color:#aab8ca
 }
 
 .fiveStatValue{
   margin-top:5px;
   font-size:21px;
-  font-weight:950;
+  font-weight:950
 }
 
-
-/* =========================================================
-   AUTOMATIC GROUP LIST
-========================================================= */
-
-.groupsSection{
-  margin-top:14px;
+/* وقت أحدث Best */
+.bestTime{
+  margin-top:4px;
+  font-size:11px;
+  color:#aebdd0;
+  font-weight:800
 }
+
+.groupsSection{margin-top:14px}
 
 .groupsTitleRow{
   display:flex;
@@ -681,7 +481,7 @@ h1{
   justify-content:space-between;
   gap:12px;
   margin-bottom:10px;
-  flex-wrap:wrap;
+  flex-wrap:wrap
 }
 
 .groupRow{
@@ -689,38 +489,34 @@ h1{
   border-radius:14px;
   margin-top:10px;
   overflow:hidden;
-  background:rgba(7,17,31,.24);
+  background:rgba(7,17,31,.24)
 }
 
 .groupSummary{
   display:grid;
-
   grid-template-columns:
     minmax(150px,1.2fr)
     minmax(220px,1.5fr)
-    90px
+    100px
     90px
     110px
     auto;
-
   gap:12px;
   align-items:center;
-  padding:13px;
+  padding:13px
 }
 
-.groupName{
-  font-weight:950;
-}
+.groupName{font-weight:950}
 
 .groupMiniLabel{
   font-size:11px;
   color:var(--mut);
-  margin-bottom:3px;
+  margin-bottom:3px
 }
 
 .groupMetric{
   font-size:14px;
-  font-weight:900;
+  font-weight:900
 }
 
 .toggleBtn{
@@ -731,30 +527,25 @@ h1{
   padding:8px 10px;
   font-size:12px;
   font-weight:900;
-  cursor:pointer;
+  cursor:pointer
 }
 
 .groupDetails{
   display:none;
   padding:0 13px 13px;
-  border-top:1px solid var(--line);
+  border-top:1px solid var(--line)
 }
 
 .groupRow.open .groupDetails{
-  display:block;
+  display:block
 }
-
-
-/* =========================================================
-   RESULT CARD
-========================================================= */
 
 .result{
   margin-top:10px;
   border:1px solid var(--line);
   border-radius:12px;
   padding:12px;
-  background:rgba(7,17,31,.34);
+  background:rgba(7,17,31,.34)
 }
 
 .resultHead{
@@ -762,25 +553,17 @@ h1{
   justify-content:space-between;
   align-items:center;
   gap:10px;
-  flex-wrap:wrap;
+  flex-wrap:wrap
 }
 
 .score{
   font-size:18px;
-  font-weight:950;
+  font-weight:950
 }
 
-.score3{
-  color:#56a0ff;
-}
-
-.score4{
-  color:#ff9d3b;
-}
-
-.score5{
-  color:#2bd56f;
-}
+.score3{color:#56a0ff}
+.score4{color:#ff9d3b}
+.score5{color:#2bd56f}
 
 .empty{
   margin-top:10px;
@@ -789,17 +572,11 @@ h1{
   color:#9fb0c7;
   border:1px dashed #3d5065;
   border-radius:12px;
-  background:rgba(7,17,31,.22);
+  background:rgba(7,17,31,.22)
 }
 
-
-/* =========================================================
-   MANUAL
-========================================================= */
-
 .manualShell{
-  border:
-    2px solid rgba(34,197,94,.55);
+  border:2px solid rgba(34,197,94,.55)
 }
 
 .manualTop{
@@ -807,35 +584,35 @@ h1{
   align-items:flex-start;
   justify-content:space-between;
   gap:12px;
-  flex-wrap:wrap;
+  flex-wrap:wrap
 }
 
 .manualTop h2{
   margin:0;
-  font-size:24px;
+  font-size:24px
 }
 
 .manualTop p{
   margin:7px 0 0;
-  color:#aab8ca;
+  color:#aab8ca
 }
 
 .manualGrid{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:12px;
-  margin-top:15px;
+  margin-top:15px
 }
 
 .manualGroup{
   background:rgba(7,17,31,.32);
   border:1px solid #31435a;
   border-radius:14px;
-  padding:14px;
+  padding:14px
 }
 
 .manualGroup.active{
-  border-color:#20c46a;
+  border-color:#20c46a
 }
 
 .manualHead{
@@ -843,22 +620,20 @@ h1{
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  margin-bottom:12px;
+  margin-bottom:12px
 }
 
-.manualName{
-  font-weight:950;
-}
+.manualName{font-weight:950}
 
 .manualState{
   font-size:12px;
-  font-weight:900;
+  font-weight:900
 }
 
 .manualInputs{
   display:grid;
   grid-template-columns:repeat(5,1fr);
-  gap:6px;
+  gap:6px
 }
 
 .manualInputs input{
@@ -872,535 +647,358 @@ h1{
   text-align:center;
   outline:none;
   font-size:16px;
-  font-weight:900;
+  font-weight:900
 }
 
 .manualInputs input:focus{
-  border-color:#20c46a;
+  border-color:#20c46a
 }
 
 .manualActions{
   display:grid;
-
-  grid-template-columns:
-    1.3fr
-    1fr
-    1fr;
-
+  grid-template-columns:1.3fr 1fr 1fr;
   gap:7px;
-  margin-top:10px;
+  margin-top:10px
 }
 
 .manualMsg{
   min-height:18px;
   margin-top:8px;
-  font-size:12px;
+  font-size:12px
 }
 
 .manualMeta{
   margin-top:11px;
   color:#98a9bf;
-  font-size:12px;
+  font-size:12px
 }
-
-
-/* =========================================================
-   FOOTER
-========================================================= */
 
 footer{
   margin-top:22px;
   text-align:center;
   color:#8092a8;
-  font-size:12px;
+  font-size:12px
 }
 
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
 @media(max-width:900px){
-
-  .header{
-    flex-direction:column;
-  }
-
-  .headerRight{
-    width:100%;
-    justify-content:space-between;
-  }
-
-  .manualGrid{
-    grid-template-columns:1fr;
-  }
+  .header{flex-direction:column}
+  .headerRight{width:100%;justify-content:space-between}
+  .manualGrid{grid-template-columns:1fr}
 
   .groupSummary{
-    grid-template-columns:
-      1fr
-      1fr
-      1fr;
-
-    gap:10px;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:10px
   }
 
   .groupSummary .groupNumbersCell{
-    grid-column:1 / -1;
+    grid-column:1/-1
   }
 
   .groupSummary .groupNameCell{
-    grid-column:span 2;
+    grid-column:span 2
   }
 }
 
-
 @media(max-width:620px){
+  .wrap{padding:16px 10px 30px}
+  h1{font-size:29px}
+  .card{padding:14px;border-radius:14px}
 
-  .wrap{
-    padding:16px 10px 30px;
-  }
-
-  h1{
-    font-size:29px;
-  }
-
-  .card{
-    padding:14px;
-    border-radius:14px;
-  }
-
-  .stats{
-    grid-template-columns:repeat(2,1fr);
-  }
-
+  .stats,
   .fiveStats{
-    grid-template-columns:repeat(2,1fr);
+    grid-template-columns:repeat(2,1fr)
   }
 
   .latestCompact{
     align-items:flex-start;
-    flex-direction:column;
+    flex-direction:column
   }
 
-  .bullMini{
-    text-align:left;
-  }
-
-  .bullMiniCircle{
-    margin:0;
-  }
+  .bullMini{text-align:left}
+  .bullMiniCircle{margin:0}
 
   .groupSummary{
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:1fr 1fr
   }
 
   .groupSummary .groupNameCell,
   .groupSummary .groupNumbersCell{
-    grid-column:1 / -1;
+    grid-column:1/-1
   }
 
   .ball{
     width:37px;
     height:37px;
-    font-size:13px;
+    font-size:13px
   }
 
   .manualInputs input{
     height:44px;
-    font-size:15px;
+    font-size:15px
   }
 
   .manualActions .btn{
     padding:10px 7px;
-    font-size:12px;
+    font-size:12px
   }
 }
-
 </style>
-
 </head>
-
 
 <body>
 
 <div class="wrap">
 
+<header class="header">
 
-  <header class="header">
+  <div>
+    <div class="brandRow">
+      <h1>Hot Spot Automatic 12H</h1>
+      <span class="version">v31 FIXED</span>
+    </div>
+
+    <p class="subtitle">
+      GROUP FIVE: analyze latest 50 draws, then track the next 20 future draws.
+    </p>
+  </div>
+
+  <div class="headerRight">
+
+    <div class="autoBox">
+      Auto refresh:
+      <span class="autoOn">ON</span>
+      <br>
+      Smart Sync + 60 sec
+    </div>
+
+    <div class="timeBox">
+      <div id="clock">--:--:--</div>
+      <div id="today">--</div>
+    </div>
+
+  </div>
+
+</header>
+
+
+<section class="card">
+
+  <div class="toolbar">
+
+    <button
+      class="btn btnBlue"
+      id="refresh"
+    >
+      ↻ Refresh Now
+    </button>
+
+    <span id="busy"></span>
+
+    <span
+      class="statusText"
+      id="status"
+    >
+      <span class="dot"></span>
+      Connecting…
+    </span>
+
+  </div>
+
+  <div
+    id="syncInfo"
+    class="syncInfo"
+  >
+    Checking official draw…
+  </div>
+
+  <div id="summary"></div>
+
+</section>
+
+
+<div id="latestDraw"></div>
+
+<div id="groupFiveContent"></div>
+
+
+<section class="card groupsSection">
+
+  <div class="groupsTitleRow">
+
+    <div class="title">
+      Automatic Groups
+    </div>
+
+    <span class="pill">
+      Tap Show Results only when needed
+    </span>
+
+  </div>
+
+  <div id="autoContent"></div>
+
+</section>
+
+
+<section class="card manualShell">
+
+  <div class="manualTop">
 
     <div>
-
-      <div class="brandRow">
-
-        <h1>
-          Hot Spot Automatic 12H
-        </h1>
-
-        <span class="version">
-          v31 FIXED
-        </span>
-
-      </div>
-
-      <p class="subtitle">
-
-        GROUP FIVE:
-        analyze latest 50 draws,
-        then track the next 20 future draws.
-
-      </p>
-
+      <h2>Manual Analysis</h2>
+      <p>Two independent groups of five numbers.</p>
     </div>
 
+    <span class="pill">
+      Future draws only
+    </span>
 
-    <div class="headerRight">
+  </div>
 
-      <div class="autoBox">
+  <div class="manualGrid">
 
-        Auto refresh:
+    <div
+      class="manualGroup"
+      id="manualGroup1"
+    >
 
-        <span class="autoOn">
-          ON
-        </span>
+      <div class="manualHead">
 
-        <br>
-
-        Smart Sync + 60 sec
-
-      </div>
-
-
-      <div class="timeBox">
-
-        <div id="clock">
-          --:--:--
+        <div class="manualName">
+          Manual Group 1
         </div>
 
-        <div id="today">
-          --
+        <div
+          class="manualState mut"
+          id="manualState1"
+        >
+          ● Not tracking
         </div>
 
       </div>
 
-    </div>
+      <div class="manualInputs">
 
-  </header>
+        <input inputmode="numeric" maxlength="2" id="m1_1">
+        <input inputmode="numeric" maxlength="2" id="m1_2">
+        <input inputmode="numeric" maxlength="2" id="m1_3">
+        <input inputmode="numeric" maxlength="2" id="m1_4">
+        <input inputmode="numeric" maxlength="2" id="m1_5">
 
+      </div>
 
-  <!-- STATUS -->
+      <div class="manualActions">
 
-  <section class="card">
+        <button
+          class="btn btnGreen"
+          id="start1"
+        >
+          ▶ Start
+        </button>
 
-    <div class="toolbar">
+        <button
+          class="btn btnRed"
+          id="stop1"
+        >
+          ■ Stop
+        </button>
 
-      <button
-        class="btn btnBlue"
-        id="refresh"
-      >
-        ↻ Refresh Now
-      </button>
+        <button
+          class="btn btnDark"
+          id="clear1"
+        >
+          Clear
+        </button>
 
-      <span id="busy"></span>
+      </div>
 
-      <span
-        class="statusText"
-        id="status"
-      >
+      <div
+        class="manualMsg mut"
+        id="msg1"
+      ></div>
 
-        <span class="dot"></span>
-
-        Connecting…
-
-      </span>
+      <div id="manualContent1"></div>
 
     </div>
 
 
     <div
-      id="syncInfo"
-      class="syncInfo"
+      class="manualGroup"
+      id="manualGroup2"
     >
-      Checking official draw…
-    </div>
 
+      <div class="manualHead">
 
-    <div id="summary"></div>
-
-  </section>
-
-
-  <!-- LATEST DRAW -->
-
-  <div id="latestDraw"></div>
-
-
-  <!-- GROUP FIVE -->
-
-  <div id="groupFiveContent"></div>
-
-
-  <!-- OTHER AUTOMATIC GROUPS -->
-
-  <section class="card groupsSection">
-
-    <div class="groupsTitleRow">
-
-      <div class="title">
-        Automatic Groups
-      </div>
-
-      <span class="pill">
-        Tap Show Results only when needed
-      </span>
-
-    </div>
-
-    <div id="autoContent"></div>
-
-  </section>
-
-
-  <!-- MANUAL -->
-
-  <section class="card manualShell">
-
-    <div class="manualTop">
-
-      <div>
-
-        <h2>
-          Manual Analysis
-        </h2>
-
-        <p>
-          Two independent groups of five numbers.
-        </p>
-
-      </div>
-
-      <span class="pill">
-        Future draws only
-      </span>
-
-    </div>
-
-
-    <div class="manualGrid">
-
-
-      <div
-        class="manualGroup"
-        id="manualGroup1"
-      >
-
-        <div class="manualHead">
-
-          <div class="manualName">
-            Manual Group 1
-          </div>
-
-          <div
-            class="manualState mut"
-            id="manualState1"
-          >
-            ● Not tracking
-          </div>
-
+        <div class="manualName">
+          Manual Group 2
         </div>
-
-
-        <div class="manualInputs">
-
-          <input
-            inputmode="numeric"
-            maxlength="2"
-            id="m1_1"
-            aria-label="Manual group 1 number 1"
-          >
-
-          <input
-            inputmode="numeric"
-            maxlength="2"
-            id="m1_2"
-            aria-label="Manual group 1 number 2"
-          >
-
-          <input
-            inputmode="numeric"
-            maxlength="2"
-            id="m1_3"
-            aria-label="Manual group 1 number 3"
-          >
-
-          <input
-            inputmode="numeric"
-            maxlength="2"
-            id="m1_4"
-            aria-label="Manual group 1 number 4"
-          >
-
-          <input
-            inputmode="numeric"
-            maxlength="2"
-            id="m1_5"
-            aria-label="Manual group 1 number 5"
-          >
-
-        </div>
-
-
-        <div class="manualActions">
-
-          <button
-            class="btn btnGreen"
-            id="start1"
-          >
-            ▶ Start
-          </button>
-
-          <button
-            class="btn btnRed"
-            id="stop1"
-          >
-            ■ Stop
-          </button>
-
-          <button
-            class="btn btnDark"
-            id="clear1"
-          >
-            Clear
-          </button>
-
-        </div>
-
 
         <div
-          class="manualMsg mut"
-          id="msg1"
-        ></div>
-
-        <div id="manualContent1"></div>
+          class="manualState mut"
+          id="manualState2"
+        >
+          ● Not tracking
+        </div>
 
       </div>
 
+      <div class="manualInputs">
+
+        <input inputmode="numeric" maxlength="2" id="m2_1">
+        <input inputmode="numeric" maxlength="2" id="m2_2">
+        <input inputmode="numeric" maxlength="2" id="m2_3">
+        <input inputmode="numeric" maxlength="2" id="m2_4">
+        <input inputmode="numeric" maxlength="2" id="m2_5">
+
+      </div>
+
+      <div class="manualActions">
+
+        <button
+          class="btn btnGreen"
+          id="start2"
+        >
+          ▶ Start
+        </button>
+
+        <button
+          class="btn btnRed"
+          id="stop2"
+        >
+          ■ Stop
+        </button>
+
+        <button
+          class="btn btnDark"
+          id="clear2"
+        >
+          Clear
+        </button>
+
+      </div>
 
       <div
-        class="manualGroup"
-        id="manualGroup2"
-      >
+        class="manualMsg mut"
+        id="msg2"
+      ></div>
 
-        <div class="manualHead">
-
-          <div class="manualName">
-            Manual Group 2
-          </div>
-
-          <div
-            class="manualState mut"
-            id="manualState2"
-          >
-            ● Not tracking
-          </div>
-
-        </div>
-
-
-        <div class="manualInputs">
-
-          <input
-            inputmode="numeric"
-            maxlength="2"
-            id="m2_1"
-            aria-label="Manual group 2 number 1"
-          >
-
-          <input
-            inputmode="numeric"
-            maxlength="2"
-            id="m2_2"
-            aria-label="Manual group 2 number 2"
-          >
-
-          <input
-            inputmode="numeric"
-            maxlength="2"
-            id="m2_3"
-            aria-label="Manual group 2 number 3"
-          >
-
-          <input
-            inputmode="numeric"
-            maxlength="2"
-            id="m2_4"
-            aria-label="Manual group 2 number 4"
-          >
-
-          <input
-            inputmode="numeric"
-            maxlength="2"
-            id="m2_5"
-            aria-label="Manual group 2 number 5"
-          >
-
-        </div>
-
-
-        <div class="manualActions">
-
-          <button
-            class="btn btnGreen"
-            id="start2"
-          >
-            ▶ Start
-          </button>
-
-          <button
-            class="btn btnRed"
-            id="stop2"
-          >
-            ■ Stop
-          </button>
-
-          <button
-            class="btn btnDark"
-            id="clear2"
-          >
-            Clear
-          </button>
-
-        </div>
-
-
-        <div
-          class="manualMsg mut"
-          id="msg2"
-        ></div>
-
-        <div id="manualContent2"></div>
-
-      </div>
+      <div id="manualContent2"></div>
 
     </div>
 
-  </section>
+  </div>
+
+</section>
 
 
-  <footer>
-    © 2026 Hot Spot Tracker
-  </footer>
-
+<footer>
+  © 2026 Hot Spot Tracker
+</footer>
 
 </div>
 
 
-
 <script>
-
-
-/* =========================================================
-   HELPERS
-========================================================= */
 
 const esc =
   s =>
@@ -1417,27 +1015,21 @@ const esc =
     );
 
 
-function busy(
-  text
-){
+function busy(text){
 
-  const el =
-    document.getElementById(
-      'busy'
-    );
-
-
-  el.innerHTML =
-    text
-      ?
-      `
-      <span class="spin"></span>
-      <span class="small mut">
-        ${esc(text)}
-      </span>
-      `
-      :
-      '';
+  document
+    .getElementById('busy')
+    .innerHTML =
+      text
+        ?
+        `
+        <span class="spin"></span>
+        <span class="small mut">
+          ${esc(text)}
+        </span>
+        `
+        :
+        '';
 }
 
 
@@ -1455,9 +1047,7 @@ async function api(
       }
     );
 
-
   let j;
-
 
   try{
 
@@ -1470,7 +1060,6 @@ async function api(
       'Invalid server response'
     );
   }
-
 
   if(
     !r.ok
@@ -1485,56 +1074,44 @@ async function api(
     );
   }
 
-
   return j;
 }
 
 
-/* =========================================================
-   CLOCK
-========================================================= */
+/* CLOCK */
 
 function updateClock(){
 
   const now =
     new Date();
 
+  document
+    .getElementById('clock')
+    .textContent =
+      now.toLocaleTimeString(
+        [],
+        {
+          hour:'2-digit',
+          minute:'2-digit',
+          second:'2-digit'
+        }
+      );
 
   document
-    .getElementById(
-      'clock'
-    )
+    .getElementById('today')
     .textContent =
-
-    now.toLocaleTimeString(
-      [],
-      {
-        hour:'2-digit',
-        minute:'2-digit',
-        second:'2-digit'
-      }
-    );
-
-
-  document
-    .getElementById(
-      'today'
-    )
-    .textContent =
-
-    now.toLocaleDateString(
-      [],
-      {
-        month:'short',
-        day:'numeric',
-        year:'numeric'
-      }
-    );
+      now.toLocaleDateString(
+        [],
+        {
+          month:'short',
+          day:'numeric',
+          year:'numeric'
+        }
+      );
 }
 
 
 updateClock();
-
 
 setInterval(
   updateClock,
@@ -1542,23 +1119,16 @@ setInterval(
 );
 
 
-/* =========================================================
-   SYNC DISPLAY
-========================================================= */
+/* SYNC */
 
-function renderSyncInfo(
-  sync
-){
+function renderSyncInfo(sync){
 
   const el =
     document.getElementById(
       'syncInfo'
     );
 
-
-  if(
-    !sync
-  ){
+  if(!sync){
 
     el.className =
       'syncInfo warn';
@@ -1569,10 +1139,7 @@ function renderSyncInfo(
     return;
   }
 
-
-  if(
-    sync.synced
-  ){
+  if(sync.synced){
 
     if(
       sync.caughtUp === false
@@ -1595,7 +1162,6 @@ function renderSyncInfo(
       return;
     }
 
-
     el.className =
       'syncInfo good';
 
@@ -1611,7 +1177,6 @@ function renderSyncInfo(
     return;
   }
 
-
   el.className =
     'syncInfo good';
 
@@ -1626,115 +1191,68 @@ function renderSyncInfo(
 }
 
 
-/* =========================================================
-   STATUS
-========================================================= */
+/* STATUS */
 
-function renderStatus(
-  mode
-){
+function renderStatus(mode){
 
   const el =
     document.getElementById(
       'status'
     );
 
-
-  if(
-    mode ===
-    'collecting'
-  ){
+  if(mode === 'collecting'){
 
     el.innerHTML =
-      `
-      <span class="dot"></span>
-      Live: Collecting
-      `;
+      '<span class="dot"></span>Live: Collecting';
 
     return;
   }
 
-
-  if(
-    mode ===
-    'preparing'
-  ){
+  if(mode === 'preparing'){
 
     el.innerHTML =
-      `
-      <span class="amber">
-        ● Preparing
-      </span>
-      `;
+      '<span class="amber">● Preparing</span>';
 
     return;
   }
 
-
-  if(
-    mode ===
-    'tracking'
-  ){
+  if(mode === 'tracking'){
 
     el.innerHTML =
-      `
-      <span class="ok">
-        ● Automatic Tracking
-      </span>
-      `;
+      '<span class="ok">● Automatic Tracking</span>';
 
     return;
   }
 
-
-  if(
-    mode ===
-    'cleanup'
-  ){
+  if(mode === 'cleanup'){
 
     el.innerHTML =
-      `
-      <span class="blue">
-        ● Cleanup
-      </span>
-      `;
+      '<span class="blue">● Cleanup</span>';
 
     return;
   }
-
 
   el.innerHTML =
-    `
-    <span class="mut">
-      ● Idle
-    </span>
-    `;
+    '<span class="mut">● Idle</span>';
 }
 
 
-/* =========================================================
-   SUMMARY
-========================================================= */
+/* SUMMARY */
 
-function renderSummary(
-  j
-){
+function renderSummary(j){
 
   const c =
     j?.collection || {};
-
 
   const have =
     Number(
       c.have || 0
     );
 
-
   const need =
     Number(
       c.need || 180
     );
-
 
   const remaining =
     Number(
@@ -1745,7 +1263,6 @@ function renderSummary(
         need - have
       )
     );
-
 
   const pct =
     need
@@ -1761,16 +1278,12 @@ function renderSummary(
       :
       0;
 
-
   document
-    .getElementById(
-      'summary'
-    )
+    .getElementById('summary')
     .innerHTML =
-    `
+      `
 
       <div class="stats">
-
 
         <div class="stat">
 
@@ -1779,13 +1292,10 @@ function renderSummary(
           </div>
 
           <div class="big cBlue">
-            ${esc(
-              j?.mode || '—'
-            )}
+            ${esc(j?.mode || '—')}
           </div>
 
         </div>
-
 
         <div class="stat">
 
@@ -1799,7 +1309,6 @@ function renderSummary(
 
         </div>
 
-
         <div class="stat">
 
           <div class="statLabel">
@@ -1812,7 +1321,6 @@ function renderSummary(
 
         </div>
 
-
         <div class="stat">
 
           <div class="statLabel">
@@ -1820,7 +1328,6 @@ function renderSummary(
           </div>
 
           <div class="big cPurple">
-
             ${
               j?.latest?.draw_id
               ??
@@ -1828,14 +1335,11 @@ function renderSummary(
               ??
               '—'
             }
-
           </div>
 
         </div>
 
-
       </div>
-
 
       <div class="progress">
 
@@ -1848,30 +1352,20 @@ function renderSummary(
         </span>
 
       </div>
-    `;
+      `;
 }
 
 
-/* =========================================================
-   LATEST DRAW
-========================================================= */
+/* LATEST DRAW */
 
-function latestFromTrack(
-  j
-){
+function latestFromTrack(j){
 
-  if(
-    j?.latest
-  ){
-
+  if(j?.latest){
     return j.latest;
   }
 
-
   const pool =
-    Array.isArray(
-      j?.draws
-    )
+    Array.isArray(j?.draws)
     &&
     j.draws.length
       ?
@@ -1879,22 +1373,14 @@ function latestFromTrack(
       :
       [];
 
-
-  if(
-    !pool.length
-  ){
-
+  if(!pool.length){
     return null;
   }
-
 
   return pool
     .slice()
     .sort(
-      (
-        a,
-        b
-      ) =>
+      (a,b) =>
         Number(
           b.id
           ??
@@ -1914,19 +1400,14 @@ function latestFromTrack(
 }
 
 
-function renderLatestDraw(
-  d
-){
+function renderLatestDraw(d){
 
   const box =
     document.getElementById(
       'latestDraw'
     );
 
-
-  if(
-    !d
-  ){
+  if(!d){
 
     box.innerHTML =
       `
@@ -1946,20 +1427,14 @@ function renderLatestDraw(
     return;
   }
 
-
   const nums =
-    Array.isArray(
-      d.numbers
-    )
+    Array.isArray(d.numbers)
       ?
       d.numbers
         .map(Number)
-        .filter(
-          Number.isFinite
-        )
+        .filter(Number.isFinite)
       :
       [];
-
 
   const bullRaw =
     d.bullsEye
@@ -1967,7 +1442,6 @@ function renderLatestDraw(
     d.bulls_eye
     ??
     null;
-
 
   const bull =
     bullRaw === null
@@ -1978,10 +1452,7 @@ function renderLatestDraw(
       ?
       null
       :
-      Number(
-        bullRaw
-      );
-
+      Number(bullRaw);
 
   const drawId =
     d.id
@@ -1990,14 +1461,12 @@ function renderLatestDraw(
     ??
     '—';
 
-
   const drawDate =
     d.date
     ??
     d.draw_date
     ??
     '';
-
 
   const drawTime =
     d.time
@@ -2006,12 +1475,10 @@ function renderLatestDraw(
     ??
     '';
 
-
   box.innerHTML =
     `
 
     <section class="card">
-
 
       <div class="sectionTitle">
 
@@ -2029,53 +1496,39 @@ function renderLatestDraw(
 
       </div>
 
-
       <div class="latestMeta">
 
         <span class="latestDrawNumber">
           Draw #${esc(drawId)}
         </span>
 
-
         <span>
-
           ${esc(drawDate)}
-
           ${
             drawTime
               ?
-              ' — '
-              +
-              esc(drawTime)
+              ' — ' + esc(drawTime)
               :
               ''
           }
-
         </span>
 
       </div>
 
-
       <div class="latestCompact">
-
 
         <div class="balls">
 
           ${
-            nums.map(
-              n => {
-
-                const isBull =
-                  bull !== null
-                  &&
-                  Number(n) ===
-                  bull;
-
-
-                return `
+            nums
+              .map(
+                n =>
+                  `
                   <span
                     class="ball ${
-                      isBull
+                      bull !== null
+                      &&
+                      n === bull
                         ?
                         'latestBull'
                         :
@@ -2084,13 +1537,12 @@ function renderLatestDraw(
                   >
                     ${n}
                   </span>
-                `;
-              }
-            ).join('')
+                  `
+              )
+              .join('')
           }
 
         </div>
-
 
         <div class="bullMini">
 
@@ -2099,7 +1551,6 @@ function renderLatestDraw(
           </div>
 
           <div class="bullMiniCircle">
-
             ${
               bull !== null
                 ?
@@ -2107,69 +1558,44 @@ function renderLatestDraw(
                 :
                 '—'
             }
-
           </div>
 
         </div>
 
-
       </div>
-
 
     </section>
     `;
 }
 
 
-/* =========================================================
-   RESULT HELPERS
-========================================================= */
+/* RESULT HELPERS */
 
-function scoreClass(
-  n
-){
+function scoreClass(n){
 
-  if(
-    n >= 5
-  ){
-
-    return 'score5';
-  }
-
-
-  if(
+  return n >= 5
+    ?
+    'score5'
+    :
     n === 4
-  ){
-
-    return 'score4';
-  }
-
-
-  return 'score3';
+      ?
+      'score4'
+      :
+      'score3';
 }
 
 
-function hitClass(
-  n
-){
+function hitClass(n){
 
-  if(
-    n >= 5
-  ){
-
-    return 'hit5';
-  }
-
-
-  if(
+  return n >= 5
+    ?
+    'hit5'
+    :
     n === 4
-  ){
-
-    return 'hit4';
-  }
-
-
-  return 'hit3';
+      ?
+      'hit4'
+      :
+      'hit3';
 }
 
 
@@ -2180,23 +1606,17 @@ function resultCard(
 
   const hits =
     (
-      r.hit_numbers ||
-      []
-    ).map(
-      Number
-    );
-
+      r.hit_numbers || []
+    ).map(Number);
 
   const hc =
     Number(
       r.hit_count || 0
     );
 
-
   return `
 
     <div class="result">
-
 
       <div class="resultHead">
 
@@ -2205,34 +1625,24 @@ function resultCard(
           <b>
             Draw ${
               esc(
-                r.draw_id
-                ??
-                '—'
+                r.draw_id ?? '—'
               )
             }
           </b>
 
           <span class="mut">
-            — ${
-              esc(
-                r.time || ''
-              )
-            }
+            — ${esc(r.time || '')}
           </span>
 
         </div>
 
-
         <div
-          class="score ${
-            scoreClass(hc)
-          }"
+          class="score ${scoreClass(hc)}"
         >
           ${hc}/5
         </div>
 
       </div>
-
 
       <div
         class="balls"
@@ -2241,20 +1651,16 @@ function resultCard(
 
         ${
           (
-            groupNumbers ||
-            []
-          ).map(
+            groupNumbers || []
+          )
+          .map(
             n => {
 
               const num =
                 Number(n);
 
-
               const isHit =
-                hits.includes(
-                  num
-                );
-
+                hits.includes(num);
 
               const isBull =
                 Boolean(
@@ -2263,9 +1669,7 @@ function resultCard(
                 &&
                 Number(
                   r.bulls_eye
-                ) ===
-                num;
-
+                ) === num;
 
               return `
                 <span
@@ -2287,11 +1691,11 @@ function resultCard(
                 </span>
               `;
             }
-          ).join('')
+          )
+          .join('')
         }
 
       </div>
-
 
       <div
         class="small"
@@ -2310,7 +1714,6 @@ function resultCard(
           }
         </b>
 
-
         ${
           r.bulls_eye_match
             ?
@@ -2318,11 +1721,7 @@ function resultCard(
             &nbsp; • &nbsp;
 
             <span class="blue">
-              Bulls-eye ${
-                esc(
-                  r.bulls_eye
-                )
-              }
+              Bulls-eye ${esc(r.bulls_eye)}
             </span>
             `
             :
@@ -2331,64 +1730,123 @@ function resultCard(
 
       </div>
 
-
     </div>
   `;
 }
 
 
-function importantResults(
-  g
-){
+function importantResults(g){
 
-  const source =
-    Array.isArray(
-      g?.results
-    )
+  return (
+    Array.isArray(g?.results)
       ?
       g.results
       :
-      [];
-
-
-  return source
+      []
+  )
     .filter(
       r =>
         Number(
           r.hit_count
-        )
-        >=
-        3
+        ) >= 3
     )
     .sort(
-      (
-        a,
-        b
-      ) =>
-        Number(
-          b.draw_id
-        )
+      (a,b) =>
+        Number(b.draw_id)
         -
-        Number(
-          a.draw_id
-        )
+        Number(a.draw_id)
     );
 }
 
 
 /* =========================================================
-   GROUP FIVE
+   NEW:
+   Finds Best result and newest time it happened.
 ========================================================= */
 
-function renderGroupFive(
-  state
-){
+function bestInfo(results){
+
+  const rows =
+    Array.isArray(results)
+      ?
+      results
+      :
+      [];
+
+  let best = 0;
+
+  for(const r of rows){
+
+    best =
+      Math.max(
+        best,
+        Number(
+          r.hit_count || 0
+        )
+      );
+  }
+
+  /*
+    User only wants a time shown
+    when Best is 4/5 or 5/5.
+  */
+
+  if(best < 4){
+
+    return {
+      best,
+      time:'',
+      drawId:null
+    };
+  }
+
+  /*
+    If Best occurred several times,
+    choose the NEWEST occurrence.
+  */
+
+  const match =
+    rows
+      .filter(
+        r =>
+          Number(
+            r.hit_count || 0
+          ) === best
+      )
+      .sort(
+        (a,b) =>
+          Number(
+            b.draw_id || 0
+          )
+          -
+          Number(
+            a.draw_id || 0
+          )
+      )[0]
+      ||
+      null;
+
+  return {
+    best,
+    time:String(
+      match?.time || ''
+    ),
+    drawId:
+      match?.draw_id
+      ??
+      null
+  };
+}
+
+
+/* GROUP FIVE */
+
+function renderGroupFive(state){
 
   const root =
     document.getElementById(
       'groupFiveContent'
     );
-
 
   const groups =
     Array.isArray(
@@ -2399,31 +1857,24 @@ function renderGroupFive(
       :
       [];
 
-
   const g =
     groups.find(
       x =>
         String(
           x?.name || ''
-        )
-        ===
+        ) ===
         'AUTO Group Five'
     );
-
 
   const top =
     state?.groupFive || {};
 
-
-  if(
-    !g
-  ){
+  if(!g){
 
     const have =
       Number(
         top.analysisHave || 0
       );
-
 
     const remain =
       Number(
@@ -2435,12 +1886,10 @@ function renderGroupFive(
         )
       );
 
-
     root.innerHTML =
       `
 
       <section class="card groupFiveHero">
-
 
         <div class="fiveHeader">
 
@@ -2456,16 +1905,13 @@ function renderGroupFive(
 
           </div>
 
-
           <span class="pill">
             50 → 20 Rolling
           </span>
 
         </div>
 
-
         <div class="fiveStats">
-
 
           <div class="fiveStat">
 
@@ -2479,7 +1925,6 @@ function renderGroupFive(
 
           </div>
 
-
           <div class="fiveStat">
 
             <div class="fiveStatLabel">
@@ -2491,7 +1936,6 @@ function renderGroupFive(
             </div>
 
           </div>
-
 
           <div class="fiveStat">
 
@@ -2505,7 +1949,6 @@ function renderGroupFive(
 
           </div>
 
-
           <div class="fiveStat">
 
             <div class="fiveStatLabel">
@@ -2513,60 +1956,31 @@ function renderGroupFive(
             </div>
 
             <div class="fiveStatValue cPurple">
-              ${
-                top.cycle
-                ??
-                '—'
-              }
+              ${top.cycle ?? '—'}
             </div>
 
           </div>
 
-
         </div>
 
-
       </section>
-    `;
-
+      `;
 
     return;
   }
 
-
   const important =
-    importantResults(
-      g
-    );
+    importantResults(g);
 
-
-  const allResults =
-    Array.isArray(
-      g.results
-    )
+  const all =
+    Array.isArray(g.results)
       ?
       g.results
       :
       [];
 
-
-  let best =
-    0;
-
-
-  for(
-    const r of allResults
-  ){
-
-    best =
-      Math.max(
-        best,
-        Number(
-          r.hit_count || 0
-        )
-      );
-  }
-
+  const bi =
+    bestInfo(all);
 
   const five =
     g.groupFive
@@ -2575,16 +1989,14 @@ function renderGroupFive(
     ||
     {};
 
-
   const tracked =
     Number(
       five.tracked
       ??
-      allResults.length
+      all.length
       ??
       0
     );
-
 
   const remaining =
     Number(
@@ -2596,14 +2008,12 @@ function renderGroupFive(
       )
     );
 
-
   const cycle =
     five.cycle
     ??
     top.cycle
     ??
     '—';
-
 
   const nextSelection =
     five.nextSelectionAfterDrawId
@@ -2612,12 +2022,10 @@ function renderGroupFive(
     ??
     '—';
 
-
   root.innerHTML =
     `
 
     <section class="card groupFiveHero">
-
 
       <div class="fiveHeader">
 
@@ -2628,15 +2036,12 @@ function renderGroupFive(
           </div>
 
           <div class="fiveRule">
-
             Analyze latest 50 draws
             → Track next 20
             → Renew
-
           </div>
 
         </div>
-
 
         <span class="pill">
           50 → 20 Rolling
@@ -2644,13 +2049,11 @@ function renderGroupFive(
 
       </div>
 
-
       <div class="balls fiveNumbers">
 
         ${
           (
-            g.numbers ||
-            []
+            g.numbers || []
           )
           .map(
             n =>
@@ -2665,9 +2068,7 @@ function renderGroupFive(
 
       </div>
 
-
       <div class="fiveStats">
-
 
         <div class="fiveStat">
 
@@ -2681,7 +2082,6 @@ function renderGroupFive(
 
         </div>
 
-
         <div class="fiveStat">
 
           <div class="fiveStatLabel">
@@ -2694,7 +2094,6 @@ function renderGroupFive(
 
         </div>
 
-
         <div class="fiveStat">
 
           <div class="fiveStatLabel">
@@ -2702,11 +2101,24 @@ function renderGroupFive(
           </div>
 
           <div class="fiveStatValue cGreen">
-            ${best}/5
+            ${bi.best}/5
           </div>
 
-        </div>
+          ${
+            bi.best >= 4
+            &&
+            bi.time
+              ?
+              `
+              <div class="bestTime">
+                ${esc(bi.time)}
+              </div>
+              `
+              :
+              ''
+          }
 
+        </div>
 
         <div class="fiveStat">
 
@@ -2720,9 +2132,7 @@ function renderGroupFive(
 
         </div>
 
-
       </div>
-
 
       <div
         class="small mut"
@@ -2739,10 +2149,7 @@ function renderGroupFive(
 
       </div>
 
-
-      <div
-        style="margin-top:10px"
-      >
+      <div style="margin-top:10px">
 
         <button
           class="toggleBtn"
@@ -2753,7 +2160,6 @@ function renderGroupFive(
         </button>
 
       </div>
-
 
       <div
         id="fiveResults"
@@ -2782,15 +2188,10 @@ function renderGroupFive(
 
       </div>
 
-
     </section>
     `;
 }
 
-
-/* =========================================================
-   GROUP FIVE RESULT TOGGLE
-========================================================= */
 
 function toggleFiveResults(){
 
@@ -2799,27 +2200,17 @@ function toggleFiveResults(){
       'fiveResults'
     );
 
-
   const btn =
     document.getElementById(
       'fiveToggle'
     );
 
-
-  if(
-    !box
-    ||
-    !btn
-  ){
-
+  if(!box || !btn){
     return;
   }
 
-
   const open =
-    box.style.display !==
-    'none';
-
+    box.style.display !== 'none';
 
   box.style.display =
     open
@@ -2827,7 +2218,6 @@ function toggleFiveResults(){
       'none'
       :
       'block';
-
 
   btn.textContent =
     open
@@ -2838,9 +2228,7 @@ function toggleFiveResults(){
 }
 
 
-/* =========================================================
-   OTHER AUTOMATIC GROUPS
-========================================================= */
+/* OTHER AUTOMATIC GROUPS */
 
 function groupLabel(
   g,
@@ -2852,38 +2240,28 @@ function groupLabel(
       g?.name || ''
     );
 
-
   if(
     name ===
     'AUTO Group Special'
   ){
-
     return 'Special Group';
   }
-
 
   if(
     name ===
     'AUTO Group Advanced'
   ){
-
     return 'Advanced Group';
   }
-
 
   const match =
     name.match(
       /^AUTO Group (\d+)$/
     );
 
-
-  if(
-    match
-  ){
-
+  if(match){
     return `Automatic Group ${match[1]}`;
   }
-
 
   return (
     name
@@ -2899,42 +2277,20 @@ function automaticRow(
 ){
 
   const important =
-    importantResults(
-      g
-    );
-
+    importantResults(g);
 
   const all =
-    Array.isArray(
-      g.results
-    )
+    Array.isArray(g.results)
       ?
       g.results
       :
       [];
 
-
-  let best =
-    0;
-
-
-  for(
-    const r of all
-  ){
-
-    best =
-      Math.max(
-        best,
-        Number(
-          r.hit_count || 0
-        )
-      );
-  }
-
+  const bi =
+    bestInfo(all);
 
   const id =
     `autoRow_${index}`;
-
 
   return `
 
@@ -2943,9 +2299,7 @@ function automaticRow(
       id="${id}"
     >
 
-
       <div class="groupSummary">
-
 
         <div class="groupNameCell">
 
@@ -2954,16 +2308,17 @@ function automaticRow(
           </div>
 
           <div class="groupName">
-            ${esc(
-              groupLabel(
-                g,
-                index
+            ${
+              esc(
+                groupLabel(
+                  g,
+                  index
+                )
               )
-            )}
+            }
           </div>
 
         </div>
-
 
         <div class="groupNumbersCell">
 
@@ -2975,8 +2330,7 @@ function automaticRow(
 
             ${
               (
-                g.numbers ||
-                []
+                g.numbers || []
               )
               .map(
                 n =>
@@ -2993,7 +2347,6 @@ function automaticRow(
 
         </div>
 
-
         <div>
 
           <div class="groupMiniLabel">
@@ -3001,11 +2354,24 @@ function automaticRow(
           </div>
 
           <div class="groupMetric cGreen">
-            ${best}/5
+            ${bi.best}/5
           </div>
 
-        </div>
+          ${
+            bi.best >= 4
+            &&
+            bi.time
+              ?
+              `
+              <div class="bestTime">
+                ${esc(bi.time)}
+              </div>
+              `
+              :
+              ''
+          }
 
+        </div>
 
         <div>
 
@@ -3019,7 +2385,6 @@ function automaticRow(
 
         </div>
 
-
         <div>
 
           <div class="groupMiniLabel">
@@ -3027,7 +2392,6 @@ function automaticRow(
           </div>
 
           <div class="groupMetric cPurple">
-
             ${
               g.last_seen_draw_id
               ??
@@ -3035,11 +2399,9 @@ function automaticRow(
               ??
               '—'
             }
-
           </div>
 
         </div>
-
 
         <div>
 
@@ -3052,9 +2414,7 @@ function automaticRow(
 
         </div>
 
-
       </div>
-
 
       <div class="groupDetails">
 
@@ -3080,54 +2440,35 @@ function automaticRow(
 
       </div>
 
-
     </div>
   `;
 }
 
 
-function toggleGroup(
-  id
-){
+function toggleGroup(id){
 
   const row =
-    document.getElementById(
-      id
-    );
+    document.getElementById(id);
 
-
-  if(
-    !row
-  ){
-
+  if(!row){
     return;
   }
 
-
   const wasOpen =
-    row
-      .classList
-      .contains(
-        'open'
-      );
-
-
-  row
-    .classList
-    .toggle(
+    row.classList.contains(
       'open'
     );
 
+  row.classList.toggle(
+    'open'
+  );
 
   const btn =
     row.querySelector(
       '.toggleBtn'
     );
 
-
-  if(
-    btn
-  ){
+  if(btn){
 
     btn.textContent =
       wasOpen
@@ -3139,9 +2480,7 @@ function toggleGroup(
 }
 
 
-function renderAutomaticGroups(
-  state
-){
+function renderAutomaticGroups(state){
 
   const groups =
     Array.isArray(
@@ -3152,73 +2491,50 @@ function renderAutomaticGroups(
       :
       [];
 
-
   const other =
     groups.filter(
       g =>
         String(
           g?.name || ''
-        )
-        !==
+        ) !==
         'AUTO Group Five'
     );
-
 
   const root =
     document.getElementById(
       'autoContent'
     );
 
-
-  if(
-    !other.length
-  ){
-
-    root.innerHTML =
+  root.innerHTML =
+    other.length
+      ?
+      other
+        .map(automaticRow)
+        .join('')
+      :
       `
       <div class="empty">
         No other automatic groups yet.
       </div>
       `;
-
-    return;
-  }
-
-
-  root.innerHTML =
-    other
-      .map(
-        automaticRow
-      )
-      .join('');
 }
 
 
-/* =========================================================
-   MANUAL GROUPS
-========================================================= */
+/* MANUAL GROUPS */
 
-function normalizeManuals(
-  j
-){
+function normalizeManuals(j){
 
-  if(
-    Array.isArray(
-      j?.manuals
-    )
-  ){
-
-    return [
+  return Array.isArray(j?.manuals)
+    ?
+    [
       j.manuals[0] || null,
       j.manuals[1] || null
+    ]
+    :
+    [
+      j?.manual || null,
+      null
     ];
-  }
-
-
-  return [
-    j?.manual || null,
-    null
-  ];
 }
 
 
@@ -3238,10 +2554,8 @@ function fillInputs(
         `m${slot}_${i}`
       );
 
-
     if(
-      document.activeElement !==
-      el
+      document.activeElement !== el
     ){
 
       el.value =
@@ -3263,37 +2577,27 @@ function renderManualSlot(
       `manualGroup${slot}`
     );
 
-
   const state =
     document.getElementById(
       `manualState${slot}`
     );
-
 
   const content =
     document.getElementById(
       `manualContent${slot}`
     );
 
-
-  if(
-    !m
-  ){
+  if(!m){
 
     groupBox
       .classList
-      .remove(
-        'active'
-      );
-
+      .remove('active');
 
     state.className =
       'manualState mut';
 
-
     state.textContent =
       '● Not tracking';
-
 
     content.innerHTML =
       `
@@ -3302,61 +2606,39 @@ function renderManualSlot(
       </div>
       `;
 
-
     return;
   }
 
-
   const nums =
     (
-      m.numbers ||
-      []
-    ).map(
-      Number
-    );
-
+      m.numbers || []
+    ).map(Number);
 
   const matches =
     (
-      m.matches ||
-      []
+      m.matches || []
     )
     .slice()
     .sort(
-      (
-        a,
-        b
-      ) =>
-        Number(
-          b.draw_id
-        )
+      (a,b) =>
+        Number(b.draw_id)
         -
-        Number(
-          a.draw_id
-        )
+        Number(a.draw_id)
     );
-
 
   fillInputs(
     slot,
     nums
   );
 
-
-  if(
-    m.active
-  ){
+  if(m.active){
 
     groupBox
       .classList
-      .add(
-        'active'
-      );
-
+      .add('active');
 
     state.className =
       'manualState ok';
-
 
     state.textContent =
       '● Tracking';
@@ -3365,19 +2647,14 @@ function renderManualSlot(
 
     groupBox
       .classList
-      .remove(
-        'active'
-      );
-
+      .remove('active');
 
     state.className =
       'manualState amber';
 
-
     state.textContent =
       '● Stopped';
   }
-
 
   content.innerHTML =
     `
@@ -3385,27 +2662,14 @@ function renderManualSlot(
     <div class="manualMeta">
 
       Started after draw
-      <b>
-        ${
-          m.startDrawId
-          ??
-          '—'
-        }
-      </b>
+      <b>${m.startDrawId ?? '—'}</b>
 
       &nbsp; • &nbsp;
 
       Last checked
-      <b>
-        ${
-          m.lastSeenDrawId
-          ??
-          '—'
-        }
-      </b>
+      <b>${m.lastSeenDrawId ?? '—'}</b>
 
     </div>
-
 
     <div
       class="balls"
@@ -3426,7 +2690,6 @@ function renderManualSlot(
       }
 
     </div>
-
 
     <div style="margin-top:10px">
 
@@ -3455,32 +2718,24 @@ function renderManualSlot(
 }
 
 
-function renderManuals(
-  j
-){
+function renderManuals(j){
 
-  const manuals =
-    normalizeManuals(
-      j
-    );
-
+  const m =
+    normalizeManuals(j);
 
   renderManualSlot(
     1,
-    manuals[0]
+    m[0]
   );
-
 
   renderManualSlot(
     2,
-    manuals[1]
+    m[1]
   );
 }
 
 
-function readNumbers(
-  slot
-){
+function readNumbers(slot){
 
   const nums =
     [
@@ -3489,7 +2744,8 @@ function readNumbers(
       3,
       4,
       5
-    ].map(
+    ]
+    .map(
       i =>
         Number(
           document
@@ -3499,7 +2755,6 @@ function readNumbers(
             .value
         )
     );
-
 
   if(
     nums.some(
@@ -3517,18 +2772,14 @@ function readNumbers(
     );
   }
 
-
   if(
-    new Set(
-      nums
-    ).size !== 5
+    new Set(nums).size !== 5
   ){
 
     throw Error(
       'All 5 numbers must be different.'
     );
   }
-
 
   return nums;
 }
@@ -3544,65 +2795,52 @@ function setManualBusy(
       `start${slot}`
     )
     .disabled =
-    isBusy;
-
+      isBusy;
 
   document
     .getElementById(
       `stop${slot}`
     )
     .disabled =
-    isBusy;
-
+      isBusy;
 
   document
     .getElementById(
       `clear${slot}`
     )
     .disabled =
-    isBusy;
+      isBusy;
 }
 
 
-async function startManual(
-  slot
-){
+async function startManual(slot){
 
   const msg =
     document.getElementById(
       `msg${slot}`
     );
 
-
   try{
 
     const numbers =
-      readNumbers(
-        slot
-      );
-
+      readNumbers(slot);
 
     setManualBusy(
       slot,
       true
     );
 
-
     msg.className =
       'manualMsg mut';
 
-
     msg.textContent =
       'Starting…';
-
 
     const j =
       await api(
         '/api/group',
         {
-
-          method:
-            'POST',
+          method:'POST',
 
           headers:{
             'content-type':
@@ -3611,36 +2849,25 @@ async function startManual(
 
           body:
             JSON.stringify({
-
-              action:
-                'start',
-
+              action:'start',
               slot,
-
               numbers
             })
         }
       );
 
-
     msg.className =
       'manualMsg ok';
 
-
-    if(
+    msg.textContent =
       j?.unchanged
-    ){
-
-      msg.textContent =
+        ?
         `Already tracking. Original start draw ${
           j?.manual?.startDrawId
           ??
           '—'
-        } was preserved.`;
-
-    }else{
-
-      msg.textContent =
+        } was preserved.`
+        :
         `Tracking started after draw ${
           j?.latest?.id
           ??
@@ -3648,18 +2875,13 @@ async function startManual(
           ??
           '—'
         }.`;
-    }
 
-
-    renderManuals(
-      j
-    );
+    renderManuals(j);
 
   }catch(e){
 
     msg.className =
       'manualMsg bad';
-
 
     msg.textContent =
       String(
@@ -3676,15 +2898,12 @@ async function startManual(
 }
 
 
-async function stopManual(
-  slot
-){
+async function stopManual(slot){
 
   const msg =
     document.getElementById(
       `msg${slot}`
     );
-
 
   try{
 
@@ -3693,22 +2912,17 @@ async function stopManual(
       true
     );
 
-
     msg.className =
       'manualMsg mut';
-
 
     msg.textContent =
       'Stopping…';
 
-
     const j =
       await api(
         '/api/group',
         {
-
-          method:
-            'POST',
+          method:'POST',
 
           headers:{
             'content-type':
@@ -3717,33 +2931,24 @@ async function stopManual(
 
           body:
             JSON.stringify({
-
-              action:
-                'stop',
-
+              action:'stop',
               slot
             })
         }
       );
 
-
     msg.className =
       'manualMsg amber';
-
 
     msg.textContent =
       'Tracking stopped. Existing results were kept.';
 
-
-    renderManuals(
-      j
-    );
+    renderManuals(j);
 
   }catch(e){
 
     msg.className =
       'manualMsg bad';
-
 
     msg.textContent =
       String(
@@ -3760,15 +2965,12 @@ async function stopManual(
 }
 
 
-async function clearManual(
-  slot
-){
+async function clearManual(slot){
 
   const msg =
     document.getElementById(
       `msg${slot}`
     );
-
 
   try{
 
@@ -3777,22 +2979,17 @@ async function clearManual(
       true
     );
 
-
     msg.className =
       'manualMsg mut';
 
-
     msg.textContent =
       'Clearing…';
-
 
     const j =
       await api(
         '/api/group',
         {
-
-          method:
-            'POST',
+          method:'POST',
 
           headers:{
             'content-type':
@@ -3801,34 +2998,24 @@ async function clearManual(
 
           body:
             JSON.stringify({
-
-              action:
-                'clear',
-
+              action:'clear',
               slot
             })
         }
       );
-
 
     fillInputs(
       slot,
       []
     );
 
-
     msg.className =
       'manualMsg ok';
-
 
     msg.textContent =
       'Manual group cleared.';
 
-
-    renderManuals(
-      j
-    );
-
+    renderManuals(j);
 
     fillInputs(
       slot,
@@ -3839,7 +3026,6 @@ async function clearManual(
 
     msg.className =
       'manualMsg bad';
-
 
     msg.textContent =
       String(
@@ -3856,17 +3042,7 @@ async function clearManual(
 }
 
 
-/* =========================================================
-   SMART SYNC
-
-   THIS IS THE IMPORTANT NEW PART.
-
-   BEFORE reading state/group data:
-
-   1. /api/sync checks official latest draw.
-   2. If database is behind, it runs the worker.
-   3. After worker finishes, page reads /api/state.
-========================================================= */
+/* SMART SYNC */
 
 async function smartSync(){
 
@@ -3875,14 +3051,11 @@ async function smartSync(){
       'syncInfo'
     );
 
-
   el.className =
     'syncInfo working';
 
-
   el.textContent =
     'Checking official draw and syncing if needed…';
-
 
   try{
 
@@ -3893,11 +3066,7 @@ async function smartSync(){
         Date.now()
       );
 
-
-    renderSyncInfo(
-      result
-    );
-
+    renderSyncInfo(result);
 
     return result;
 
@@ -3906,31 +3075,19 @@ async function smartSync(){
     el.className =
       'syncInfo warn';
 
-
     el.textContent =
       'Smart Sync warning: '
       +
       String(
-        e?.message ||
-        e
+        e?.message || e
       );
-
-
-    /*
-      Do NOT stop the whole site.
-
-      Even if smart sync fails,
-      continue loading existing data.
-    */
 
     return null;
   }
 }
 
 
-/* =========================================================
-   LOAD ALL
-========================================================= */
+/* LOAD */
 
 let loadingAll =
   false;
@@ -3938,73 +3095,41 @@ let loadingAll =
 
 async function loadAll(){
 
-  if(
-    loadingAll
-  ){
-
+  if(loadingAll){
     return;
   }
 
-
   loadingAll =
     true;
-
 
   const refreshBtn =
     document.getElementById(
       'refresh'
     );
 
-
   refreshBtn.disabled =
     true;
-
 
   busy(
     'Checking official draw…'
   );
 
-
   try{
 
-
-    /* =====================================================
-       STEP 1
-
-       Catch database up first.
-    ===================================================== */
-
     await smartSync();
-
 
     busy(
       'Loading updated results…'
     );
 
-
-    /*
-      New timestamp after sync.
-
-      This prevents any stale browser request
-      from being reused.
-    */
-
     const ts =
       Date.now();
-
-
-    /* =====================================================
-       STEP 2
-
-       NOW read state after sync finished.
-    ===================================================== */
 
     const [
       stateResult,
       trackResult,
       manualResult
     ] =
-
       await Promise.allSettled([
 
         api(
@@ -4024,8 +3149,8 @@ async function loadAll(){
           +
           ts
         )
-      ]);
 
+      ]);
 
     if(
       stateResult.status ===
@@ -4035,25 +3160,15 @@ async function loadAll(){
       const state =
         stateResult.value;
 
-
-      renderSummary(
-        state
-      );
-
+      renderSummary(state);
 
       renderStatus(
         state.mode
       );
 
+      renderGroupFive(state);
 
-      renderGroupFive(
-        state
-      );
-
-
-      renderAutomaticGroups(
-        state
-      );
+      renderAutomaticGroups(state);
 
     }else{
 
@@ -4062,21 +3177,20 @@ async function loadAll(){
           'status'
         )
         .innerHTML =
-        `
-        <span class="bad">
-          ${
-            esc(
-              stateResult
-                .reason
-                ?.message
-              ||
-              'State error'
-            )
-          }
-        </span>
-        `;
+          `
+          <span class="bad">
+            ${
+              esc(
+                stateResult
+                  .reason
+                  ?.message
+                ||
+                'State error'
+              )
+            }
+          </span>
+          `;
     }
-
 
     if(
       trackResult.status ===
@@ -4096,34 +3210,31 @@ async function loadAll(){
           'latestDraw'
         )
         .innerHTML =
-        `
-        <section class="card">
+          `
+          <section class="card">
 
-          <div class="title">
-            Latest Draw
-          </div>
+            <div class="title">
+              Latest Draw
+            </div>
 
-          <div
-            class="bad"
-            style="margin-top:10px"
-          >
+            <div
+              class="bad"
+              style="margin-top:10px"
+            >
+              ${
+                esc(
+                  trackResult
+                    .reason
+                    ?.message
+                  ||
+                  'Latest draw error'
+                )
+              }
+            </div>
 
-            ${
-              esc(
-                trackResult
-                  .reason
-                  ?.message
-                ||
-                'Latest draw error'
-              )
-            }
-
-          </div>
-
-        </section>
-        `;
+          </section>
+          `;
     }
-
 
     if(
       manualResult.status ===
@@ -4136,17 +3247,12 @@ async function loadAll(){
 
     }else{
 
-      document
-        .getElementById(
-          'manualContent1'
-        )
-        .innerHTML =
+      const msg =
         `
         <div
           class="bad"
           style="margin-top:10px"
         >
-
           ${
             esc(
               manualResult
@@ -4156,47 +3262,30 @@ async function loadAll(){
               'Manual tracker error'
             )
           }
-
         </div>
         `;
 
+      document
+        .getElementById(
+          'manualContent1'
+        )
+        .innerHTML =
+          msg;
 
       document
         .getElementById(
           'manualContent2'
         )
         .innerHTML =
-        `
-        <div
-          class="bad"
-          style="margin-top:10px"
-        >
-
-          ${
-            esc(
-              manualResult
-                .reason
-                ?.message
-              ||
-              'Manual tracker error'
-            )
-          }
-
-        </div>
-        `;
+          msg;
     }
-
 
   }finally{
 
-    busy(
-      ''
-    );
-
+    busy('');
 
     refreshBtn.disabled =
       false;
-
 
     loadingAll =
       false;
@@ -4204,9 +3293,7 @@ async function loadAll(){
 }
 
 
-/* =========================================================
-   BUTTON EVENTS
-========================================================= */
+/* BUTTONS */
 
 document
   .getElementById(
@@ -4232,11 +3319,8 @@ for(
     .addEventListener(
       'click',
       () =>
-        startManual(
-          slot
-        )
+        startManual(slot)
     );
-
 
   document
     .getElementById(
@@ -4245,11 +3329,8 @@ for(
     .addEventListener(
       'click',
       () =>
-        stopManual(
-          slot
-        )
+        stopManual(slot)
     );
-
 
   document
     .getElementById(
@@ -4258,33 +3339,19 @@ for(
     .addEventListener(
       'click',
       () =>
-        clearManual(
-          slot
-        )
+        clearManual(slot)
     );
 }
 
 
-/* =========================================================
-   AUTO REFRESH
-
-   Every 60 seconds:
-
-   FIRST smart sync.
-   THEN load updated state.
-
-   Safari background:
-   refresh immediately when user returns.
-========================================================= */
+/* AUTO REFRESH */
 
 loadAll();
-
 
 setInterval(
   loadAll,
   60000
 );
-
 
 document.addEventListener(
   'visibilitychange',
@@ -4294,28 +3361,22 @@ document.addEventListener(
       document.visibilityState ===
       'visible'
     ){
-
       loadAll();
     }
   }
 );
-
 
 window.addEventListener(
   'focus',
   loadAll
 );
 
-
 window.addEventListener(
   'pageshow',
   loadAll
 );
 
-
 </script>
 
-
 </body>
-
 </html>
