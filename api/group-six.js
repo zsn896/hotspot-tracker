@@ -1357,7 +1357,6 @@ function learnerValidationScore(
 
 /* =========================================================
    STRATEGY 1
-   PERSISTENT CORE + PAIR
 ========================================================= */
 
 function strategyPersistent(
@@ -1397,7 +1396,6 @@ function strategyPersistent(
 
 /* =========================================================
    STRATEGY 2
-   HOT + STABLE
 ========================================================= */
 
 function strategyHotStable(
@@ -1490,7 +1488,6 @@ function strategyHotStable(
 
 /* =========================================================
    STRATEGY 3
-   CORE + MOMENTUM
 ========================================================= */
 
 function strategyCoreMomentum(
@@ -1650,7 +1647,6 @@ function strategyCoreMomentum(
 
 /* =========================================================
    STRATEGY 4
-   SYNERGY ENSEMBLE
 ========================================================= */
 
 function learnerCombinationScore(
@@ -1912,7 +1908,7 @@ function strategySynergyEnsemble(
 
 
 /* =========================================================
-   STRATEGY COLLECTION
+   STRATEGIES
 ========================================================= */
 
 function learnerStrategies(
@@ -1965,7 +1961,7 @@ function learnerPickByStrategyId(
 
 
 /* =========================================================
-   WALK FORWARD LEARNING
+   WALK FORWARD
 ========================================================= */
 
 function walkForwardLearn(
@@ -2333,6 +2329,315 @@ function learnerConfidence(
 
 
 /* =========================================================
+   NEW: 12H STRENGTH RATING
+========================================================= */
+
+function learnerStrengthRating({
+  have,
+  confidence,
+  leaderboard,
+  coreInfo,
+  completed
+}) {
+  const leader =
+    leaderboard?.[0] ||
+    {};
+
+  const wins =
+    Number(
+      leader.wins ||
+      0
+    );
+
+  const fourPlus =
+    Number(
+      leader.fourPlus ||
+      0
+    );
+
+  const exact5 =
+    Number(
+      leader.exact5 ||
+      0
+    );
+
+  const threePlus =
+    Number(
+      leader.threePlus ||
+      0
+    );
+
+  const stages =
+    Number(
+      leader.stages ||
+      0
+    );
+
+  const coreSegments =
+    Number(
+      coreInfo?.coreSegmentCount ||
+      0
+    );
+
+  const coreConsistency =
+    Number(
+      coreInfo?.coreConsistency ||
+      0
+    );
+
+  const winRate =
+    stages > 0
+      ? wins / stages
+      : 0;
+
+  let points = 0;
+
+  if (
+    have >= 90
+  ) {
+    points += 10;
+  }
+
+  if (
+    have >= 110
+  ) {
+    points += 8;
+  }
+
+  if (
+    have >= 150
+  ) {
+    points += 7;
+  }
+
+  if (
+    completed
+  ) {
+    points += 5;
+  }
+
+  if (
+    confidence >= 50
+  ) {
+    points += 8;
+  }
+
+  if (
+    confidence >= 60
+  ) {
+    points += 8;
+  }
+
+  if (
+    confidence >= 75
+  ) {
+    points += 8;
+  }
+
+  if (
+    wins >= 1
+  ) {
+    points += 7;
+  }
+
+  if (
+    wins >= 2
+  ) {
+    points += 8;
+  }
+
+  if (
+    wins >= 3
+  ) {
+    points += 6;
+  }
+
+  if (
+    winRate >= 0.5
+  ) {
+    points += 5;
+  }
+
+  if (
+    fourPlus >= 1
+  ) {
+    points += 10;
+  }
+
+  if (
+    fourPlus >= 2
+  ) {
+    points += 7;
+  }
+
+  if (
+    exact5 >= 1
+  ) {
+    points += 12;
+  }
+
+  if (
+    threePlus >= 8
+  ) {
+    points += 4;
+  }
+
+  if (
+    coreSegments >= 3
+  ) {
+    points += 5;
+  }
+
+  if (
+    coreSegments >= 4
+  ) {
+    points += 5;
+  }
+
+  if (
+    coreConsistency >= 0.45
+  ) {
+    points += 5;
+  }
+
+  if (
+    coreConsistency >= 0.60
+  ) {
+    points += 5;
+  }
+
+  points =
+    Math.min(
+      100,
+      points
+    );
+
+  let level =
+    'WEAK';
+
+  let label =
+    'Weak';
+
+  let labelAr =
+    'ضعيف';
+
+  let recommendation =
+    'Observe only. The learning evidence is not strong enough yet.';
+
+  if (
+    have >= 150 &&
+    confidence >= 75 &&
+    wins >= 3 &&
+    (
+      fourPlus >= 2 ||
+      exact5 >= 1
+    ) &&
+    coreSegments >= 4 &&
+    coreConsistency >= 0.55
+  ) {
+    level =
+      'VERY_STRONG';
+
+    label =
+      'Very Strong';
+
+    labelAr =
+      'قوي جدًا';
+
+    recommendation =
+      'Highest learner classification. Core, strategy and walk-forward results are all showing strong agreement.';
+  }
+  else if (
+    have >= 110 &&
+    confidence >= 60 &&
+    wins >= 2 &&
+    fourPlus >= 1 &&
+    coreSegments >= 4 &&
+    coreConsistency >= 0.45
+  ) {
+    level =
+      'STRONG';
+
+    label =
+      'Strong';
+
+    labelAr =
+      'قوي';
+
+    recommendation =
+      'The pattern has meaningful support. Give more attention to the Core 3 and the current five-number suggestion.';
+  }
+  else if (
+    have >= 90 &&
+    confidence >= 50 &&
+    (
+      wins >= 1 ||
+      fourPlus >= 1
+    ) &&
+    coreSegments >= 3
+  ) {
+    level =
+      'MEDIUM';
+
+    label =
+      'Medium';
+
+    labelAr =
+      'متوسط';
+
+    recommendation =
+      'Useful for monitoring, but wait for more stability before treating the suggestion as strong.';
+  }
+
+  return {
+    level,
+
+    label,
+
+    labelAr,
+
+    points,
+
+    recommendation,
+
+    evidence: {
+      draws:
+        Number(
+          have || 0
+        ),
+
+      confidence:
+        Number(
+          confidence || 0
+        ),
+
+      stages,
+
+      wins,
+
+      winRate:
+        Number(
+          winRate.toFixed(3)
+        ),
+
+      threePlus,
+
+      fourPlus,
+
+      exact5,
+
+      coreSegments,
+
+      coreConsistency:
+        Number(
+          coreConsistency.toFixed(3)
+        )
+    }
+  };
+}
+
+
+/* =========================================================
    DAILY 12H PATTERN LEARNER
 ========================================================= */
 
@@ -2430,6 +2735,23 @@ async function runDailyPatternLearner() {
       schedule:
         '6:00 AM – 6:00 PM',
 
+      strength: {
+        level:
+          'WEAK',
+
+        label:
+          'Weak',
+
+        labelAr:
+          'ضعيف',
+
+        points:
+          0,
+
+        recommendation:
+          'Collecting the first 50 draws. No reliable strength classification yet.'
+      },
+
       message:
         'The learner is collecting the first 50 draws before producing a serious suggestion.'
     };
@@ -2480,6 +2802,16 @@ async function runDailyPatternLearner() {
   const completed =
     have >=
     LEARNER_DAY_DRAWS;
+
+  const strength =
+    learnerStrengthRating({
+      have,
+      confidence,
+      leaderboard:
+        learned.leaderboard,
+      coreInfo,
+      completed
+    });
 
   return {
     ok:
@@ -2556,8 +2888,12 @@ async function runDailyPatternLearner() {
       confidence,
 
       provisional:
-        !completed
+        !completed,
+
+      strength
     },
+
+    strength,
 
     walkForward: {
       completedStages:
@@ -2693,6 +3029,9 @@ async function runDailyPatternLearner() {
 
     rule:
       'Uses same-day 6 AM–6 PM draws only. It compares several deterministic selection strategies with walk-forward tests: train on past draws, score only on the next unseen 20 draws, then use the best-performing strategy for one five-number suggestion.',
+
+    strengthRule:
+      'Strength rating combines draw maturity, confidence, strategy wins, 4/5 and 5/5 walk-forward results, Core 3 segment persistence and Core consistency.',
 
     warning:
       'This detects patterns in observed data; it does not prove or reconstruct the lottery draw mechanism and does not guarantee future results.'
@@ -3375,12 +3714,6 @@ async function runGroupSix() {
 
 /* =========================================================
    API HANDLER
-
-   Learner:
-   /api/group-six?mode=learner
-
-   Existing Group Six:
-   /api/group-six
 ========================================================= */
 
 async function handler(
@@ -3513,3 +3846,6 @@ module.exports.runDailyPatternLearner =
 
 module.exports.walkForwardLearn =
   walkForwardLearn;
+
+module.exports.learnerStrengthRating =
+  learnerStrengthRating;
