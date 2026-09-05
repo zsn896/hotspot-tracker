@@ -1,7 +1,10 @@
 'use strict';
 
 const { db } = require('./lib');
-const { selectFive: newSelectFive } = require('../lib/group-five');
+
+const {
+  selectFive: persistentSelectFive
+} = require('../lib/group-five');
 
 const ANALYSIS = 50;
 const TRACK = 20;
@@ -13,72 +16,155 @@ const TOP_CORES = 70;
 const TOP_COMPANIONS = 12;
 const MIN_CORE_OCCURRENCES = 2;
 
+
+/* =========================================================
+   BASIC HELPERS
+========================================================= */
+
 function norm(values) {
-  return [...new Set((values || []).map(Number))]
+  return [
+    ...new Set(
+      (values || []).map(Number)
+    )
+  ]
     .filter(
       n =>
         Number.isInteger(n) &&
         n >= 1 &&
         n <= 80
     )
-    .sort((a, b) => a - b);
+    .sort(
+      (a, b) => a - b
+    );
 }
 
-function combos(values, size, fn) {
-  const a = norm(values);
 
-  function walk(start, picked) {
-    if (picked.length === size) {
-      fn([...picked]);
+function combinations(
+  values,
+  size
+) {
+  const input =
+    norm(values);
+
+  const out = [];
+
+  function walk(
+    start,
+    picked
+  ) {
+    if (
+      picked.length === size
+    ) {
+      out.push([
+        ...picked
+      ]);
+
       return;
     }
 
     for (
       let i = start;
-      i <= a.length - (size - picked.length);
+      i <=
+      input.length -
+      (
+        size -
+        picked.length
+      );
       i++
     ) {
-      picked.push(a[i]);
-      walk(i + 1, picked);
+      picked.push(
+        input[i]
+      );
+
+      walk(
+        i + 1,
+        picked
+      );
+
       picked.pop();
     }
   }
 
-  walk(0, []);
+  walk(
+    0,
+    []
+  );
+
+  return out;
 }
 
-function combos2(values, fn) {
-  combos(values, 2, fn);
+
+function combos2(
+  values,
+  fn
+) {
+  for (
+    const combo
+    of combinations(
+      values,
+      2
+    )
+  ) {
+    fn(combo);
+  }
 }
 
-function combos3(values, fn) {
-  combos(values, 3, fn);
+
+function combos3(
+  values,
+  fn
+) {
+  for (
+    const combo
+    of combinations(
+      values,
+      3
+    )
+  ) {
+    fn(combo);
+  }
 }
+
 
 function mean(values) {
   return values.length
-    ? values.reduce((s, n) => s + n, 0) / values.length
+    ? values.reduce(
+        (sum, n) =>
+          sum + n,
+        0
+      ) /
+      values.length
     : 0;
 }
 
+
 function stdDev(values) {
-  if (values.length < 2) {
+  if (
+    values.length < 2
+  ) {
     return 0;
   }
 
-  const avg = mean(values);
+  const avg =
+    mean(values);
 
   return Math.sqrt(
     mean(
       values.map(
         n =>
-          (n - avg) ** 2
+          (
+            n - avg
+          ) ** 2
       )
     )
   );
 }
 
-function hitCount(draw, numbers) {
+
+function hitCount(
+  draw,
+  numbers
+) {
   const set =
     new Set(
       norm(
@@ -88,8 +174,15 @@ function hitCount(draw, numbers) {
 
   let hits = 0;
 
-  for (const n of numbers) {
-    if (set.has(Number(n))) {
+  for (
+    const n
+    of numbers
+  ) {
+    if (
+      set.has(
+        Number(n)
+      )
+    ) {
       hits++;
     }
   }
@@ -97,50 +190,64 @@ function hitCount(draw, numbers) {
   return hits;
 }
 
-function recencyWeight(index, total) {
-  return total <= 1
-    ? 1
-    : 1 +
-      index /
-      (
-        total - 1
-      );
+
+function recencyWeight(
+  index,
+  total
+) {
+  if (
+    total <= 1
+  ) {
+    return 1;
+  }
+
+  return (
+    1 +
+    index /
+    (
+      total - 1
+    )
+  );
 }
 
 
 /* =========================================================
-   OLD SELECTOR
-   Commit db5c69275294dcfb1fe93340739f7f753147fa46
+   LEGACY SELECTOR
 ========================================================= */
 
-function buildCoreMap(window) {
-  const map =
+function buildCoreMap(
+  window
+) {
+  const coreMap =
     new Map();
 
   for (
-    let i = 0;
-    i < window.length;
-    i++
+    let drawIndex = 0;
+    drawIndex <
+    window.length;
+    drawIndex++
   ) {
-    const nums =
+    const numbers =
       norm(
-        window[i]?.numbers
+        window[
+          drawIndex
+        ]?.numbers
       );
 
     const weight =
       recencyWeight(
-        i,
+        drawIndex,
         window.length
       );
 
     combos3(
-      nums,
+      numbers,
       core => {
         const key =
           core.join(',');
 
         const old =
-          map.get(key) ||
+          coreMap.get(key) ||
           {
             core,
             count: 0,
@@ -150,11 +257,18 @@ function buildCoreMap(window) {
           };
 
         old.count++;
-        old.weightedCount += weight;
-        old.lastIndex = i;
-        old.drawIndexes.push(i);
 
-        map.set(
+        old.weightedCount +=
+          weight;
+
+        old.lastIndex =
+          drawIndex;
+
+        old.drawIndexes.push(
+          drawIndex
+        );
+
+        coreMap.set(
           key,
           old
         );
@@ -162,12 +276,17 @@ function buildCoreMap(window) {
     );
   }
 
-  return map;
+  return coreMap;
 }
 
-function topCores(window) {
+
+function topCores(
+  window
+) {
   return [
-    ...buildCoreMap(window).values()
+    ...buildCoreMap(
+      window
+    ).values()
   ]
     .filter(
       x =>
@@ -195,6 +314,7 @@ function topCores(window) {
     );
 }
 
+
 function companionsForCore(
   window,
   coreInfo
@@ -206,7 +326,7 @@ function companionsForCore(
     const drawIndex
     of coreInfo.drawIndexes
   ) {
-    const nums =
+    const numbers =
       norm(
         window[
           drawIndex
@@ -221,7 +341,7 @@ function companionsForCore(
 
     for (
       const n
-      of nums
+      of numbers
     ) {
       if (
         coreInfo.core
@@ -240,8 +360,12 @@ function companionsForCore(
         };
 
       old.count++;
-      old.weighted += weight;
-      old.lastIndex = drawIndex;
+
+      old.weighted +=
+        weight;
+
+      old.lastIndex =
+        drawIndex;
 
       counts.set(
         n,
@@ -279,13 +403,21 @@ function companionsForCore(
     );
 }
 
-function buildCandidates(window) {
+
+function buildLegacyCandidates(
+  window
+) {
   const candidates =
     new Map();
 
+  const cores =
+    topCores(
+      window
+    );
+
   for (
     const coreInfo
-    of topCores(window)
+    of cores
   ) {
     const companions =
       companionsForCore(
@@ -342,9 +474,6 @@ function buildCandidates(window) {
 
           coreWeighted:
             coreInfo.weightedCount,
-
-          coreLastIndex:
-            coreInfo.lastIndex,
 
           companionWeighted:
             Number(
@@ -417,13 +546,15 @@ function buildCandidates(window) {
   ];
 }
 
-function strongGapStats(indexes) {
+
+function strongGapStats(
+  indexes
+) {
   if (
     indexes.length < 3
   ) {
     return {
       meanGap: 0,
-      deviation: 0,
       cv: null,
       consistency: 0
     };
@@ -438,7 +569,9 @@ function strongGapStats(indexes) {
   ) {
     gaps.push(
       indexes[i] -
-      indexes[i - 1]
+      indexes[
+        i - 1
+      ]
     );
   }
 
@@ -457,9 +590,6 @@ function strongGapStats(indexes) {
     meanGap:
       avg,
 
-    deviation:
-      sd,
-
     cv,
 
     consistency:
@@ -472,17 +602,21 @@ function strongGapStats(indexes) {
   };
 }
 
-function evaluateOldCandidate(
+
+function evaluateLegacyCandidate(
   window,
   candidate
 ) {
   let exact5 = 0;
   let four = 0;
   let three = 0;
+
   let weightedHits = 0;
   let weightedStrong = 0;
+
   let recentHits = 0;
   let recentStrong = 0;
+
   let lastStrongIndex = -1;
   let lastExactIndex = -1;
 
@@ -526,7 +660,9 @@ function evaluateOldCandidate(
       hits === 5
     ) {
       exact5++;
-      lastExactIndex = i;
+
+      lastExactIndex =
+        i;
     }
 
     if (
@@ -539,7 +675,9 @@ function evaluateOldCandidate(
       hits >= 3
     ) {
       three++;
-      lastStrongIndex = i;
+
+      lastStrongIndex =
+        i;
 
       strongIndexes.push(
         i
@@ -599,10 +737,10 @@ function evaluateOldCandidate(
         )
       : 0;
 
-  const s =
+  const support =
     candidate.support;
 
-  const score =
+  const deepScore =
     exact5 * 120
     +
     four * 34
@@ -617,13 +755,13 @@ function evaluateOldCandidate(
     +
     recentHits * 1.8
     +
-    s.coreCount * 5
+    support.coreCount * 5
     +
-    s.coreWeighted * 3
+    support.coreWeighted * 3
     +
-    s.companionWeighted * 1.5
+    support.companionWeighted * 1.5
     +
-    s.companionMin * 1.25
+    support.companionMin * 1.25
     +
     gap.consistency * 14
     +
@@ -635,7 +773,8 @@ function evaluateOldCandidate(
     numbers:
       candidate.numbers,
 
-    score,
+    score:
+      deepScore,
 
     exact5,
 
@@ -653,59 +792,65 @@ function evaluateOldCandidate(
   };
 }
 
-function oldSelectFive(window) {
+
+function legacySelectFive(
+  window
+) {
   const evaluated =
-    buildCandidates(window)
+    buildLegacyCandidates(
+      window
+    )
       .map(
-        c =>
-          evaluateOldCandidate(
+        candidate =>
+          evaluateLegacyCandidate(
             window,
-            c
+            candidate
           )
-      )
-      .sort(
-        (a, b) =>
-          b.score -
-          a.score
-
-          ||
-
-          b.exact5 -
-          a.exact5
-
-          ||
-
-          b.fourPlus -
-          a.fourPlus
-
-          ||
-
-          b.recentStrong -
-          a.recentStrong
-
-          ||
-
-          b.threePlus -
-          a.threePlus
-
-          ||
-
-          b.weightedHits -
-          a.weightedHits
-
-          ||
-
-          b.lastStrongIndex -
-          a.lastStrongIndex
-
-          ||
-
-          a.numbers
-            .join(',')
-            .localeCompare(
-              b.numbers.join(',')
-            )
       );
+
+  evaluated.sort(
+    (a, b) =>
+      b.score -
+      a.score
+
+      ||
+
+      b.exact5 -
+      a.exact5
+
+      ||
+
+      b.fourPlus -
+      a.fourPlus
+
+      ||
+
+      b.recentStrong -
+      a.recentStrong
+
+      ||
+
+      b.threePlus -
+      a.threePlus
+
+      ||
+
+      b.weightedHits -
+      a.weightedHits
+
+      ||
+
+      b.lastStrongIndex -
+      a.lastStrongIndex
+
+      ||
+
+      a.numbers
+        .join(',')
+        .localeCompare(
+          b.numbers.join(',')
+        )
+  );
 
   return (
     evaluated[0]
@@ -717,7 +862,302 @@ function oldSelectFive(window) {
 
 
 /* =========================================================
-   TEST SCORING
+   HYBRID SELECTOR
+
+   Candidate pool =
+   union of legacy five +
+   Persistent Core 3 five.
+
+   Max union = 10 numbers.
+   Max combinations = C(10,5) = 252.
+
+   Ranking is based ONLY on analysis data.
+========================================================= */
+
+function evaluateHybridCandidate(
+  window,
+  numbers
+) {
+  let exact5 = 0;
+  let fourPlus = 0;
+  let threePlus = 0;
+
+  let recentFourPlus = 0;
+  let recentThreePlus = 0;
+
+  let weightedHits = 0;
+  let weightedStrong = 0;
+
+  let totalHits = 0;
+  let lastStrongIndex = -1;
+
+  const strongIndexes = [];
+
+  for (
+    let i = 0;
+    i < window.length;
+    i++
+  ) {
+    const hits =
+      hitCount(
+        window[i],
+        numbers
+      );
+
+    const weight =
+      recencyWeight(
+        i,
+        window.length
+      );
+
+    totalHits +=
+      hits;
+
+    weightedHits +=
+      (
+        hits *
+        hits
+      )
+      *
+      weight;
+
+    if (
+      hits === 5
+    ) {
+      exact5++;
+    }
+
+    if (
+      hits >= 4
+    ) {
+      fourPlus++;
+    }
+
+    if (
+      hits >= 3
+    ) {
+      threePlus++;
+
+      lastStrongIndex =
+        i;
+
+      strongIndexes.push(
+        i
+      );
+
+      weightedStrong +=
+        (
+          hits === 5
+            ? 14
+            : hits === 4
+              ? 7
+              : 2
+        )
+        *
+        weight;
+    }
+
+    if (
+      i >=
+      window.length -
+      RECENT_WINDOW
+    ) {
+      if (
+        hits >= 4
+      ) {
+        recentFourPlus++;
+      }
+
+      if (
+        hits >= 3
+      ) {
+        recentThreePlus++;
+      }
+    }
+  }
+
+  const gap =
+    strongGapStats(
+      strongIndexes
+    );
+
+  const latestIndex =
+    window.length - 1;
+
+  const strongRecency =
+    lastStrongIndex >= 0
+      ? 1 /
+        (
+          1 +
+          latestIndex -
+          lastStrongIndex
+        )
+      : 0;
+
+  /*
+    Hybrid goal:
+
+    1. Strongly protect 4/5 potential.
+    2. Keep the new selector's strength in 3/5.
+    3. Reward recent strong appearances.
+    4. Reward regular spacing.
+    5. Avoid using future test draws.
+  */
+  const score =
+    exact5 * 180
+    +
+    fourPlus * 58
+    +
+    threePlus * 13
+    +
+    recentFourPlus * 32
+    +
+    recentThreePlus * 10
+    +
+    weightedStrong * 4
+    +
+    weightedHits * 1.1
+    +
+    gap.consistency * 18
+    +
+    strongRecency * 20
+    +
+    totalHits * 0.35;
+
+  return {
+    numbers,
+
+    score,
+
+    exact5,
+
+    fourPlus,
+
+    threePlus,
+
+    recentFourPlus,
+
+    recentThreePlus,
+
+    weightedHits,
+
+    consistency:
+      gap.consistency,
+
+    lastStrongIndex
+  };
+}
+
+
+function hybridSelectFive(
+  window,
+  oldNumbers,
+  persistentNumbers
+) {
+  const pool =
+    norm([
+      ...(oldNumbers || []),
+      ...(persistentNumbers || [])
+    ]);
+
+  if (
+    pool.length < 5
+  ) {
+    return null;
+  }
+
+  /*
+    If both selectors returned
+    exactly the same five,
+    Hybrid is automatically
+    that same group.
+  */
+  if (
+    pool.length === 5
+  ) {
+    return pool;
+  }
+
+  const candidates =
+    combinations(
+      pool,
+      5
+    );
+
+  const evaluated =
+    candidates.map(
+      numbers =>
+        evaluateHybridCandidate(
+          window,
+          numbers
+        )
+    );
+
+  evaluated.sort(
+    (a, b) =>
+      b.score -
+      a.score
+
+      ||
+
+      b.exact5 -
+      a.exact5
+
+      ||
+
+      b.fourPlus -
+      a.fourPlus
+
+      ||
+
+      b.recentFourPlus -
+      a.recentFourPlus
+
+      ||
+
+      b.threePlus -
+      a.threePlus
+
+      ||
+
+      b.recentThreePlus -
+      a.recentThreePlus
+
+      ||
+
+      b.consistency -
+      a.consistency
+
+      ||
+
+      b.weightedHits -
+      a.weightedHits
+
+      ||
+
+      b.lastStrongIndex -
+      a.lastStrongIndex
+
+      ||
+
+      a.numbers
+        .join(',')
+        .localeCompare(
+          b.numbers.join(',')
+        )
+  );
+
+  return (
+    evaluated[0]
+      ?.numbers
+    ||
+    null
+  );
+}
+
+
+/* =========================================================
+   FUTURE TEST
 ========================================================= */
 
 function scoreFuture(
@@ -726,9 +1166,9 @@ function scoreFuture(
 ) {
   const hits =
     draws.map(
-      d =>
+      draw =>
         hitCount(
-          d,
+          draw,
           numbers
         )
     );
@@ -761,8 +1201,8 @@ function scoreFuture(
       Number(
         (
           hits.reduce(
-            (s, h) =>
-              s + h,
+            (sum, h) =>
+              sum + h,
             0
           )
           /
@@ -775,47 +1215,157 @@ function scoreFuture(
   };
 }
 
-function winner(
-  oldR,
-  newR
+
+function compareResult(
+  a,
+  b
 ) {
-  const oldT = [
-    oldR.exact5,
-    oldR.fourPlus,
-    oldR.threePlus,
-    oldR.best,
-    oldR.averageHits
+  const aTuple = [
+    a.exact5,
+    a.fourPlus,
+    a.threePlus,
+    a.best,
+    a.averageHits
   ];
 
-  const newT = [
-    newR.exact5,
-    newR.fourPlus,
-    newR.threePlus,
-    newR.best,
-    newR.averageHits
+  const bTuple = [
+    b.exact5,
+    b.fourPlus,
+    b.threePlus,
+    b.best,
+    b.averageHits
   ];
 
   for (
     let i = 0;
-    i < oldT.length;
+    i < aTuple.length;
     i++
   ) {
     if (
-      newT[i] >
-      oldT[i]
+      aTuple[i] >
+      bTuple[i]
     ) {
-      return 'new';
+      return 1;
     }
 
     if (
-      newT[i] <
-      oldT[i]
+      aTuple[i] <
+      bTuple[i]
     ) {
-      return 'old';
+      return -1;
     }
   }
 
-  return 'tie';
+  return 0;
+}
+
+
+function cycleWinner(
+  oldResult,
+  persistentResult,
+  hybridResult
+) {
+  const rows = [
+    {
+      name:
+        'old',
+
+      result:
+        oldResult
+    },
+
+    {
+      name:
+        'persistent',
+
+      result:
+        persistentResult
+    },
+
+    {
+      name:
+        'hybrid',
+
+      result:
+        hybridResult
+    }
+  ];
+
+  rows.sort(
+    (a, b) =>
+      compareResult(
+        b.result,
+        a.result
+      )
+  );
+
+  const best =
+    rows[0];
+
+  const second =
+    rows[1];
+
+  if (
+    compareResult(
+      best.result,
+      second.result
+    ) === 0
+  ) {
+    return 'tie';
+  }
+
+  return best.name;
+}
+
+
+/* =========================================================
+   TOTALS
+========================================================= */
+
+function emptyTotals() {
+  return {
+    wins:
+      0,
+
+    threePlus:
+      0,
+
+    fourPlus:
+      0,
+
+    exact5:
+      0,
+
+    bestOverall:
+      0,
+
+    averageHitAccumulator:
+      0
+  };
+}
+
+
+function addResult(
+  total,
+  result
+) {
+  total.threePlus +=
+    result.threePlus;
+
+  total.fourPlus +=
+    result.fourPlus;
+
+  total.exact5 +=
+    result.exact5;
+
+  total.bestOverall =
+    Math.max(
+      total.bestOverall,
+      result.best
+    );
+
+  total.averageHitAccumulator +=
+    result.averageHits;
 }
 
 
@@ -870,60 +1420,30 @@ async (
         });
     }
 
-    const cycles = [];
-
     const totals = {
-      old: {
-        wins:
-          0,
+      old:
+        emptyTotals(),
 
-        threePlus:
-          0,
+      persistent:
+        emptyTotals(),
 
-        fourPlus:
-          0,
-
-        exact5:
-          0,
-
-        bestOverall:
-          0,
-
-        avgHits:
-          0
-      },
-
-      new: {
-        wins:
-          0,
-
-        threePlus:
-          0,
-
-        fourPlus:
-          0,
-
-        exact5:
-          0,
-
-        bestOverall:
-          0,
-
-        avgHits:
-          0
-      },
+      hybrid:
+        emptyTotals(),
 
       ties:
         0
     };
 
+    const cycles = [];
+
     for (
-      let i = 0;
-      i < CYCLES;
-      i++
+      let cycleIndex = 0;
+      cycleIndex < CYCLES;
+      cycleIndex++
     ) {
       const start =
-        i * STEP;
+        cycleIndex *
+        STEP;
 
       const analysis =
         draws.slice(
@@ -938,18 +1458,26 @@ async (
         );
 
       const oldNumbers =
-        oldSelectFive(
+        legacySelectFive(
           analysis
         );
 
-      const newPick =
-        newSelectFive(
+      const persistentPick =
+        persistentSelectFive(
           analysis
         );
 
-      const newNumbers =
+      const persistentNumbers =
         norm(
-          newPick?.numbers || []
+          persistentPick
+            ?.numbers || []
+        );
+
+      const hybridNumbers =
+        hybridSelectFive(
+          analysis,
+          oldNumbers,
+          persistentNumbers
         );
 
       if (
@@ -957,103 +1485,79 @@ async (
         ||
         oldNumbers.length !== 5
         ||
-        newNumbers.length !== 5
+        persistentNumbers.length !== 5
+        ||
+        !hybridNumbers
+        ||
+        hybridNumbers.length !== 5
         ||
         future.length !== TRACK
       ) {
         cycles.push({
           cycle:
-            i + 1,
+            cycleIndex + 1,
 
           error:
-            'Incomplete selection or future window.'
+            'Incomplete selector output or future window.'
         });
 
         continue;
       }
 
-      const oldR =
+      const oldResult =
         scoreFuture(
           oldNumbers,
           future
         );
 
-      const newR =
+      const persistentResult =
         scoreFuture(
-          newNumbers,
+          persistentNumbers,
           future
         );
 
-      const w =
-        winner(
-          oldR,
-          newR
+      const hybridResult =
+        scoreFuture(
+          hybridNumbers,
+          future
+        );
+
+      const winner =
+        cycleWinner(
+          oldResult,
+          persistentResult,
+          hybridResult
         );
 
       if (
-        w === 'old'
+        winner === 'tie'
       ) {
-        totals.old.wins++;
-      }
-      else if (
-        w === 'new'
-      ) {
-        totals.new.wins++;
-      }
-      else {
         totals.ties++;
       }
-
-      for (
-        const [
-          key,
-          r
-        ]
-        of [
-          [
-            'old',
-            oldR
-          ],
-          [
-            'new',
-            newR
-          ]
-        ]
-      ) {
+      else {
         totals[
-          key
-        ].threePlus +=
-          r.threePlus;
-
-        totals[
-          key
-        ].fourPlus +=
-          r.fourPlus;
-
-        totals[
-          key
-        ].exact5 +=
-          r.exact5;
-
-        totals[
-          key
-        ].bestOverall =
-          Math.max(
-            totals[
-              key
-            ].bestOverall,
-            r.best
-          );
-
-        totals[
-          key
-        ].avgHits +=
-          r.averageHits;
+          winner
+        ].wins++;
       }
+
+      addResult(
+        totals.old,
+        oldResult
+      );
+
+      addResult(
+        totals.persistent,
+        persistentResult
+      );
+
+      addResult(
+        totals.hybrid,
+        hybridResult
+      );
 
       cycles.push({
         cycle:
-          i + 1,
+          cycleIndex + 1,
 
         analysisFromDrawId:
           analysis[0]
@@ -1075,52 +1579,115 @@ async (
           numbers:
             oldNumbers,
 
-          ...oldR
+          ...oldResult
         },
 
-        new: {
+        persistent: {
           numbers:
-            newNumbers,
+            persistentNumbers,
 
-          ...newR
+          ...persistentResult
         },
 
-        winner:
-          w
+        hybrid: {
+          numbers:
+            hybridNumbers,
+
+          ...hybridResult
+        },
+
+        winner
       });
     }
 
-    totals.old.meanCycleAverageHits =
-      Number(
-        (
-          totals.old.avgHits
-          /
-          CYCLES
+    for (
+      const key
+      of [
+        'old',
+        'persistent',
+        'hybrid'
+      ]
+    ) {
+      totals[
+        key
+      ].meanCycleAverageHits =
+        Number(
+          (
+            totals[
+              key
+            ].averageHitAccumulator
+            /
+            CYCLES
+          )
+            .toFixed(3)
+        );
+
+      delete totals[
+        key
+      ].averageHitAccumulator;
+    }
+
+    const ranking =
+      [
+        'old',
+        'persistent',
+        'hybrid'
+      ]
+        .map(
+          name => ({
+            name,
+
+            wins:
+              totals[
+                name
+              ].wins,
+
+            exact5:
+              totals[
+                name
+              ].exact5,
+
+            fourPlus:
+              totals[
+                name
+              ].fourPlus,
+
+            threePlus:
+              totals[
+                name
+              ].threePlus,
+
+            averageHits:
+              totals[
+                name
+              ].meanCycleAverageHits
+          })
         )
-          .toFixed(3)
-      );
+        .sort(
+          (a, b) =>
+            b.exact5 -
+            a.exact5
 
-    totals.new.meanCycleAverageHits =
-      Number(
-        (
-          totals.new.avgHits
-          /
-          CYCLES
-        )
-          .toFixed(3)
-      );
+            ||
 
-    delete totals.old.avgHits;
-    delete totals.new.avgHits;
+            b.fourPlus -
+            a.fourPlus
 
-    const verdict =
-      totals.new.wins >
-      totals.old.wins
-        ? 'new'
-        : totals.old.wins >
-          totals.new.wins
-            ? 'old'
-            : 'tie';
+            ||
+
+            b.threePlus -
+            a.threePlus
+
+            ||
+
+            b.wins -
+            a.wins
+
+            ||
+
+            b.averageHits -
+            a.averageHits
+        );
 
     return res
       .status(200)
@@ -1129,7 +1696,7 @@ async (
           true,
 
         test:
-          'Legacy selector vs current Persistent Core 3',
+          'Old vs Persistent Core 3 vs Hybrid',
 
         rules: {
           cycles:
@@ -1147,21 +1714,24 @@ async (
           futureLeakage:
             false,
 
-          note:
-            'Ten rolling historical 50-draw tests are used because a single Hot Spot day does not contain ten complete 20-draw Group Five cycles.'
-        },
+          hybridPool:
+            'Union of Old five and Persistent Core 3 five',
 
-        source: {
-          old:
-            'group-five.js before Persistent Core 3 refactor (commit db5c69275294dcfb1fe93340739f7f753147fa46)',
+          hybridMaximumCandidates:
+            252,
 
-          new:
-            'current lib/group-five.js selectFive()'
+          hybridGoal:
+            'Preserve 3/5 frequency while restoring stronger 4/5 behavior'
         },
 
         totals,
 
-        verdict,
+        ranking,
+
+        verdict:
+          ranking[0]
+            ?.name ||
+          null,
 
         cycles
       });
@@ -1174,8 +1744,7 @@ async (
           false,
 
         error:
-          e.message
-          ||
+          e.message ||
           String(e)
       });
   }
