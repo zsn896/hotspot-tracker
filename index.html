@@ -630,6 +630,15 @@ h1{
   border-color:#20c46a
 }
 
+.fusionGroup{
+  grid-column:1/-1;
+  border-color:rgba(47,128,255,.55)
+}
+
+.fusionGroup.active{
+  border-color:#2f80ff
+}
+
 .manualHead{
   display:flex;
   align-items:center;
@@ -667,6 +676,12 @@ h1{
 
 .manualInputs input:focus{
   border-color:#20c46a
+}
+
+.fusionInputs input{
+  color:#69adff;
+  border-color:#345981;
+  cursor:default
 }
 
 .manualActions{
@@ -722,6 +737,16 @@ h1{
   display:block
 }
 
+.fusionSelection{
+  margin-top:10px;
+  padding:10px 12px;
+  border:1px solid rgba(47,128,255,.30);
+  background:rgba(47,128,255,.08);
+  border-radius:10px;
+  color:#a9cfff;
+  font-size:12px
+}
+
 footer{
   margin-top:22px;
   text-align:center;
@@ -733,6 +758,7 @@ footer{
   .header{flex-direction:column}
   .headerRight{width:100%;justify-content:space-between}
   .manualGrid{grid-template-columns:1fr}
+  .fusionGroup{grid-column:auto}
 
   .groupSummary{
     grid-template-columns:1fr 1fr 1fr;
@@ -899,7 +925,7 @@ footer{
     <div>
       <h2>Manual Analysis</h2>
       <p>
-        Two independent groups of five numbers.
+        Manual Groups 1 + 2 and automatic Fusion Group 3.
       </p>
     </div>
 
@@ -1004,6 +1030,64 @@ footer{
       <div class="manualMsg mut" id="msg2"></div>
 
       <div id="manualContent2"></div>
+
+    </div>
+
+
+    <div class="manualGroup fusionGroup" id="manualGroup3">
+
+      <div class="manualHead">
+
+        <div>
+          <div class="manualName">
+            Manual Group 3 — Fusion
+          </div>
+
+          <div class="small mut" style="margin-top:4px">
+            Generated automatically from Manual Group 1 + 2
+          </div>
+        </div>
+
+        <div class="manualState mut" id="manualState3">
+          ● Not tracking
+        </div>
+
+      </div>
+
+
+      <div class="manualInputs fusionInputs">
+        <input id="m3_1" readonly placeholder="—">
+        <input id="m3_2" readonly placeholder="—">
+        <input id="m3_3" readonly placeholder="—">
+        <input id="m3_4" readonly placeholder="—">
+        <input id="m3_5" readonly placeholder="—">
+      </div>
+
+
+      <div class="manualActions">
+
+        <button class="btn btnBlue" id="generate3">
+          ⚡ Generate Numbers
+        </button>
+
+        <button class="btn btnRed" id="stop3">
+          ■ Stop
+        </button>
+
+        <button class="btn btnDark" id="clear3">
+          Clear
+        </button>
+
+      </div>
+
+
+      <div class="manualMsg mut" id="msg3">
+        Press Generate Numbers to analyze Manual Group 1 + 2.
+      </div>
+
+      <div id="fusionSelectionInfo"></div>
+
+      <div id="manualContent3"></div>
 
     </div>
 
@@ -2695,6 +2779,11 @@ function fillInputs(
       );
 
 
+    if(!el){
+      continue;
+    }
+
+
     if(
       document.activeElement !==
       el
@@ -2805,6 +2894,17 @@ function renderManualSlot(
     );
 
 
+  if(
+    !groupBox
+    ||
+    !state
+    ||
+    !content
+  ){
+    return;
+  }
+
+
   if(!m){
 
     groupBox
@@ -2820,6 +2920,12 @@ function renderManualSlot(
 
     state.textContent =
       '● Not tracking';
+
+
+    fillInputs(
+      slot,
+      []
+    );
 
 
     content.innerHTML =
@@ -2893,10 +2999,6 @@ function renderManualSlot(
 
     Show the newest 3/5+ result,
     NOT the highest historical result.
-
-    Therefore:
-    older 4/5 + newer 3/5
-    => display 3/5.
   */
 
   const latestStrong =
@@ -3094,6 +3196,67 @@ function renderManuals(j){
 }
 
 
+function renderFusion(j){
+
+  renderManualSlot(
+    3,
+    j?.manual || null
+  );
+
+
+  const info =
+    document.getElementById(
+      'fusionSelectionInfo'
+    );
+
+
+  if(
+    j?.selection
+    &&
+    info
+  ){
+
+    info.innerHTML =
+      `
+      <div class="fusionSelection">
+
+        Analyzed:
+        <b>
+          ${Number(
+            j.selection.analyzedDraws || 0
+          )} draws
+        </b>
+
+        &nbsp; • &nbsp;
+
+        Combinations tested:
+        <b>
+          ${Number(
+            j.selection.combinationsTested || 0
+          )}
+        </b>
+
+        &nbsp; • &nbsp;
+
+        Historical score:
+        <b>
+          ${Number(
+            j.selection.exact5 || 0
+          )} × 5/5,
+          ${Number(
+            j.selection.fourPlus || 0
+          )} × 4/5+,
+          ${Number(
+            j.selection.threePlus || 0
+          )} × 3/5+
+        </b>
+
+      </div>
+      `;
+  }
+}
+
+
 function readNumbers(slot){
 
   const nums =
@@ -3248,7 +3411,6 @@ async function startManual(slot){
           ??
           '—'
         }.`;
-
 
     renderManuals(j);
 
@@ -3435,6 +3597,287 @@ async function clearManual(slot){
 }
 
 
+/* FUSION GROUP 3 */
+
+function setFusionBusy(
+  isBusy
+){
+
+  document
+    .getElementById(
+      'generate3'
+    )
+    .disabled =
+      isBusy;
+
+
+  document
+    .getElementById(
+      'stop3'
+    )
+    .disabled =
+      isBusy;
+
+
+  document
+    .getElementById(
+      'clear3'
+    )
+    .disabled =
+      isBusy;
+}
+
+
+async function generateFusion(){
+
+  const msg =
+    document.getElementById(
+      'msg3'
+    );
+
+
+  try{
+
+    setFusionBusy(
+      true
+    );
+
+
+    msg.className =
+      'manualMsg mut';
+
+
+    msg.textContent =
+      'Analyzing Manual Group 1 + 2 and testing combinations…';
+
+
+    const j =
+      await api(
+        '/api/fusion',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'generate'
+            })
+        }
+      );
+
+
+    msg.className =
+      'manualMsg ok';
+
+
+    msg.textContent =
+      j?.unchanged
+        ?
+        'The same five numbers are still ranked first. Existing tracking was preserved.'
+        :
+        `New Fusion numbers selected. Tracking starts after draw ${
+          j?.latest?.id
+          ??
+          j?.manual?.startDrawId
+          ??
+          '—'
+        }.`;
+
+
+    renderFusion(
+      j
+    );
+
+  }catch(e){
+
+    msg.className =
+      'manualMsg bad';
+
+
+    msg.textContent =
+      String(
+        e?.message || e
+      );
+
+  }finally{
+
+    setFusionBusy(
+      false
+    );
+  }
+}
+
+
+async function stopFusion(){
+
+  const msg =
+    document.getElementById(
+      'msg3'
+    );
+
+
+  try{
+
+    setFusionBusy(
+      true
+    );
+
+
+    msg.className =
+      'manualMsg mut';
+
+
+    msg.textContent =
+      'Stopping Fusion tracking…';
+
+
+    const j =
+      await api(
+        '/api/fusion',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'stop'
+            })
+        }
+      );
+
+
+    msg.className =
+      'manualMsg amber';
+
+
+    msg.textContent =
+      'Fusion tracking stopped. Existing results were kept.';
+
+
+    renderFusion(
+      j
+    );
+
+  }catch(e){
+
+    msg.className =
+      'manualMsg bad';
+
+
+    msg.textContent =
+      String(
+        e?.message || e
+      );
+
+  }finally{
+
+    setFusionBusy(
+      false
+    );
+  }
+}
+
+
+async function clearFusion(){
+
+  const msg =
+    document.getElementById(
+      'msg3'
+    );
+
+
+  try{
+
+    setFusionBusy(
+      true
+    );
+
+
+    msg.className =
+      'manualMsg mut';
+
+
+    msg.textContent =
+      'Clearing Fusion Group 3…';
+
+
+    const j =
+      await api(
+        '/api/fusion',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'clear'
+            })
+        }
+      );
+
+
+    fillInputs(
+      3,
+      []
+    );
+
+
+    const info =
+      document.getElementById(
+        'fusionSelectionInfo'
+      );
+
+
+    if(info){
+      info.innerHTML =
+        '';
+    }
+
+
+    msg.className =
+      'manualMsg ok';
+
+
+    msg.textContent =
+      'Fusion Group 3 cleared. Press Generate Numbers when you want a new group.';
+
+
+    renderFusion(
+      j
+    );
+
+  }catch(e){
+
+    msg.className =
+      'manualMsg bad';
+
+
+    msg.textContent =
+      String(
+        e?.message || e
+      );
+
+  }finally{
+
+    setFusionBusy(
+      false
+    );
+  }
+}
+
+
 /* SMART SYNC */
 
 async function smartSync(){
@@ -3540,7 +3983,8 @@ async function loadAll(){
     const [
       stateResult,
       trackResult,
-      manualResult
+      manualResult,
+      fusionResult
     ] =
       await Promise.allSettled([
 
@@ -3558,6 +4002,12 @@ async function loadAll(){
 
         api(
           '/api/group?ts='
+          +
+          ts
+        ),
+
+        api(
+          '/api/fusion?ts='
           +
           ts
         )
@@ -3707,6 +4157,41 @@ async function loadAll(){
           msg;
     }
 
+
+    if(
+      fusionResult.status ===
+      'fulfilled'
+    ){
+
+      renderFusion(
+        fusionResult.value
+      );
+
+    }else{
+
+      document
+        .getElementById(
+          'manualContent3'
+        )
+        .innerHTML =
+          `
+          <div
+            class="bad"
+            style="margin-top:10px"
+          >
+            ${
+              esc(
+                fusionResult
+                  .reason
+                  ?.message
+                ||
+                'Fusion tracker error'
+              )
+            }
+          </div>
+          `;
+    }
+
   }finally{
 
     busy('');
@@ -3779,6 +4264,36 @@ for(
         )
     );
 }
+
+
+document
+  .getElementById(
+    'generate3'
+  )
+  .addEventListener(
+    'click',
+    generateFusion
+  );
+
+
+document
+  .getElementById(
+    'stop3'
+  )
+  .addEventListener(
+    'click',
+    stopFusion
+  );
+
+
+document
+  .getElementById(
+    'clear3'
+  )
+  .addEventListener(
+    'click',
+    clearFusion
+  );
 
 
 /* AUTO REFRESH */
