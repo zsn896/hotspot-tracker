@@ -23,7 +23,6 @@
 }
 
 *{box-sizing:border-box}
-
 html{background:var(--bg)}
 
 body{
@@ -488,6 +487,135 @@ h1{
   font-weight:800
 }
 
+/* 12H LEARNER */
+
+.learnerHero{
+  border:2px solid rgba(179,92,255,.62);
+  background:
+    radial-gradient(circle at 90% 0%,rgba(179,92,255,.10),transparent 35%),
+    linear-gradient(180deg,rgba(25,31,57,.98),rgba(15,27,45,.98))
+}
+
+.learnerTitle{
+  font-size:27px;
+  font-weight:950
+}
+
+.learnerSub{
+  margin-top:6px;
+  color:#b5c3d6;
+  font-size:13px;
+  line-height:1.5
+}
+
+.learnerNumbers{
+  margin-top:17px
+}
+
+.learnerNumbers .ball{
+  width:48px;
+  height:48px;
+  font-size:17px;
+  border-color:#8e63d5;
+  background:linear-gradient(180deg,#42316a,#241d43)
+}
+
+.learnerNumbers .coreBall{
+  border-color:#69adff;
+  box-shadow:0 0 0 2px rgba(47,128,255,.18);
+  background:linear-gradient(180deg,#2d65a8,#194b86)
+}
+
+.learnerStats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:9px;
+  margin-top:16px
+}
+
+.learnerStat{
+  padding:12px 8px;
+  text-align:center;
+  background:rgba(7,17,31,.34);
+  border:1px solid var(--line);
+  border-radius:12px
+}
+
+.learnerStatLabel{
+  color:#aab8ca;
+  font-size:12px
+}
+
+.learnerStatValue{
+  margin-top:5px;
+  font-size:21px;
+  font-weight:950
+}
+
+.learnerStrategy{
+  margin-top:13px;
+  padding:11px 13px;
+  border:1px solid rgba(179,92,255,.35);
+  background:rgba(179,92,255,.08);
+  border-radius:11px;
+  font-size:13px;
+  color:#d5c4f7
+}
+
+.learnerStrong{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:8px;
+  margin-top:10px
+}
+
+.strongItem{
+  border:1px solid var(--line);
+  background:rgba(7,17,31,.34);
+  border-radius:11px;
+  padding:10px;
+  text-align:center
+}
+
+.strongNumber{
+  font-size:20px;
+  font-weight:950
+}
+
+.strongCount{
+  margin-top:4px;
+  font-size:11px;
+  color:#a9b8ca
+}
+
+.leaderTable{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+  font-size:12px
+}
+
+.leaderTable th,
+.leaderTable td{
+  border-bottom:1px solid var(--line);
+  padding:9px 7px;
+  text-align:center
+}
+
+.leaderTable th{
+  color:#9fb0c7;
+  font-weight:900
+}
+
+.learnerDetails{
+  display:none;
+  margin-top:12px
+}
+
+.learnerDetails.open{
+  display:block
+}
+
 .groupsSection{margin-top:14px}
 
 .groupsTitleRow{
@@ -767,6 +895,7 @@ footer{
   .headerRight{width:100%;justify-content:space-between}
   .manualGrid{grid-template-columns:1fr}
   .fusionGroup{grid-column:auto}
+  .learnerStrong{grid-template-columns:repeat(3,1fr)}
 
   .groupSummary{
     grid-template-columns:1fr 1fr 1fr;
@@ -788,7 +917,8 @@ footer{
   .card{padding:14px;border-radius:14px}
 
   .stats,
-  .fiveStats{
+  .fiveStats,
+  .learnerStats{
     grid-template-columns:repeat(2,1fr)
   }
 
@@ -840,6 +970,19 @@ footer{
   .fusionActions{
     grid-template-columns:1fr 1fr
   }
+
+  .learnerStrong{
+    grid-template-columns:repeat(2,1fr)
+  }
+
+  .learnerNumbers .ball{
+    width:43px;
+    height:43px
+  }
+
+  .leaderTable{
+    font-size:10px
+  }
 }
 </style>
 </head>
@@ -857,7 +1000,7 @@ footer{
     </div>
 
     <p class="subtitle">
-      GROUP FIVE: cumulative analysis 50 → 70 → 90 → 110… with 20 future draws between each selection.
+      GROUP FIVE + 12H Daily Pattern Learner + Manual Tracking.
     </p>
   </div>
 
@@ -909,6 +1052,48 @@ footer{
 <div id="latestDraw"></div>
 
 <div id="groupFiveContent"></div>
+
+
+<section
+  class="card learnerHero"
+  id="learnerCard"
+>
+
+  <div class="fiveHeader">
+
+    <div>
+
+      <div class="learnerTitle">
+        12H Learning Group
+      </div>
+
+      <div class="learnerSub">
+        Learns from the 6:00 AM → 6:00 PM draw stream,
+        performs walk-forward testing,
+        compares several selection methods,
+        and produces one 5-number suggestion.
+      </div>
+
+    </div>
+
+    <span
+      class="pill"
+      id="learnerStatusPill"
+    >
+      Loading…
+    </span>
+
+  </div>
+
+  <div id="learnerContent">
+
+    <div class="empty">
+      Loading 12H learner…
+    </div>
+
+  </div>
+
+</section>
 
 
 <section class="card groupsSection">
@@ -1051,6 +1236,7 @@ footer{
       <div class="manualHead">
 
         <div>
+
           <div class="manualName">
             Manual Group 3 — Fusion
           </div>
@@ -1058,6 +1244,7 @@ footer{
           <div class="small mut" style="margin-top:4px">
             Enter 5 numbers manually or Generate automatically from Manual Group 1 + 2
           </div>
+
         </div>
 
         <div class="manualState mut" id="manualState3">
@@ -1454,7 +1641,7 @@ function renderSummary(j){
 }
 
 
-/* LATEST DRAW */
+/* LATEST */
 
 function latestFromTrack(j){
 
@@ -1540,7 +1727,6 @@ function renderLatestDraw(d){
     return;
   }
 
-
   const nums =
     Array.isArray(
       d.numbers
@@ -1554,14 +1740,12 @@ function renderLatestDraw(d){
       :
       [];
 
-
   const bullRaw =
     d.bullsEye
     ??
     d.bulls_eye
     ??
     null;
-
 
   const bull =
     bullRaw === null
@@ -1576,14 +1760,12 @@ function renderLatestDraw(d){
         bullRaw
       );
 
-
   const drawId =
     d.id
     ??
     d.draw_id
     ??
     '—';
-
 
   const drawDate =
     d.date
@@ -1592,14 +1774,12 @@ function renderLatestDraw(d){
     ??
     '';
 
-
   const drawTime =
     d.time
     ??
     d.draw_time
     ??
     '';
-
 
   box.innerHTML =
     `
@@ -1748,12 +1928,10 @@ function resultCard(
       r.hit_numbers || []
     ).map(Number);
 
-
   const hc =
     Number(
       r.hit_count || 0
     );
-
 
   return `
 
@@ -1921,10 +2099,8 @@ function bestInfo(results){
       :
       [];
 
-
   let best =
     0;
-
 
   for(
     const r of rows
@@ -1939,7 +2115,6 @@ function bestInfo(results){
       );
   }
 
-
   if(best < 3){
 
     return {
@@ -1948,7 +2123,6 @@ function bestInfo(results){
       drawId:null
     };
   }
-
 
   const match =
     rows
@@ -1970,7 +2144,6 @@ function bestInfo(results){
       )[0]
       ||
       null;
-
 
   return {
     best,
@@ -1997,7 +2170,6 @@ function renderGroupFive(state){
       'groupFiveContent'
     );
 
-
   const groups =
     Array.isArray(
       state?.groups
@@ -2006,7 +2178,6 @@ function renderGroupFive(state){
       state.groups
       :
       [];
-
 
   const g =
     groups.find(
@@ -2017,10 +2188,8 @@ function renderGroupFive(state){
         'AUTO Group Five'
     );
 
-
   const top =
     state?.groupFive || {};
-
 
   if(!g){
 
@@ -2031,12 +2200,10 @@ function renderGroupFive(state){
         50
       );
 
-
     const have =
       Number(
         top.analysisHave || 0
       );
-
 
     const remain =
       Number(
@@ -2048,7 +2215,6 @@ function renderGroupFive(state){
           have
         )
       );
-
 
     root.innerHTML =
       `
@@ -2125,14 +2291,11 @@ function renderGroupFive(state){
       </section>
       `;
 
-
     return;
   }
 
-
   const important =
     importantResults(g);
-
 
   const all =
     Array.isArray(
@@ -2143,10 +2306,8 @@ function renderGroupFive(state){
       :
       [];
 
-
   const bi =
     bestInfo(all);
-
 
   const five =
     g.groupFive
@@ -2154,7 +2315,6 @@ function renderGroupFive(state){
     top
     ||
     {};
-
 
   const tracked =
     Number(
@@ -2164,7 +2324,6 @@ function renderGroupFive(state){
       ??
       0
     );
-
 
   const remaining =
     Number(
@@ -2176,14 +2335,12 @@ function renderGroupFive(state){
       )
     );
 
-
   const cycle =
     five.cycle
     ??
     top.cycle
     ??
     '—';
-
 
   const currentAnalysis =
     Number(
@@ -2194,10 +2351,8 @@ function renderGroupFive(state){
       50
     );
 
-
   const nextAnalysis =
     currentAnalysis + 20;
-
 
   const nextSelection =
     five.nextSelectionAfterDrawId
@@ -2205,7 +2360,6 @@ function renderGroupFive(state){
     top.nextSelectionAfterDrawId
     ??
     '—';
-
 
   root.innerHTML =
     `
@@ -2260,7 +2414,6 @@ function renderGroupFive(state){
 
 
       <div class="fiveStats">
-
 
         <div class="fiveStat">
 
@@ -2409,12 +2562,10 @@ function toggleFiveResults(){
       'fiveResults'
     );
 
-
   const btn =
     document.getElementById(
       'fiveToggle'
     );
-
 
   if(
     !box
@@ -2424,11 +2575,9 @@ function toggleFiveResults(){
     return;
   }
 
-
   const open =
     box.style.display !==
     'none';
-
 
   box.style.display =
     open
@@ -2437,13 +2586,637 @@ function toggleFiveResults(){
       :
       'block';
 
-
   btn.textContent =
     open
       ?
       'Show Results'
       :
       'Hide Results';
+}
+
+
+/* 12H LEARNER */
+
+function toggleLearnerDetails(){
+
+  const box =
+    document.getElementById(
+      'learnerDetails'
+    );
+
+  const btn =
+    document.getElementById(
+      'learnerToggle'
+    );
+
+  if(
+    !box
+    ||
+    !btn
+  ){
+    return;
+  }
+
+  const open =
+    box.classList.contains(
+      'open'
+    );
+
+  box.classList.toggle(
+    'open'
+  );
+
+  btn.textContent =
+    open
+      ?
+      'Show Learning Details'
+      :
+      'Hide Learning Details';
+}
+
+
+function renderLearner(j){
+
+  const root =
+    document.getElementById(
+      'learnerContent'
+    );
+
+  const pill =
+    document.getElementById(
+      'learnerStatusPill'
+    );
+
+  if(
+    !root
+    ||
+    !pill
+  ){
+    return;
+  }
+
+  if(!j){
+
+    pill.textContent =
+      'Unavailable';
+
+    root.innerHTML =
+      `
+      <div class="empty">
+        12H Learner data unavailable.
+      </div>
+      `;
+
+    return;
+  }
+
+  if(
+    j.reason ===
+    'no-daily-control'
+  ){
+
+    pill.textContent =
+      'Waiting';
+
+    root.innerHTML =
+      `
+      <div class="empty">
+        Waiting for today's 6:00 AM cycle.
+      </div>
+      `;
+
+    return;
+  }
+
+  const have =
+    Number(
+      j.have || 0
+    );
+
+  const target =
+    Number(
+      j.dayTarget || 180
+    );
+
+  const remaining =
+    Number(
+      j.remaining
+      ??
+      Math.max(
+        0,
+        target - have
+      )
+    );
+
+  const pct =
+    target
+      ?
+      Math.min(
+        100,
+        Math.round(
+          have /
+          target *
+          100
+        )
+      )
+      :
+      0;
+
+  if(
+    j.completed
+  ){
+
+    pill.textContent =
+      '12H COMPLETE';
+
+  }else if(
+    j.active
+  ){
+
+    pill.textContent =
+      'LEARNING';
+
+  }else{
+
+    pill.textContent =
+      'COLLECTING';
+  }
+
+  if(
+    !j?.suggestion
+  ){
+
+    root.innerHTML =
+      `
+
+      <div class="learnerStats">
+
+        <div class="learnerStat">
+
+          <div class="learnerStatLabel">
+            Draws
+          </div>
+
+          <div class="learnerStatValue cBlue">
+            ${have}/${target}
+          </div>
+
+        </div>
+
+
+        <div class="learnerStat">
+
+          <div class="learnerStatLabel">
+            Remaining
+          </div>
+
+          <div class="learnerStatValue cOrange">
+            ${remaining}
+          </div>
+
+        </div>
+
+
+        <div class="learnerStat">
+
+          <div class="learnerStatLabel">
+            Minimum Training
+          </div>
+
+          <div class="learnerStatValue">
+            50
+          </div>
+
+        </div>
+
+
+        <div class="learnerStat">
+
+          <div class="learnerStatLabel">
+            Schedule
+          </div>
+
+          <div class="learnerStatValue cPurple">
+            6A–6P
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="progress">
+        <i style="width:${pct}%"></i>
+        <span>${pct}%</span>
+      </div>
+
+      <div class="empty">
+        ${
+          esc(
+            j.message
+            ||
+            'Collecting data before producing a suggestion.'
+          )
+        }
+      </div>
+      `;
+
+    return;
+  }
+
+  const suggestion =
+    j.suggestion || {};
+
+  const numbers =
+    Array.isArray(
+      suggestion.numbers
+    )
+      ?
+      suggestion.numbers.map(Number)
+      :
+      [];
+
+  const core =
+    Array.isArray(
+      suggestion.core
+    )
+      ?
+      suggestion.core.map(Number)
+      :
+      [];
+
+  const leaders =
+    Array.isArray(
+      j?.walkForward?.leaderboard
+    )
+      ?
+      j.walkForward.leaderboard
+      :
+      [];
+
+  const strongest =
+    Array.isArray(
+      j.strongestNumbers
+    )
+      ?
+      j.strongestNumbers
+      :
+      [];
+
+  root.innerHTML =
+    `
+
+    <div class="balls learnerNumbers">
+
+      ${
+        numbers
+          .map(
+            n =>
+              `
+              <span
+                class="ball ${
+                  core.includes(
+                    Number(n)
+                  )
+                    ?
+                    'coreBall'
+                    :
+                    ''
+                }"
+              >
+                ${Number(n)}
+              </span>
+              `
+          )
+          .join('')
+      }
+
+    </div>
+
+
+    <div
+      class="small mut"
+      style="margin-top:8px"
+    >
+      Blue-highlighted numbers = current Core 3
+    </div>
+
+
+    <div class="learnerStats">
+
+      <div class="learnerStat">
+
+        <div class="learnerStatLabel">
+          Draws Learned
+        </div>
+
+        <div class="learnerStatValue cBlue">
+          ${have}/${target}
+        </div>
+
+      </div>
+
+
+      <div class="learnerStat">
+
+        <div class="learnerStatLabel">
+          Remaining
+        </div>
+
+        <div class="learnerStatValue cOrange">
+          ${remaining}
+        </div>
+
+      </div>
+
+
+      <div class="learnerStat">
+
+        <div class="learnerStatLabel">
+          Confidence
+        </div>
+
+        <div class="learnerStatValue cGreen">
+          ${Number(
+            suggestion.confidence || 0
+          )}%
+        </div>
+
+      </div>
+
+
+      <div class="learnerStat">
+
+        <div class="learnerStatLabel">
+          Walk-Forward Stages
+        </div>
+
+        <div class="learnerStatValue cPurple">
+          ${Number(
+            j?.walkForward
+              ?.completedStages || 0
+          )}
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="progress">
+      <i style="width:${pct}%"></i>
+      <span>${pct}% of 12H learning window</span>
+    </div>
+
+
+    <div class="learnerStrategy">
+
+      Current winning strategy:
+
+      <b>
+        ${esc(
+          suggestion.strategyLabel
+          ||
+          suggestion.strategy
+          ||
+          '—'
+        )}
+      </b>
+
+      &nbsp; • &nbsp;
+
+      ${
+        suggestion.provisional
+          ?
+          '<span class="amber">Provisional — still learning</span>'
+          :
+          '<span class="ok">Final 12H selection</span>'
+      }
+
+      <br><br>
+
+      Core 3:
+
+      <b>
+        ${
+          core.length
+            ?
+            core.join(' - ')
+            :
+            '—'
+        }
+      </b>
+
+    </div>
+
+
+    <div style="margin-top:12px">
+
+      <button
+        class="toggleBtn"
+        id="learnerToggle"
+        onclick="toggleLearnerDetails()"
+      >
+        Show Learning Details
+      </button>
+
+    </div>
+
+
+    <div
+      class="learnerDetails"
+      id="learnerDetails"
+    >
+
+      <div
+        class="title"
+        style="font-size:17px;margin-top:14px"
+      >
+        Strategy Leaderboard
+      </div>
+
+
+      ${
+        leaders.length
+          ?
+          `
+          <div style="overflow-x:auto">
+
+            <table class="leaderTable">
+
+              <thead>
+
+                <tr>
+                  <th>Strategy</th>
+                  <th>Wins</th>
+                  <th>3/5+</th>
+                  <th>4/5+</th>
+                  <th>5/5</th>
+                  <th>Avg</th>
+                  <th>Score</th>
+                </tr>
+
+              </thead>
+
+              <tbody>
+
+                ${
+                  leaders
+                    .map(
+                      (
+                        row,
+                        index
+                      ) =>
+                        `
+                        <tr>
+
+                          <td>
+                            ${
+                              index === 0
+                                ?
+                                '★ '
+                                :
+                                ''
+                            }
+                            ${esc(
+                              row.label
+                              ||
+                              row.id
+                              ||
+                              '—'
+                            )}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.wins || 0
+                            )}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.threePlus || 0
+                            )}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.fourPlus || 0
+                            )}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.exact5 || 0
+                            )}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.averageHits || 0
+                            ).toFixed(2)}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.validationScore || 0
+                            ).toFixed(1)}
+                          </td>
+
+                        </tr>
+                        `
+                    )
+                    .join('')
+                }
+
+              </tbody>
+
+            </table>
+
+          </div>
+          `
+          :
+          `
+          <div class="empty">
+            No completed walk-forward stages yet.
+          </div>
+          `
+      }
+
+
+      <div
+        class="title"
+        style="font-size:17px;margin-top:18px"
+      >
+        Strongest Numbers Today
+      </div>
+
+
+      <div class="learnerStrong">
+
+        ${
+          strongest
+            .slice(
+              0,
+              10
+            )
+            .map(
+              x =>
+                `
+                <div class="strongItem">
+
+                  <div class="strongNumber">
+                    ${Number(
+                      x.number
+                    )}
+                  </div>
+
+                  <div class="strongCount">
+                    Appeared:
+                    <b>
+                      ${Number(
+                        x.count || 0
+                      )}
+                    </b>
+                  </div>
+
+                  <div class="strongCount">
+                    Recent:
+                    <b>
+                      ${Number(
+                        x.recentCount || 0
+                      )}
+                    </b>
+                  </div>
+
+                  <div class="strongCount">
+                    Strength:
+                    <b>
+                      ${Number(
+                        x.strength || 0
+                      ).toFixed(1)}
+                    </b>
+                  </div>
+
+                </div>
+                `
+            )
+            .join('')
+        }
+
+      </div>
+
+
+      <div
+        class="small mut"
+        style="margin-top:14px;line-height:1.6"
+      >
+        The learner trains only on earlier draws and tests each method
+        on the next unseen 20-draw block. It does not use those future
+        validation draws when making the earlier selection.
+      </div>
+
+    </div>
+    `;
 }
 
 
@@ -2459,29 +3232,24 @@ function groupLabel(
       g?.name || ''
     );
 
-
   if(name === 'AUTO Group Special'){
     return 'Special Group';
   }
 
-
   if(name === 'AUTO Group Advanced'){
     return 'Advanced Group';
   }
-
 
   const match =
     name.match(
       /^AUTO Group (\d+)$/
     );
 
-
   if(match){
     return (
       `Automatic Group ${match[1]}`
     );
   }
-
 
   return (
     name
@@ -2499,7 +3267,6 @@ function automaticRow(
   const important =
     importantResults(g);
 
-
   const all =
     Array.isArray(
       g.results
@@ -2509,14 +3276,11 @@ function automaticRow(
       :
       [];
 
-
   const bi =
     bestInfo(all);
 
-
   const id =
     `autoRow_${index}`;
-
 
   return `
 
@@ -2678,28 +3442,23 @@ function toggleGroup(id){
       id
     );
 
-
   if(!row){
     return;
   }
-
 
   const wasOpen =
     row.classList.contains(
       'open'
     );
 
-
   row.classList.toggle(
     'open'
   );
-
 
   const btn =
     row.querySelector(
       '.toggleBtn'
     );
-
 
   if(btn){
 
@@ -2724,7 +3483,6 @@ function renderAutomaticGroups(state){
       :
       [];
 
-
   const other =
     groups.filter(
       g =>
@@ -2734,12 +3492,10 @@ function renderAutomaticGroups(state){
         'AUTO Group Five'
     );
 
-
   const root =
     document.getElementById(
       'autoContent'
     );
-
 
   root.innerHTML =
     other.length
@@ -2794,11 +3550,9 @@ function fillInputs(
         `m${slot}_${i}`
       );
 
-
     if(!el){
       continue;
     }
-
 
     if(
       document.activeElement !==
@@ -2851,12 +3605,10 @@ function toggleManualResults(slot){
       `manualResults${slot}`
     );
 
-
   const btn =
     document.getElementById(
       `manualToggle${slot}`
     );
-
 
   if(
     !box
@@ -2866,17 +3618,14 @@ function toggleManualResults(slot){
     return;
   }
 
-
   const open =
     box.classList.contains(
       'open'
     );
 
-
   box.classList.toggle(
     'open'
   );
-
 
   btn.textContent =
     open
@@ -2897,18 +3646,15 @@ function renderManualSlot(
       `manualGroup${slot}`
     );
 
-
   const state =
     document.getElementById(
       `manualState${slot}`
     );
 
-
   const content =
     document.getElementById(
       `manualContent${slot}`
     );
-
 
   if(
     !groupBox
@@ -2920,7 +3666,6 @@ function renderManualSlot(
     return;
   }
 
-
   if(!m){
 
     groupBox
@@ -2929,20 +3674,16 @@ function renderManualSlot(
         'active'
       );
 
-
     state.className =
       'manualState mut';
 
-
     state.textContent =
       '● Not tracking';
-
 
     fillInputs(
       slot,
       []
     );
-
 
     content.innerHTML =
       `
@@ -2951,10 +3692,8 @@ function renderManualSlot(
       </div>
       `;
 
-
     return;
   }
-
 
   const nums =
     (
@@ -2963,12 +3702,10 @@ function renderManualSlot(
       Number
     );
 
-
   fillInputs(
     slot,
     nums
   );
-
 
   if(m.active){
 
@@ -2978,10 +3715,8 @@ function renderManualSlot(
         'active'
       );
 
-
     state.className =
       'manualState ok';
-
 
     state.textContent =
       '● Tracking';
@@ -2994,21 +3729,17 @@ function renderManualSlot(
         'active'
       );
 
-
     state.className =
       'manualState amber';
-
 
     state.textContent =
       '● Stopped';
   }
 
-
   const matches =
     manualImportantMatches(
       m
     );
-
 
   const latestStrong =
     m?.lastSeenResult
@@ -3032,14 +3763,12 @@ function renderManualSlot(
         null
     );
 
-
   const latestHit =
     Number(
       latestStrong?.hitCount
       ??
       0
     );
-
 
   const latestTime =
     String(
@@ -3048,14 +3777,12 @@ function renderManualSlot(
       ''
     );
 
-
   const latestDrawId =
     latestStrong?.drawId
     ??
     m?.lastSeenDrawId
     ??
     null;
-
 
   content.innerHTML =
     `
@@ -3191,12 +3918,10 @@ function renderManuals(j){
   const m =
     normalizeManuals(j);
 
-
   renderManualSlot(
     1,
     m[0]
   );
-
 
   renderManualSlot(
     2,
@@ -3212,12 +3937,10 @@ function renderFusion(j){
     j?.manual || null
   );
 
-
   const info =
     document.getElementById(
       'fusionSelectionInfo'
     );
-
 
   if(
     j?.selection
@@ -3287,7 +4010,6 @@ function readNumbers(slot){
         )
     );
 
-
   if(
     nums.some(
       n =>
@@ -3304,7 +4026,6 @@ function readNumbers(slot){
     );
   }
 
-
   if(
     new Set(nums).size !== 5
   ){
@@ -3313,7 +4034,6 @@ function readNumbers(slot){
       'All 5 numbers must be different.'
     );
   }
-
 
   return nums;
 }
@@ -3331,14 +4051,12 @@ function setManualBusy(
     .disabled =
       isBusy;
 
-
   document
     .getElementById(
       `stop${slot}`
     )
     .disabled =
       isBusy;
-
 
   document
     .getElementById(
@@ -3356,7 +4074,6 @@ async function startManual(slot){
       `msg${slot}`
     );
 
-
   try{
 
     const numbers =
@@ -3364,20 +4081,16 @@ async function startManual(slot){
         slot
       );
 
-
     setManualBusy(
       slot,
       true
     );
 
-
     msg.className =
       'manualMsg mut';
 
-
     msg.textContent =
-      'Starting…';
-
+      'Starting new cycle…';
 
     const j =
       await api(
@@ -3399,27 +4112,17 @@ async function startManual(slot){
         }
       );
 
-
     msg.className =
       'manualMsg ok';
 
-
     msg.textContent =
-      j?.unchanged
-        ?
-        `Already tracking. Original start draw ${
-          j?.manual?.startDrawId
-          ??
-          '—'
-        } was preserved.`
-        :
-        `Tracking started after draw ${
-          j?.latest?.id
-          ??
-          j?.manual?.startDrawId
-          ??
-          '—'
-        }.`;
+      `New tracking cycle started after draw ${
+        j?.latest?.id
+        ??
+        j?.manual?.startDrawId
+        ??
+        '—'
+      }. Previous cycle results were reset.`;
 
     renderManuals(j);
 
@@ -3427,7 +4130,6 @@ async function startManual(slot){
 
     msg.className =
       'manualMsg bad';
-
 
     msg.textContent =
       String(
@@ -3451,7 +4153,6 @@ async function stopManual(slot){
       `msg${slot}`
     );
 
-
   try{
 
     setManualBusy(
@@ -3459,14 +4160,11 @@ async function stopManual(slot){
       true
     );
 
-
     msg.className =
       'manualMsg mut';
 
-
     msg.textContent =
       'Stopping…';
-
 
     const j =
       await api(
@@ -3487,14 +4185,11 @@ async function stopManual(slot){
         }
       );
 
-
     msg.className =
       'manualMsg amber';
 
-
     msg.textContent =
       'Tracking stopped. Existing results were kept.';
-
 
     renderManuals(j);
 
@@ -3502,7 +4197,6 @@ async function stopManual(slot){
 
     msg.className =
       'manualMsg bad';
-
 
     msg.textContent =
       String(
@@ -3526,7 +4220,6 @@ async function clearManual(slot){
       `msg${slot}`
     );
 
-
   try{
 
     setManualBusy(
@@ -3534,14 +4227,11 @@ async function clearManual(slot){
       true
     );
 
-
     msg.className =
       'manualMsg mut';
 
-
     msg.textContent =
       'Clearing…';
-
 
     const j =
       await api(
@@ -3562,23 +4252,18 @@ async function clearManual(slot){
         }
       );
 
-
     fillInputs(
       slot,
       []
     );
 
-
     msg.className =
       'manualMsg ok';
-
 
     msg.textContent =
       'Manual group cleared.';
 
-
     renderManuals(j);
-
 
     fillInputs(
       slot,
@@ -3589,7 +4274,6 @@ async function clearManual(slot){
 
     msg.className =
       'manualMsg bad';
-
 
     msg.textContent =
       String(
@@ -3619,7 +4303,6 @@ function setFusionBusy(
     .disabled =
       isBusy;
 
-
   document
     .getElementById(
       'generate3'
@@ -3627,14 +4310,12 @@ function setFusionBusy(
     .disabled =
       isBusy;
 
-
   document
     .getElementById(
       'stop3'
     )
     .disabled =
       isBusy;
-
 
   document
     .getElementById(
@@ -3652,7 +4333,6 @@ async function startFusion(){
       'msg3'
     );
 
-
   try{
 
     const numbers =
@@ -3660,19 +4340,15 @@ async function startFusion(){
         3
       );
 
-
     setFusionBusy(
       true
     );
 
-
     msg.className =
       'manualMsg mut';
 
-
     msg.textContent =
       'Starting Manual Group 3…';
-
 
     const j =
       await api(
@@ -3693,10 +4369,8 @@ async function startFusion(){
         }
       );
 
-
     msg.className =
       'manualMsg ok';
-
 
     if(j?.unchanged){
 
@@ -3728,12 +4402,10 @@ async function startFusion(){
         }.`;
     }
 
-
     const info =
       document.getElementById(
         'fusionSelectionInfo'
       );
-
 
     if(info){
       info.innerHTML =
@@ -3744,7 +4416,6 @@ async function startFusion(){
         `;
     }
 
-
     renderFusion(
       j
     );
@@ -3753,7 +4424,6 @@ async function startFusion(){
 
     msg.className =
       'manualMsg bad';
-
 
     msg.textContent =
       String(
@@ -3776,21 +4446,17 @@ async function generateFusion(){
       'msg3'
     );
 
-
   try{
 
     setFusionBusy(
       true
     );
 
-
     msg.className =
       'manualMsg mut';
 
-
     msg.textContent =
       'Analyzing Manual Group 1 + 2 and testing combinations…';
-
 
     const j =
       await api(
@@ -3810,10 +4476,8 @@ async function generateFusion(){
         }
       );
 
-
     msg.className =
       'manualMsg ok';
-
 
     msg.textContent =
       j?.unchanged
@@ -3828,7 +4492,6 @@ async function generateFusion(){
           '—'
         }.`;
 
-
     renderFusion(
       j
     );
@@ -3837,7 +4500,6 @@ async function generateFusion(){
 
     msg.className =
       'manualMsg bad';
-
 
     msg.textContent =
       String(
@@ -3860,21 +4522,17 @@ async function stopFusion(){
       'msg3'
     );
 
-
   try{
 
     setFusionBusy(
       true
     );
 
-
     msg.className =
       'manualMsg mut';
 
-
     msg.textContent =
       'Stopping Fusion tracking…';
-
 
     const j =
       await api(
@@ -3894,14 +4552,11 @@ async function stopFusion(){
         }
       );
 
-
     msg.className =
       'manualMsg amber';
 
-
     msg.textContent =
       'Fusion tracking stopped. Existing results were kept.';
-
 
     renderFusion(
       j
@@ -3911,7 +4566,6 @@ async function stopFusion(){
 
     msg.className =
       'manualMsg bad';
-
 
     msg.textContent =
       String(
@@ -3934,21 +4588,17 @@ async function clearFusion(){
       'msg3'
     );
 
-
   try{
 
     setFusionBusy(
       true
     );
 
-
     msg.className =
       'manualMsg mut';
 
-
     msg.textContent =
       'Clearing Fusion Group 3…';
-
 
     const j =
       await api(
@@ -3968,37 +4618,30 @@ async function clearFusion(){
         }
       );
 
-
     fillInputs(
       3,
       []
     );
-
 
     const info =
       document.getElementById(
         'fusionSelectionInfo'
       );
 
-
     if(info){
       info.innerHTML =
         '';
     }
 
-
     msg.className =
       'manualMsg ok';
-
 
     msg.textContent =
       'Manual Group 3 cleared. Enter numbers and press Start, or press Generate Numbers.';
 
-
     renderFusion(
       j
     );
-
 
     fillInputs(
       3,
@@ -4009,7 +4652,6 @@ async function clearFusion(){
 
     msg.className =
       'manualMsg bad';
-
 
     msg.textContent =
       String(
@@ -4034,14 +4676,11 @@ async function smartSync(){
       'syncInfo'
     );
 
-
   el.className =
     'syncInfo working';
 
-
   el.textContent =
     'Checking official draw and syncing if needed…';
-
 
   try{
 
@@ -4052,11 +4691,9 @@ async function smartSync(){
         Date.now()
       );
 
-
     renderSyncInfo(
       result
     );
-
 
     return result;
 
@@ -4065,14 +4702,12 @@ async function smartSync(){
     el.className =
       'syncInfo warn';
 
-
     el.textContent =
       'Smart Sync warning: '
       +
       String(
         e?.message || e
       );
-
 
     return null;
   }
@@ -4093,45 +4728,38 @@ async function loadAll(){
     return;
   }
 
-
   loadingAll =
     true;
-
 
   const refreshBtn =
     document.getElementById(
       'refresh'
     );
 
-
   refreshBtn.disabled =
     true;
-
 
   busy(
     'Checking official draw…'
   );
 
-
   try{
 
     await smartSync();
-
 
     busy(
       'Loading updated results…'
     );
 
-
     const ts =
       Date.now();
-
 
     const [
       stateResult,
       trackResult,
       manualResult,
-      fusionResult
+      fusionResult,
+      learnerResult
     ] =
       await Promise.allSettled([
 
@@ -4157,6 +4785,12 @@ async function loadAll(){
           '/api/fusion?ts='
           +
           ts
+        ),
+
+        api(
+          '/api/group-six?mode=learner&ts='
+          +
+          ts
         )
 
       ]);
@@ -4170,21 +4804,17 @@ async function loadAll(){
       const state =
         stateResult.value;
 
-
       renderSummary(
         state
       );
-
 
       renderStatus(
         state.mode
       );
 
-
       renderGroupFive(
         state
       );
-
 
       renderAutomaticGroups(
         state
@@ -4259,6 +4889,46 @@ async function loadAll(){
 
 
     if(
+      learnerResult.status ===
+      'fulfilled'
+    ){
+
+      renderLearner(
+        learnerResult.value
+      );
+
+    }else{
+
+      renderLearner(
+        null
+      );
+
+      const root =
+        document.getElementById(
+          'learnerContent'
+        );
+
+      if(root){
+
+        root.innerHTML =
+          `
+          <div class="bad" style="margin-top:10px">
+            ${
+              esc(
+                learnerResult
+                  .reason
+                  ?.message
+                ||
+                '12H Learner error'
+              )
+            }
+          </div>
+          `;
+      }
+    }
+
+
+    if(
       manualResult.status ===
       'fulfilled'
     ){
@@ -4287,14 +4957,12 @@ async function loadAll(){
         </div>
         `;
 
-
       document
         .getElementById(
           'manualContent1'
         )
         .innerHTML =
           msg;
-
 
       document
         .getElementById(
@@ -4343,10 +5011,8 @@ async function loadAll(){
 
     busy('');
 
-
     refreshBtn.disabled =
       false;
-
 
     loadingAll =
       false;
@@ -4385,7 +5051,6 @@ for(
         )
     );
 
-
   document
     .getElementById(
       `stop${slot}`
@@ -4397,7 +5062,6 @@ for(
           slot
         )
     );
-
 
   document
     .getElementById(
