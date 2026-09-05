@@ -40,19 +40,19 @@ function getManualName(slot) {
 
 
 function validateNumbers(input) {
-  const nums =
+  const numbers =
     Array.isArray(input)
       ? input.map(Number)
       : [];
 
-  if (nums.length !== 5) {
+  if (numbers.length !== 5) {
     throw new Error(
       'Enter exactly 5 numbers.'
     );
   }
 
   if (
-    nums.some(
+    numbers.some(
       n =>
         !Number.isInteger(n) ||
         n < 1 ||
@@ -64,39 +64,16 @@ function validateNumbers(input) {
     );
   }
 
-  if (new Set(nums).size !== 5) {
+  if (
+    new Set(numbers).size !== 5
+  ) {
     throw new Error(
       'The 5 numbers must be different.'
     );
   }
 
-  return [...nums].sort(
+  return [...numbers].sort(
     (a, b) => a - b
-  );
-}
-
-
-function sameNumbers(a, b) {
-  const aa =
-    Array.isArray(a)
-      ? a
-          .map(Number)
-          .sort((x, y) => x - y)
-      : [];
-
-  const bb =
-    Array.isArray(b)
-      ? b
-          .map(Number)
-          .sort((x, y) => x - y)
-      : [];
-
-  return (
-    aa.length === 5 &&
-    bb.length === 5 &&
-    aa.every(
-      (n, i) => n === bb[i]
-    )
   );
 }
 
@@ -119,11 +96,20 @@ async function storeDraw(draw) {
         'resolution=merge-duplicates,return=minimal',
 
       body: {
-        draw_id: draw.id,
-        draw_date: draw.date,
-        draw_time: draw.time,
-        numbers: draw.numbers,
-        bulls_eye: draw.bullsEye
+        draw_id:
+          draw.id,
+
+        draw_date:
+          draw.date,
+
+        draw_time:
+          draw.time,
+
+        numbers:
+          draw.numbers,
+
+        bulls_eye:
+          draw.bullsEye
       }
     }
   );
@@ -158,7 +144,9 @@ async function getSafeDraw(
   batchMap
 ) {
   const fromBatch =
-    batchMap.get(Number(id));
+    batchMap.get(
+      Number(id)
+    );
 
   if (fromBatch?.id) {
     return fromBatch;
@@ -166,7 +154,9 @@ async function getSafeDraw(
 
   try {
     const direct =
-      await getDraw(Number(id));
+      await getDraw(
+        Number(id)
+      );
 
     if (
       Number(direct?.id) ===
@@ -174,8 +164,9 @@ async function getSafeDraw(
     ) {
       return direct;
     }
+
   } catch (_) {
-    // Stop safely in caller.
+    // stop safely
   }
 
   return null;
@@ -195,9 +186,14 @@ async function backfillManual(
     !group.active
   ) {
     return {
-      latest: suppliedLatest,
-      processed: 0,
-      stoppedAtMissing: null
+      latest:
+        suppliedLatest,
+
+      processed:
+        0,
+
+      stoppedAtMissing:
+        null
     };
   }
 
@@ -205,7 +201,9 @@ async function backfillManual(
     suppliedLatest ||
     await getDraw(null);
 
-  await storeDraw(latest);
+  await storeDraw(
+    latest
+  );
 
   const after =
     Number(
@@ -236,7 +234,9 @@ async function backfillManual(
   const count =
     end - after;
 
-  if (count <= 0) {
+  if (
+    count <= 0
+  ) {
     return {
       latest,
       processed: 0,
@@ -246,30 +246,40 @@ async function backfillManual(
 
   const ids =
     Array.from(
-      { length: count },
+      {
+        length:
+          count
+      },
+
       (_, i) =>
         after + i + 1
     );
 
-  let batchDraws = [];
+  let batchDraws =
+    [];
 
   try {
     batchDraws =
       (
         await getMany(ids)
       ) || [];
+
   } catch (_) {
-    batchDraws = [];
+    batchDraws =
+      [];
   }
 
   const batchMap =
     new Map(
       batchDraws
-        .filter(d => d?.id)
+        .filter(
+          draw =>
+            draw?.id
+        )
         .map(
-          d => [
-            Number(d.id),
-            d
+          draw => [
+            Number(draw.id),
+            draw
           ]
         )
     );
@@ -299,12 +309,16 @@ async function backfillManual(
       Number(expectedId)
     ) {
       stoppedAtMissing =
-        Number(expectedId);
+        Number(
+          expectedId
+        );
 
       break;
     }
 
-    await storeDraw(draw);
+    await storeDraw(
+      draw
+    );
 
     const result =
       score(
@@ -312,11 +326,6 @@ async function backfillManual(
         group.numbers
       );
 
-    /*
-      Only 3/5 or better is stored.
-      Every confirmed draw still advances
-      the tracking cursor.
-    */
     if (
       Number(
         result?.count || 0
@@ -325,7 +334,8 @@ async function backfillManual(
       await db(
         'tracker_results?on_conflict=group_id,draw_id',
         {
-          method: 'POST',
+          method:
+            'POST',
 
           prefer:
             'resolution=merge-duplicates,return=minimal',
@@ -354,18 +364,22 @@ async function backfillManual(
     }
 
     lastProcessed =
-      Number(draw.id);
+      Number(
+        draw.id
+      );
 
     processed++;
   }
 
   if (
-    lastProcessed > after
+    lastProcessed >
+    after
   ) {
     await db(
       `tracker_groups?id=eq.${group.id}`,
       {
-        method: 'PATCH',
+        method:
+          'PATCH',
 
         prefer:
           'return=minimal',
@@ -400,34 +414,37 @@ async function attachDrawMeta(rows) {
       ? rows
       : [];
 
-  if (!safeRows.length) {
+  if (
+    !safeRows.length
+  ) {
     return [];
   }
 
-  const ids =
-    [
-      ...new Set(
-        safeRows
-          .map(
-            r =>
-              Number(r.draw_id)
-          )
-          .filter(
-            Number.isFinite
-          )
-      )
-    ];
+  const ids = [
+    ...new Set(
+      safeRows
+        .map(
+          row =>
+            Number(
+              row.draw_id
+            )
+        )
+        .filter(
+          Number.isFinite
+        )
+    )
+  ];
 
-  if (!ids.length) {
+  if (
+    !ids.length
+  ) {
     return safeRows;
   }
 
   const draws =
     (
       await db(
-        `hotspot_draws?select=draw_id,draw_date,draw_time&draw_id=in.(${ids.join(
-          ','
-        )})`
+        `hotspot_draws?select=draw_id,draw_date,draw_time&draw_id=in.(${ids.join(',')})`
       )
     ) || [];
 
@@ -435,7 +452,9 @@ async function attachDrawMeta(rows) {
     Object.fromEntries(
       draws.map(
         draw => [
-          Number(draw.draw_id),
+          Number(
+            draw.draw_id
+          ),
           draw
         ]
       )
@@ -447,12 +466,16 @@ async function attachDrawMeta(rows) {
 
       date:
         meta[
-          Number(row.draw_id)
+          Number(
+            row.draw_id
+          )
         ]?.draw_date || '',
 
       time:
         meta[
-          Number(row.draw_id)
+          Number(
+            row.draw_id
+          )
         ]?.draw_time || ''
     })
   );
@@ -460,20 +483,7 @@ async function attachDrawMeta(rows) {
 
 
 /* =========================================================
-   READ RESULTS
-
-   IMPORTANT:
-
-   trackingLastSeenDrawId =
-   latest sequential draw checked.
-
-   lastSeenDrawId =
-   newest 3/5, 4/5 or 5/5.
-
-   bestResult =
-   highest historical result ever achieved.
-
-   Best and Last Seen are independent.
+   READ MANUAL RESULTS
 ========================================================= */
 
 async function readManual(
@@ -484,10 +494,6 @@ async function readManual(
     return null;
   }
 
-  /*
-    Latest 100 strong results.
-    Newest first.
-  */
   let recentRows =
     (
       await db(
@@ -495,15 +501,6 @@ async function readManual(
       )
     ) || [];
 
-
-  /*
-    Best historical result.
-
-    Priority:
-    5/5 before 4/5 before 3/5.
-    If there are several with same hit count,
-    newest one is selected.
-  */
   const bestRows =
     (
       await db(
@@ -512,23 +509,13 @@ async function readManual(
     ) || [];
 
   const bestRaw =
-    bestRows[0] || null;
+    bestRows[0] ||
+    null;
 
-
-  /*
-    Last Seen MUST come only from newest
-    chronological strong result.
-  */
   const lastStrongRaw =
-    recentRows[0] || null;
+    recentRows[0] ||
+    null;
 
-
-  /*
-    If historical Best is older than the last
-    100 results, add it to matches so the
-    existing frontend Best calculation still
-    sees the true historical maximum.
-  */
   if (
     bestRaw &&
     !recentRows.some(
@@ -543,44 +530,36 @@ async function readManual(
     ];
   }
 
-
-  /*
-    Keep visible matches chronological,
-    newest first.
-  */
   recentRows.sort(
     (a, b) =>
       Number(b.draw_id) -
       Number(a.draw_id)
   );
 
-
   const rowsWithMeta =
     await attachDrawMeta(
       recentRows
     );
 
-
   const strongMetaRows =
-    await attachDrawMeta(
-      [
-        ...(lastStrongRaw
+    await attachDrawMeta([
+      ...(
+        lastStrongRaw
           ? [lastStrongRaw]
-          : []),
+          : []
+      ),
 
-        ...(
-          bestRaw &&
-          (
-            !lastStrongRaw ||
-            Number(bestRaw.draw_id) !==
-            Number(lastStrongRaw.draw_id)
-          )
-            ? [bestRaw]
-            : []
+      ...(
+        bestRaw &&
+        (
+          !lastStrongRaw ||
+          Number(bestRaw.draw_id) !==
+          Number(lastStrongRaw.draw_id)
         )
-      ]
-    );
-
+          ? [bestRaw]
+          : []
+      )
+    ]);
 
   const metaById =
     Object.fromEntries(
@@ -591,7 +570,6 @@ async function readManual(
         ]
       )
     );
-
 
   const lastStrong =
     lastStrongRaw
@@ -605,7 +583,6 @@ async function readManual(
         )
       : null;
 
-
   const best =
     bestRaw
       ? (
@@ -617,7 +594,6 @@ async function readManual(
           bestRaw
         )
       : null;
-
 
   return {
     id:
@@ -636,26 +612,20 @@ async function readManual(
         : [],
 
     active:
-      Boolean(group.active),
+      Boolean(
+        group.active
+      ),
 
     startDrawId:
       group.start_draw_id,
 
-
-    /*
-      Latest sequential draw checked.
-    */
     trackingLastSeenDrawId:
       group.last_seen_draw_id,
 
-
-    /*
-      Latest 3/5+ result.
-    */
     lastSeenDrawId:
       lastStrong?.draw_id
-      ?? null,
-
+      ??
+      null,
 
     lastSeenResult:
       lastStrong
@@ -691,12 +661,6 @@ async function readManual(
           }
         : null,
 
-
-    /*
-      True historical Best.
-      This never falls from 4/5 to 3/5,
-      or from 5/5 to anything lower.
-    */
     bestHit:
       best
         ? Number(
@@ -704,11 +668,10 @@ async function readManual(
           )
         : 0,
 
-
     bestDrawId:
       best?.draw_id
-      ?? null,
-
+      ??
+      null,
 
     bestResult:
       best
@@ -744,15 +707,9 @@ async function readManual(
           }
         : null,
 
-
     createdAt:
       group.created_at,
 
-    /*
-      Contains latest strong results plus
-      historical Best if Best is older
-      than the latest 100.
-    */
     matches:
       rowsWithMeta
   };
@@ -781,8 +738,26 @@ async function readAllManuals() {
 
 
 /* =========================================================
-   START
+   START = NEW DAILY CYCLE
 ========================================================= */
+
+/*
+  IMPORTANT:
+
+  Every time Start is pressed:
+
+  - The numbers currently entered are kept/used.
+  - Previous cycle results are deleted.
+  - Best becomes 0/5.
+  - 3/5+ count becomes 0.
+  - Last Seen becomes empty.
+  - start_draw_id becomes the latest draw at that moment.
+  - last_seen_draw_id becomes the same latest draw.
+  - Only future draws are counted.
+
+  The numbers remain stored in tracker_groups so they
+  appear again in the boxes, but the boxes remain editable.
+*/
 
 async function startManual(
   slot,
@@ -791,145 +766,43 @@ async function startManual(
   const latest =
     await getDraw(null);
 
-  await storeDraw(latest);
+  await storeDraw(
+    latest
+  );
 
   const old =
-    await getManual(slot);
-
-
-  /*
-    Same numbers already active.
-  */
-  if (
-    old &&
-    old.active &&
-    sameNumbers(
-      old.numbers,
-      numbers
-    )
-  ) {
-    const sync =
-      await backfillManual(
-        old,
-        latest
-      );
-
-    const manuals =
-      await readAllManuals();
-
-    return {
-      ok: true,
-      unchanged: true,
-      resumed: false,
-
-      message:
-        'These numbers are already being tracked. Original start draw was preserved.',
-
-      manuals,
-
-      manual:
-        manuals[
-          slot - 1
-        ],
-
-      processed:
-        sync.processed,
-
-      stoppedAtMissing:
-        sync.stoppedAtMissing,
-
-      latest: {
-        id:
-          latest.id,
-
-        date:
-          latest.date,
-
-        time:
-          latest.time
-      }
-    };
-  }
-
-
-  /*
-    Same numbers but previously stopped.
-  */
-  if (
-    old &&
-    !old.active &&
-    sameNumbers(
-      old.numbers,
-      numbers
-    )
-  ) {
-    await db(
-      `tracker_groups?id=eq.${old.id}`,
-      {
-        method: 'PATCH',
-
-        prefer:
-          'return=minimal',
-
-        body: {
-          active: true,
-
-          last_seen_draw_id:
-            latest.id
-        }
-      }
+    await getManual(
+      slot
     );
 
-    const manuals =
-      await readAllManuals();
-
-    return {
-      ok: true,
-      unchanged: false,
-      resumed: true,
-
-      message:
-        'Manual tracking resumed. Previous results were preserved.',
-
-      manuals,
-
-      manual:
-        manuals[
-          slot - 1
-        ],
-
-      latest: {
-        id:
-          latest.id,
-
-        date:
-          latest.date,
-
-        time:
-          latest.time
-      }
-    };
-  }
-
-
-  /*
-    Different numbers in existing slot.
-  */
   if (old) {
+
+    /*
+      Remove ONLY previous-cycle results.
+      The group itself stays, so its numbers
+      remain stored and can be shown again.
+    */
     await db(
       `tracker_results?group_id=eq.${old.id}`,
       {
-        method: 'DELETE',
+        method:
+          'DELETE',
 
         prefer:
           'return=minimal'
       }
     );
 
+    /*
+      Start a completely fresh cycle,
+      whether the numbers are the same
+      or were edited.
+    */
     await db(
       `tracker_groups?id=eq.${old.id}`,
       {
-        method: 'PATCH',
+        method:
+          'PATCH',
 
         prefer:
           'return=minimal',
@@ -937,7 +810,8 @@ async function startManual(
         body: {
           numbers,
 
-          active: true,
+          active:
+            true,
 
           start_draw_id:
             latest.id,
@@ -950,24 +824,25 @@ async function startManual(
 
   } else {
 
-    /*
-      Empty manual slot.
-    */
     await db(
       'tracker_groups',
       {
-        method: 'POST',
+        method:
+          'POST',
 
         prefer:
           'return=representation',
 
         body: {
           name:
-            getManualName(slot),
+            getManualName(
+              slot
+            ),
 
           numbers,
 
-          active: true,
+          active:
+            true,
 
           start_draw_id:
             latest.id,
@@ -983,12 +858,20 @@ async function startManual(
     await readAllManuals();
 
   return {
-    ok: true,
-    unchanged: false,
-    resumed: false,
+    ok:
+      true,
+
+    newCycle:
+      true,
+
+    unchanged:
+      false,
+
+    resumed:
+      false,
 
     message:
-      'Manual tracking started. Only future draws will be counted.',
+      'New manual cycle started. Previous cycle results were reset. Only future draws will be counted.',
 
     manuals,
 
@@ -996,6 +879,12 @@ async function startManual(
       manuals[
         slot - 1
       ],
+
+    processed:
+      0,
+
+    stoppedAtMissing:
+      null,
 
     latest: {
       id:
@@ -1017,14 +906,17 @@ async function startManual(
 
 async function stopManual(slot) {
   const group =
-    await getManual(slot);
+    await getManual(
+      slot
+    );
 
   if (!group) {
     const manuals =
       await readAllManuals();
 
     return {
-      ok: true,
+      ok:
+        true,
 
       message:
         'No manual group exists in this slot.',
@@ -1047,11 +939,15 @@ async function stopManual(slot) {
   let stoppedAtMissing =
     null;
 
-  if (group.active) {
+  if (
+    group.active
+  ) {
     latest =
       await getDraw(null);
 
-    await storeDraw(latest);
+    await storeDraw(
+      latest
+    );
 
     const sync =
       await backfillManual(
@@ -1068,13 +964,15 @@ async function stopManual(slot) {
     await db(
       `tracker_groups?id=eq.${group.id}`,
       {
-        method: 'PATCH',
+        method:
+          'PATCH',
 
         prefer:
           'return=minimal',
 
         body: {
-          active: false
+          active:
+            false
         }
       }
     );
@@ -1084,7 +982,8 @@ async function stopManual(slot) {
     await readAllManuals();
 
   return {
-    ok: true,
+    ok:
+      true,
 
     message:
       'Manual tracking stopped. Existing results were kept.',
@@ -1123,23 +1022,32 @@ async function stopManual(slot) {
 
 async function clearManual(slot) {
   const group =
-    await getManual(slot);
+    await getManual(
+      slot
+    );
 
   if (group) {
+
     await db(
       `tracker_results?group_id=eq.${group.id}`,
       {
-        method: 'DELETE',
+        method:
+          'DELETE',
 
         prefer:
           'return=minimal'
       }
     );
 
+    /*
+      Clear removes everything,
+      including the saved numbers.
+    */
     await db(
       `tracker_groups?id=eq.${group.id}`,
       {
-        method: 'DELETE',
+        method:
+          'DELETE',
 
         prefer:
           'return=minimal'
@@ -1151,7 +1059,8 @@ async function clearManual(slot) {
     await readAllManuals();
 
   return {
-    ok: true,
+    ok:
+      true,
 
     message:
       'Manual group cleared.',
@@ -1195,7 +1104,8 @@ async function getManualState() {
   let processed =
     0;
 
-  const missing = [];
+  const missing =
+    [];
 
   if (
     activeGroups.length
@@ -1203,7 +1113,9 @@ async function getManualState() {
     latest =
       await getDraw(null);
 
-    await storeDraw(latest);
+    await storeDraw(
+      latest
+    );
 
     for (
       const group
@@ -1238,12 +1150,14 @@ async function getManualState() {
     await readAllManuals();
 
   return {
-    ok: true,
+    ok:
+      true,
 
     manuals,
 
     manual:
-      manuals[0] || null,
+      manuals[0] ||
+      null,
 
     processed,
 
@@ -1296,11 +1210,13 @@ async function handler(
 
       const slot =
         normalizeSlot(
-          req.body?.slot ?? 1
+          req.body?.slot ??
+          1
         );
 
       if (
-        action === 'start'
+        action ===
+        'start'
       ) {
         const numbers =
           validateNumbers(
@@ -1315,35 +1231,49 @@ async function handler(
 
         return res
           .status(200)
-          .json(result);
+          .json(
+            result
+          );
       }
 
       if (
-        action === 'stop'
+        action ===
+        'stop'
       ) {
         const result =
-          await stopManual(slot);
+          await stopManual(
+            slot
+          );
 
         return res
           .status(200)
-          .json(result);
+          .json(
+            result
+          );
       }
 
       if (
-        action === 'clear'
+        action ===
+        'clear'
       ) {
         const result =
-          await clearManual(slot);
+          await clearManual(
+            slot
+          );
 
         return res
           .status(200)
-          .json(result);
+          .json(
+            result
+          );
       }
 
       return res
         .status(400)
         .json({
-          ok: false,
+          ok:
+            false,
+
           error:
             'Unknown manual action.'
         });
@@ -1358,13 +1288,17 @@ async function handler(
 
       return res
         .status(200)
-        .json(state);
+        .json(
+          state
+        );
     }
 
     return res
       .status(405)
       .json({
-        ok: false,
+        ok:
+          false,
+
         error:
           'Method not allowed'
       });
@@ -1379,7 +1313,8 @@ async function handler(
     return res
       .status(500)
       .json({
-        ok: false,
+        ok:
+          false,
 
         error:
           error?.message ||
