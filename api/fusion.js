@@ -4,18 +4,23 @@ const { getDraw, getMany, db, score } = require('./lib');
 
 const SOURCE_NAMES = ['MANUAL Group', 'MANUAL Group 2'];
 const GROUP_NAME = 'MANUAL Group 3';
+
 const MAX_BACKFILL = 80;
 const MAX_ANALYSIS_DRAWS = 500;
 const MIN_ANALYSIS_DRAWS = 20;
 const VALIDATION_RATIO = 0.30;
 const RECENT_WINDOW = 40;
 
-const nums = v => Array.isArray(v)
-  ? v.map(Number).filter(Number.isFinite)
-  : [];
+
+const nums = v =>
+  Array.isArray(v)
+    ? v.map(Number).filter(Number.isFinite)
+    : [];
+
 
 const uniqueSorted = v =>
-  [...new Set(nums(v))].sort((a, b) => a - b);
+  [...new Set(nums(v))]
+    .sort((a, b) => a - b);
 
 
 function sameNumbers(a, b) {
@@ -31,12 +36,15 @@ function sameNumbers(a, b) {
 
 
 async function storeDraw(draw) {
-  if (!draw?.id) return;
+  if (!draw?.id) {
+    return;
+  }
 
   await db(
     'hotspot_draws?on_conflict=draw_id',
     {
       method: 'POST',
+
       prefer:
         'resolution=merge-duplicates,return=minimal',
 
@@ -74,12 +82,12 @@ async function safeDraw(id, map) {
   }
 
   try {
-    const d =
+    const draw =
       await getDraw(Number(id));
 
     return (
-      Number(d?.id) === Number(id)
-        ? d
+      Number(draw?.id) === Number(id)
+        ? draw
         : null
     );
 
@@ -101,14 +109,11 @@ async function backfill(
     };
   }
 
-
   const latest =
     suppliedLatest ||
     await getDraw(null);
 
-
   await storeDraw(latest);
-
 
   const after =
     Number(
@@ -116,7 +121,6 @@ async function backfill(
       group.start_draw_id ??
       latest.id
     );
-
 
   if (
     !Number.isFinite(after) ||
@@ -129,13 +133,11 @@ async function backfill(
     };
   }
 
-
   const end =
     Math.min(
       Number(latest.id),
       after + MAX_BACKFILL
     );
-
 
   const ids =
     Array.from(
@@ -143,32 +145,28 @@ async function backfill(
       (_, i) => after + i + 1
     );
 
-
   let batch = [];
 
   try {
     batch =
       (await getMany(ids)) || [];
-  } catch {}
-
+  } catch {
+    batch = [];
+  }
 
   const map =
     new Map(
       batch
         .filter(d => d?.id)
-        .map(
-          d => [
-            Number(d.id),
-            d
-          ]
-        )
+        .map(d => [
+          Number(d.id),
+          d
+        ])
     );
-
 
   let processed = 0;
   let last = after;
   let stoppedAtMissing = null;
-
 
   for (const id of ids) {
 
@@ -177,7 +175,6 @@ async function backfill(
         id,
         map
       );
-
 
     if (
       !draw ||
@@ -189,20 +186,17 @@ async function backfill(
       break;
     }
 
-
     await storeDraw(draw);
 
-
-    const r =
+    const result =
       score(
         draw,
         group.numbers
       );
 
-
     if (
       Number(
-        r?.count || 0
+        result?.count || 0
       ) >= 3
     ) {
       await db(
@@ -214,28 +208,16 @@ async function backfill(
             'resolution=merge-duplicates,return=minimal',
 
           body: {
-            group_id:
-              group.id,
-
-            draw_id:
-              draw.id,
-
-            hit_count:
-              r.count,
-
-            hit_numbers:
-              r.hit,
-
-            bulls_eye:
-              r.bullsEye,
-
-            bulls_eye_match:
-              r.bullsEyeMatch
+            group_id: group.id,
+            draw_id: draw.id,
+            hit_count: result.count,
+            hit_numbers: result.hit,
+            bulls_eye: result.bullsEye,
+            bulls_eye_match: result.bullsEyeMatch
           }
         }
       );
     }
-
 
     last =
       Number(draw.id);
@@ -243,9 +225,7 @@ async function backfill(
     processed++;
   }
 
-
   if (last > after) {
-
     await db(
       `tracker_groups?id=eq.${group.id}`,
       {
@@ -255,17 +235,14 @@ async function backfill(
           'return=minimal',
 
         body: {
-          last_seen_draw_id:
-            last
+          last_seen_draw_id: last
         }
       }
     );
 
-
     group.last_seen_draw_id =
       last;
   }
-
 
   return {
     processed,
@@ -282,18 +259,16 @@ async function attachMeta(rows) {
       ? rows
       : [];
 
-
   if (!rows.length) {
     return [];
   }
-
 
   const ids = [
     ...new Set(
       rows
         .map(
-          r =>
-            Number(r.draw_id)
+          row =>
+            Number(row.draw_id)
         )
         .filter(
           Number.isFinite
@@ -301,11 +276,9 @@ async function attachMeta(rows) {
     )
   ];
 
-
   if (!ids.length) {
     return rows;
   }
-
 
   const draws =
     (
@@ -314,30 +287,28 @@ async function attachMeta(rows) {
       )
     ) || [];
 
-
   const meta =
     Object.fromEntries(
       draws.map(
-        d => [
-          Number(d.draw_id),
-          d
+        draw => [
+          Number(draw.draw_id),
+          draw
         ]
       )
     );
 
-
   return rows.map(
-    r => ({
-      ...r,
+    row => ({
+      ...row,
 
       date:
         meta[
-          Number(r.draw_id)
+          Number(row.draw_id)
         ]?.draw_date || '',
 
       time:
         meta[
-          Number(r.draw_id)
+          Number(row.draw_id)
         ]?.draw_time || ''
     })
   );
@@ -349,7 +320,6 @@ async function readFusion(group) {
     return null;
   }
 
-
   const rows =
     (
       await db(
@@ -357,27 +327,17 @@ async function readFusion(group) {
       )
     ) || [];
 
-
   const withMeta =
     await attachMeta(rows);
-
 
   const last =
     withMeta[0] || null;
 
-
   return {
-    id:
-      group.id,
-
-    slot:
-      3,
-
-    name:
-      group.name,
-
-    generated:
-      true,
+    id: group.id,
+    slot: 3,
+    name: group.name,
+    generated: true,
 
     numbers:
       nums(group.numbers),
@@ -438,37 +398,31 @@ async function readFusion(group) {
 function combos5(values) {
   const out = [];
 
-
   for (
     let a = 0;
     a < values.length - 4;
     a++
   ) {
-
     for (
       let b = a + 1;
       b < values.length - 3;
       b++
     ) {
-
       for (
         let c = b + 1;
         c < values.length - 2;
         c++
       ) {
-
         for (
           let d = c + 1;
           d < values.length - 1;
           d++
         ) {
-
           for (
             let e = d + 1;
             e < values.length;
             e++
           ) {
-
             out.push([
               values[a],
               values[b],
@@ -482,7 +436,6 @@ function combos5(values) {
     }
   }
 
-
   return out;
 }
 
@@ -491,17 +444,18 @@ function hitCount(
   drawNumbers,
   combo
 ) {
-  const s =
+  const drawSet =
     new Set(
       nums(drawNumbers)
     );
 
-
   return combo.reduce(
-    (n, x) =>
-      n +
+    (count, number) =>
+      count +
       (
-        s.has(Number(x))
+        drawSet.has(
+          Number(number)
+        )
           ? 1
           : 0
       ),
@@ -515,16 +469,15 @@ function containsAll(
   drawNumbers,
   values
 ) {
-  const s =
+  const set =
     new Set(
       nums(drawNumbers)
     );
 
-
   return values.every(
-    n =>
-      s.has(
-        Number(n)
+    number =>
+      set.has(
+        Number(number)
       )
   );
 }
@@ -532,30 +485,33 @@ function containsAll(
 
 function coverage(
   combo,
-  g1,
-  g2
+  group1,
+  group2
 ) {
   const a =
-    new Set(nums(g1));
+    new Set(
+      nums(group1)
+    );
 
   const b =
-    new Set(nums(g2));
-
+    new Set(
+      nums(group2)
+    );
 
   return {
     from1:
       combo.filter(
-        n =>
+        number =>
           a.has(
-            Number(n)
+            Number(number)
           )
       ).length,
 
     from2:
       combo.filter(
-        n =>
+        number =>
           b.has(
-            Number(n)
+            Number(number)
           )
       ).length
   };
@@ -569,15 +525,16 @@ function buildNumberStats(
   const map =
     new Map();
 
-
   for (
     const number
     of candidates
   ) {
-
     map.set(
       Number(number),
       {
+        number:
+          Number(number),
+
         count: 0,
         weightedCount: 0,
         recentCount: 0,
@@ -587,33 +544,29 @@ function buildNumberStats(
     );
   }
 
-
   const total =
     Math.max(
       1,
       draws.length
     );
 
-
   draws.forEach(
     (draw, index) => {
 
-      const s =
+      const drawSet =
         new Set(
           nums(
             draw.numbers
           )
         );
 
-
       const weight =
-        .45 +
-        .55 *
+        0.45 +
+        0.55 *
         (
           (index + 1) /
           total
         );
-
 
       const segment =
         Math.min(
@@ -626,219 +579,32 @@ function buildNumberStats(
             )
           )
         );
-
 
       for (
         const number
         of candidates
       ) {
-
         if (
-          !s.has(
+          drawSet.has(
             Number(number)
           )
         ) {
-          continue;
-        }
-
-
-        const stat =
-          map.get(
-            Number(number)
-          );
-
-
-        stat.count++;
-
-        stat.weightedCount +=
-          weight;
-
-        stat.lastIndex =
-          index;
-
-        stat.segments.add(
-          segment
-        );
-
-
-        if (
-          index >=
-          Math.max(
-            0,
-            total -
-            RECENT_WINDOW
-          )
-        ) {
-          stat.recentCount++;
-        }
-      }
-    }
-  );
-
-
-  for (
-    const stat
-    of map.values()
-  ) {
-
-    const recency =
-      stat.lastIndex >= 0
-        ? (
-            stat.lastIndex + 1
-          ) /
-          total
-        : 0;
-
-
-    stat.segmentCount =
-      stat.segments.size;
-
-
-    stat.score =
-      stat.count * 3
-      +
-      stat.weightedCount * 5
-      +
-      stat.recentCount * 6
-      +
-      stat.segmentCount * 8
-      +
-      recency * 10;
-
-
-    delete stat.segments;
-  }
-
-
-  return map;
-}
-
-
-const pairKey =
-  (a, b) =>
-    [
-      Number(a),
-      Number(b)
-    ]
-      .sort(
-        (x, y) =>
-          x - y
-      )
-      .join(':');
-
-
-function buildPairStats(
-  candidates,
-  draws
-) {
-  const map =
-    new Map();
-
-
-  for (
-    let i = 0;
-    i < candidates.length;
-    i++
-  ) {
-
-    for (
-      let j = i + 1;
-      j < candidates.length;
-      j++
-    ) {
-
-      map.set(
-        pairKey(
-          candidates[i],
-          candidates[j]
-        ),
-        {
-          count: 0,
-          weightedCount: 0,
-          recentCount: 0,
-          segments: new Set()
-        }
-      );
-    }
-  }
-
-
-  const total =
-    Math.max(
-      1,
-      draws.length
-    );
-
-
-  draws.forEach(
-    (draw, index) => {
-
-      const weight =
-        .45 +
-        .55 *
-        (
-          (index + 1) /
-          total
-        );
-
-
-      const segment =
-        Math.min(
-          3,
-          Math.floor(
-            index /
-            Math.max(
-              1,
-              total / 4
-            )
-          )
-        );
-
-
-      for (
-        let i = 0;
-        i < candidates.length;
-        i++
-      ) {
-
-        for (
-          let j = i + 1;
-          j < candidates.length;
-          j++
-        ) {
-
-          const a =
-            candidates[i];
-
-          const b =
-            candidates[j];
-
-
-          if (
-            !containsAll(
-              draw.numbers,
-              [a, b]
-            )
-          ) {
-            continue;
-          }
-
-
           const stat =
             map.get(
-              pairKey(a, b)
+              Number(number)
             );
-
 
           stat.count++;
 
           stat.weightedCount +=
             weight;
 
+          stat.lastIndex =
+            index;
+
           stat.segments.add(
             segment
           );
-
 
           if (
             index >=
@@ -855,114 +621,83 @@ function buildPairStats(
     }
   );
 
-
   for (
     const stat
     of map.values()
   ) {
+    const recency =
+      stat.lastIndex >= 0
+        ? (
+            stat.lastIndex + 1
+          ) /
+          total
+        : 0;
 
     stat.segmentCount =
       stat.segments.size;
 
-
     stat.score =
-      stat.count * 4
+      stat.count * 3
       +
       stat.weightedCount * 5
       +
       stat.recentCount * 6
       +
-      stat.segmentCount * 7;
-
+      stat.segmentCount * 8
+      +
+      recency * 10;
 
     delete stat.segments;
   }
-
 
   return map;
 }
 
 
-const tripleKey =
-  (a, b, c) =>
-    [
-      Number(a),
-      Number(b),
-      Number(c)
-    ]
-      .sort(
-        (x, y) =>
-          x - y
-      )
-      .join(':');
-
-
-function comboTriples(combo) {
-  const out = [];
-
-
-  for (
-    let a = 0;
-    a < combo.length - 2;
-    a++
-  ) {
-
-    for (
-      let b = a + 1;
-      b < combo.length - 1;
-      b++
-    ) {
-
-      for (
-        let c = b + 1;
-        c < combo.length;
-        c++
-      ) {
-
-        out.push([
-          combo[a],
-          combo[b],
-          combo[c]
-        ]);
-      }
-    }
-  }
-
-
-  return out;
+function pairKey(a, b) {
+  return [
+    Number(a),
+    Number(b)
+  ]
+    .sort(
+      (x, y) =>
+        x - y
+    )
+    .join(':');
 }
 
 
-function buildTripleStats(
+function buildPairStats(
   candidates,
   draws
 ) {
   const map =
     new Map();
 
-
-  const triples =
-    comboTriples(
-      candidates
-    );
-
-
   for (
-    const t
-    of triples
+    let i = 0;
+    i < candidates.length;
+    i++
   ) {
-
-    map.set(
-      tripleKey(...t),
-      {
-        count: 0,
-        weightedCount: 0,
-        recentCount: 0,
-        segments: new Set()
-      }
-    );
+    for (
+      let j = i + 1;
+      j < candidates.length;
+      j++
+    ) {
+      map.set(
+        pairKey(
+          candidates[i],
+          candidates[j]
+        ),
+        {
+          count: 0,
+          weightedCount: 0,
+          recentCount: 0,
+          segments: new Set()
+        }
+      );
+    }
   }
-
 
   const total =
     Math.max(
@@ -970,18 +705,16 @@ function buildTripleStats(
       draws.length
     );
 
-
   draws.forEach(
     (draw, index) => {
 
       const weight =
-        .45 +
-        .55 *
+        0.45 +
+        0.55 *
         (
           (index + 1) /
           total
         );
-
 
       const segment =
         Math.min(
@@ -995,61 +728,238 @@ function buildTripleStats(
           )
         );
 
-
       for (
-        const t
-        of triples
+        let i = 0;
+        i < candidates.length;
+        i++
       ) {
-
-        if (
-          !containsAll(
-            draw.numbers,
-            t
-          )
+        for (
+          let j = i + 1;
+          j < candidates.length;
+          j++
         ) {
-          continue;
-        }
+          const a =
+            candidates[i];
 
+          const b =
+            candidates[j];
 
-        const stat =
-          map.get(
-            tripleKey(...t)
-          );
+          if (
+            containsAll(
+              draw.numbers,
+              [a, b]
+            )
+          ) {
+            const stat =
+              map.get(
+                pairKey(
+                  a,
+                  b
+                )
+              );
 
+            stat.count++;
 
-        stat.count++;
+            stat.weightedCount +=
+              weight;
 
-        stat.weightedCount +=
-          weight;
+            stat.segments.add(
+              segment
+            );
 
-        stat.segments.add(
-          segment
-        );
-
-
-        if (
-          index >=
-          Math.max(
-            0,
-            total -
-            RECENT_WINDOW
-          )
-        ) {
-          stat.recentCount++;
+            if (
+              index >=
+              Math.max(
+                0,
+                total -
+                RECENT_WINDOW
+              )
+            ) {
+              stat.recentCount++;
+            }
+          }
         }
       }
     }
   );
 
+  for (
+    const stat
+    of map.values()
+  ) {
+    stat.segmentCount =
+      stat.segments.size;
+
+    stat.score =
+      stat.count * 4
+      +
+      stat.weightedCount * 5
+      +
+      stat.recentCount * 6
+      +
+      stat.segmentCount * 7;
+
+    delete stat.segments;
+  }
+
+  return map;
+}
+
+
+function tripleKey(
+  a,
+  b,
+  c
+) {
+  return [
+    Number(a),
+    Number(b),
+    Number(c)
+  ]
+    .sort(
+      (x, y) =>
+        x - y
+    )
+    .join(':');
+}
+
+
+function comboTriples(combo) {
+  const out = [];
+
+  for (
+    let a = 0;
+    a < combo.length - 2;
+    a++
+  ) {
+    for (
+      let b = a + 1;
+      b < combo.length - 1;
+      b++
+    ) {
+      for (
+        let c = b + 1;
+        c < combo.length;
+        c++
+      ) {
+        out.push([
+          combo[a],
+          combo[b],
+          combo[c]
+        ]);
+      }
+    }
+  }
+
+  return out;
+}
+
+
+function buildTripleStats(
+  candidates,
+  draws
+) {
+  const map =
+    new Map();
+
+  const triples =
+    comboTriples(
+      candidates
+    );
+
+  for (
+    const triple
+    of triples
+  ) {
+    map.set(
+      tripleKey(
+        ...triple
+      ),
+      {
+        count: 0,
+        weightedCount: 0,
+        recentCount: 0,
+        segments: new Set()
+      }
+    );
+  }
+
+  const total =
+    Math.max(
+      1,
+      draws.length
+    );
+
+  draws.forEach(
+    (draw, index) => {
+
+      const weight =
+        0.45 +
+        0.55 *
+        (
+          (index + 1) /
+          total
+        );
+
+      const segment =
+        Math.min(
+          3,
+          Math.floor(
+            index /
+            Math.max(
+              1,
+              total / 4
+            )
+          )
+        );
+
+      for (
+        const triple
+        of triples
+      ) {
+        if (
+          containsAll(
+            draw.numbers,
+            triple
+          )
+        ) {
+          const stat =
+            map.get(
+              tripleKey(
+                ...triple
+              )
+            );
+
+          stat.count++;
+
+          stat.weightedCount +=
+            weight;
+
+          stat.segments.add(
+            segment
+          );
+
+          if (
+            index >=
+            Math.max(
+              0,
+              total -
+              RECENT_WINDOW
+            )
+          ) {
+            stat.recentCount++;
+          }
+        }
+      }
+    }
+  );
 
   for (
     const stat
     of map.values()
   ) {
-
     stat.segmentCount =
       stat.segments.size;
-
 
     stat.score =
       stat.count * 8
@@ -1060,10 +970,8 @@ function buildTripleStats(
       +
       stat.segmentCount * 12;
 
-
     delete stat.segments;
   }
-
 
   return map;
 }
@@ -1082,19 +990,18 @@ function resultProfile(
   let totalHits = 0;
   let weightedStrong = 0;
   let recentStrong = 0;
+
   let longestDry = 0;
   let currentDry = 0;
 
   const strongSegments =
     new Set();
 
-
   const total =
     Math.max(
       1,
       draws.length
     );
-
 
   draws.forEach(
     (draw, index) => {
@@ -1105,19 +1012,16 @@ function resultProfile(
           combo
         );
 
-
       totalHits +=
         hits;
 
-
       const weight =
-        .5 +
-        .5 *
+        0.50 +
+        0.50 *
         (
           (index + 1) /
           total
         );
-
 
       const segment =
         Math.min(
@@ -1131,9 +1035,7 @@ function resultProfile(
           )
         );
 
-
       if (hits >= 3) {
-
         threePlus++;
 
         strongSegments.add(
@@ -1143,7 +1045,6 @@ function resultProfile(
         currentDry = 0;
 
       } else {
-
         currentDry++;
 
         longestDry =
@@ -1153,18 +1054,14 @@ function resultProfile(
           );
       }
 
-
       if (hits === 3) {
-
         threeOnly++;
 
         weightedStrong +=
           5 * weight;
       }
 
-
       if (hits === 4) {
-
         fourOnly++;
         fourPlus++;
 
@@ -1172,16 +1069,13 @@ function resultProfile(
           32 * weight;
       }
 
-
       if (hits >= 5) {
-
         exact5++;
         fourPlus++;
 
         weightedStrong +=
           180 * weight;
       }
-
 
       if (
         index >=
@@ -1191,7 +1085,6 @@ function resultProfile(
           RECENT_WINDOW
         )
       ) {
-
         if (hits === 3) {
           recentStrong += 6;
         }
@@ -1206,7 +1099,6 @@ function resultProfile(
       }
     }
   );
-
 
   return {
     exact5,
@@ -1241,33 +1133,28 @@ function synergyScore(
   let pairScore = 0;
   let tripleScore = 0;
 
-
   for (
-    const n
+    const number
     of combo
   ) {
-
     numberScore +=
       Number(
         numberStats.get(
-          Number(n)
+          Number(number)
         )?.score || 0
       );
   }
-
 
   for (
     let i = 0;
     i < combo.length;
     i++
   ) {
-
     for (
       let j = i + 1;
       j < combo.length;
       j++
     ) {
-
       pairScore +=
         Number(
           pairStats.get(
@@ -1280,20 +1167,19 @@ function synergyScore(
     }
   }
 
-
   for (
-    const t
+    const triple
     of comboTriples(combo)
   ) {
-
     tripleScore +=
       Number(
         tripleStats.get(
-          tripleKey(...t)
+          tripleKey(
+            ...triple
+          )
         )?.score || 0
       );
   }
-
 
   return {
     numberScore,
@@ -1314,7 +1200,6 @@ function splitHistory(draws) {
   const total =
     draws.length;
 
-
   let validationSize =
     Math.max(
       10,
@@ -1323,7 +1208,6 @@ function splitHistory(draws) {
         VALIDATION_RATIO
       )
     );
-
 
   validationSize =
     Math.min(
@@ -1334,14 +1218,12 @@ function splitHistory(draws) {
       )
     );
 
-
   const splitIndex =
     Math.max(
       10,
       total -
       validationSize
     );
-
 
   return {
     train:
@@ -1369,13 +1251,11 @@ function evaluateCombo({
   pairStats,
   tripleStats
 }) {
-
   const full =
     resultProfile(
       combo,
       allDraws
     );
-
 
   const train =
     resultProfile(
@@ -1383,13 +1263,11 @@ function evaluateCombo({
       trainDraws
     );
 
-
   const validation =
     resultProfile(
       combo,
       validationDraws
     );
-
 
   const source =
     coverage(
@@ -1397,7 +1275,6 @@ function evaluateCombo({
       group1,
       group2
     );
-
 
   const synergy =
     synergyScore(
@@ -1407,13 +1284,11 @@ function evaluateCombo({
       tripleStats
     );
 
-
   const balance =
     Math.min(
       source.from1,
       source.from2
     );
-
 
   const validationRate =
     validationDraws.length
@@ -1421,20 +1296,17 @@ function evaluateCombo({
         validationDraws.length
       : 0;
 
-
   const trainRate =
     trainDraws.length
       ? train.threePlus /
         trainDraws.length
       : 0;
 
-
   const stabilityGap =
     Math.abs(
       trainRate -
       validationRate
     );
-
 
   const deepScore =
     validation.exact5 * 100000
@@ -1466,7 +1338,6 @@ function evaluateCombo({
     stabilityGap * 5000
     -
     validation.longestDry * 35;
-
 
   return {
     numbers:
@@ -1704,7 +1575,6 @@ function previewRow(
 
 
 async function selectFusion() {
-
   const [
     group1,
     group2
@@ -1715,7 +1585,6 @@ async function selectFusion() {
       )
     );
 
-
   if (
     !group1 ||
     !group2
@@ -1725,18 +1594,15 @@ async function selectFusion() {
     );
   }
 
-
   const n1 =
     uniqueSorted(
       group1.numbers
     );
 
-
   const n2 =
     uniqueSorted(
       group2.numbers
     );
-
 
   if (
     n1.length !== 5 ||
@@ -1747,13 +1613,11 @@ async function selectFusion() {
     );
   }
 
-
   const candidates =
     uniqueSorted([
       ...n1,
       ...n2
     ]);
-
 
   if (
     candidates.length < 5
@@ -1763,15 +1627,12 @@ async function selectFusion() {
     );
   }
 
-
   const latest =
     await getDraw(null);
-
 
   await storeDraw(
     latest
   );
-
 
   const start =
     Math.max(
@@ -1783,7 +1644,6 @@ async function selectFusion() {
         group2.start_draw_id || 0
       )
     );
-
 
   const end =
     Math.min(
@@ -1797,9 +1657,10 @@ async function selectFusion() {
         latest.id
       ),
 
-      Number(latest.id)
+      Number(
+        latest.id
+      )
     );
-
 
   if (
     !Number.isFinite(start) ||
@@ -1811,15 +1672,14 @@ async function selectFusion() {
     );
   }
 
-
   const fromId =
     Math.max(
       start + 1,
+
       end -
       MAX_ANALYSIS_DRAWS +
       1
     );
-
 
   const rows =
     (
@@ -1828,29 +1688,27 @@ async function selectFusion() {
       )
     ) || [];
 
-
   const draws =
     rows
       .filter(
-        r =>
+        row =>
           Array.isArray(
-            r.numbers
+            row.numbers
           )
       )
       .map(
-        r => ({
+        row => ({
           id:
             Number(
-              r.draw_id
+              row.draw_id
             ),
 
           numbers:
             nums(
-              r.numbers
+              row.numbers
             )
         })
       );
-
 
   if (
     draws.length <
@@ -1861,7 +1719,6 @@ async function selectFusion() {
     );
   }
 
-
   const {
     train,
     validation
@@ -1870,13 +1727,11 @@ async function selectFusion() {
       draws
     );
 
-
   const numberStats =
     buildNumberStats(
       candidates,
       train
     );
-
 
   const pairStats =
     buildPairStats(
@@ -1884,39 +1739,34 @@ async function selectFusion() {
       train
     );
 
-
   const tripleStats =
     buildTripleStats(
       candidates,
       train
     );
 
-
   let combinations =
     combos5(
       candidates
     );
 
-
   const balanced =
     combinations.filter(
       combo => {
 
-        const s =
+        const source =
           coverage(
             combo,
             n1,
             n2
           );
 
-
         return (
-          s.from1 >= 2 &&
-          s.from2 >= 2
+          source.from1 >= 2 &&
+          source.from2 >= 2
         );
       }
     );
-
 
   if (
     balanced.length
@@ -1924,7 +1774,6 @@ async function selectFusion() {
     combinations =
       balanced;
   }
-
 
   const ranked =
     combinations
@@ -1959,17 +1808,14 @@ async function selectFusion() {
         rankFusion
       );
 
-
   const best =
     ranked[0];
-
 
   if (!best) {
     throw new Error(
       'Unable to generate Group 3.'
     );
   }
-
 
   return {
     latest,
@@ -1980,10 +1826,10 @@ async function selectFusion() {
       ranked
         .slice(0, 10)
         .map(
-          (item, i) =>
+          (item, index) =>
             previewRow(
               item,
-              i + 1
+              index + 1
             )
         ),
 
@@ -2014,14 +1860,11 @@ async function selectFusion() {
 
 
 async function preview() {
-
   const selection =
     await selectFusion();
 
-
   const current =
     await getFusion();
-
 
   return {
     ok:
@@ -2098,20 +1941,18 @@ async function preview() {
 
 
 async function generate() {
-
   const selection =
     await selectFusion();
 
-
   const selected =
     uniqueSorted(
-      selection.best.numbers
+      selection
+        .best
+        .numbers
     );
-
 
   const old =
     await getFusion();
-
 
   if (
     old?.active &&
@@ -2120,13 +1961,11 @@ async function generate() {
       selected
     )
   ) {
-
     const sync =
       await backfill(
         old,
         selection.latest
       );
-
 
     return {
       ok:
@@ -2184,9 +2023,7 @@ async function generate() {
     };
   }
 
-
   if (old) {
-
     await db(
       `tracker_results?group_id=eq.${old.id}`,
       {
@@ -2197,7 +2034,6 @@ async function generate() {
           'return=minimal'
       }
     );
-
 
     await db(
       `tracker_groups?id=eq.${old.id}`,
@@ -2225,7 +2061,6 @@ async function generate() {
     );
 
   } else {
-
     await db(
       'tracker_groups',
       {
@@ -2255,10 +2090,8 @@ async function generate() {
     );
   }
 
-
   const current =
     await getFusion();
-
 
   return {
     ok:
@@ -2315,10 +2148,8 @@ async function generate() {
 
 
 async function stop() {
-
   const group =
     await getFusion();
-
 
   if (!group) {
     return {
@@ -2333,24 +2164,16 @@ async function stop() {
     };
   }
 
-
-  let latest =
-    null;
-
-  let processed =
-    0;
-
+  let latest = null;
+  let processed = 0;
 
   if (group.active) {
-
     latest =
       await getDraw(null);
-
 
     await storeDraw(
       latest
     );
-
 
     processed =
       (
@@ -2359,7 +2182,6 @@ async function stop() {
           latest
         )
       ).processed;
-
 
     await db(
       `tracker_groups?id=eq.${group.id}`,
@@ -2377,7 +2199,6 @@ async function stop() {
       }
     );
   }
-
 
   return {
     ok:
@@ -2411,13 +2232,10 @@ async function stop() {
 
 
 async function clear() {
-
   const group =
     await getFusion();
 
-
   if (group) {
-
     await db(
       `tracker_results?group_id=eq.${group.id}`,
       {
@@ -2428,7 +2246,6 @@ async function clear() {
           'return=minimal'
       }
     );
-
 
     await db(
       `tracker_groups?id=eq.${group.id}`,
@@ -2441,7 +2258,6 @@ async function clear() {
       }
     );
   }
-
 
   return {
     ok:
@@ -2457,31 +2273,20 @@ async function clear() {
 
 
 async function state() {
-
   const group =
     await getFusion();
 
-
-  let latest =
-    null;
-
-  let processed =
-    0;
-
-  let stoppedAtMissing =
-    null;
-
+  let latest = null;
+  let processed = 0;
+  let stoppedAtMissing = null;
 
   if (group?.active) {
-
     latest =
       await getDraw(null);
-
 
     await storeDraw(
       latest
     );
-
 
     const sync =
       await backfill(
@@ -2489,15 +2294,12 @@ async function state() {
         latest
       );
 
-
     processed =
       sync.processed;
-
 
     stoppedAtMissing =
       sync.stoppedAtMissing;
   }
-
 
   return {
     ok:
@@ -2534,18 +2336,35 @@ async function handler(
   req,
   res
 ) {
-
   res.setHeader(
     'Cache-Control',
     'no-store,max-age=0'
   );
-
 
   try {
 
     if (
       req.method === 'GET'
     ) {
+      const wantsPreview =
+        String(
+          req.query?.preview || ''
+        )
+          .trim()
+          .toLowerCase();
+
+      if (
+        wantsPreview === '1' ||
+        wantsPreview === 'true' ||
+        wantsPreview === 'yes'
+      ) {
+        return res
+          .status(200)
+          .json(
+            await preview()
+          );
+      }
+
       return res
         .status(200)
         .json(
@@ -2557,7 +2376,6 @@ async function handler(
     if (
       req.method === 'POST'
     ) {
-
       const action =
         String(
           req.body?.action ||
@@ -2565,7 +2383,6 @@ async function handler(
         )
           .trim()
           .toLowerCase();
-
 
       if (
         action === 'preview'
@@ -2577,7 +2394,6 @@ async function handler(
           );
       }
 
-
       if (
         action === 'generate'
       ) {
@@ -2587,7 +2403,6 @@ async function handler(
             await generate()
           );
       }
-
 
       if (
         action === 'stop'
@@ -2599,7 +2414,6 @@ async function handler(
           );
       }
 
-
       if (
         action === 'clear'
       ) {
@@ -2609,7 +2423,6 @@ async function handler(
             await clear()
           );
       }
-
 
       return res
         .status(400)
@@ -2640,7 +2453,6 @@ async function handler(
       'Fusion Group API error:',
       error
     );
-
 
     return res
       .status(500)
