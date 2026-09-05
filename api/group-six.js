@@ -1,11 +1,12 @@
 'use strict';
 
 const { db, score } = require('../api/lib');
-const { deepAnalyze50 } = require('./group-five');
+const { deepAnalyze50 } = require('../lib/group-five');
 
 const CONTROL_PREFIX = 'AUTO_CONTROL_';
 const GROUP_NAME = 'AUTO Group Six';
 const ARCHIVE_PREFIX = 'AUTO Group Six Archive ';
+
 const MIN_ANALYSIS_DRAWS = 50;
 const TRACK_DRAWS = 20;
 const PERSISTENCE_SEGMENTS = 4;
@@ -18,32 +19,64 @@ const LEARNER_FORWARD_BLOCK = 20;
 const LEARNER_POOL_SIZE = 14;
 const LEARNER_RECENT = 40;
 
+
 function norm(values) {
   return [...new Set((values || []).map(Number))]
-    .filter(n => Number.isInteger(n) && n >= 1 && n <= 80)
+    .filter(
+      n =>
+        Number.isInteger(n) &&
+        n >= 1 &&
+        n <= 80
+    )
     .sort((a, b) => a - b);
 }
 
+
 function recencyWeight(index, total) {
-  if (total <= 1) return 1;
-  return 1 + index / (total - 1);
-}
+  if (total <= 1) {
+    return 1;
+  }
 
-function segmentForIndex(index, total) {
-  if (total <= 1) return 0;
-
-  return Math.min(
-    PERSISTENCE_SEGMENTS - 1,
-    Math.floor(index * PERSISTENCE_SEGMENTS / total)
+  return (
+    1 +
+    index /
+    (total - 1)
   );
 }
 
+
+function segmentForIndex(index, total) {
+  if (total <= 1) {
+    return 0;
+  }
+
+  return Math.min(
+    PERSISTENCE_SEGMENTS - 1,
+    Math.floor(
+      index *
+      PERSISTENCE_SEGMENTS /
+      total
+    )
+  );
+}
+
+
 function hitCount(draw, numbers) {
-  const set = new Set(norm(draw?.numbers));
+  const set =
+    new Set(
+      norm(
+        draw?.numbers
+      )
+    );
+
   let count = 0;
 
   for (const n of numbers) {
-    if (set.has(Number(n))) {
+    if (
+      set.has(
+        Number(n)
+      )
+    ) {
       count++;
     }
   }
@@ -51,18 +84,26 @@ function hitCount(draw, numbers) {
   return count;
 }
 
+
 function cumulativeWindow(inputDraws) {
   const rows =
     Array.isArray(inputDraws)
       ? [...inputDraws]
       : [];
 
-  return rows.length >= MIN_ANALYSIS_DRAWS
-    ? rows
-    : [];
+  return (
+    rows.length >=
+    MIN_ANALYSIS_DRAWS
+      ? rows
+      : []
+  );
 }
 
-function getWindowEndingAt(draws, endId) {
+
+function getWindowEndingAt(
+  draws,
+  endId
+) {
   return cumulativeWindow(
     (draws || []).filter(
       d =>
@@ -71,6 +112,7 @@ function getWindowEndingAt(draws, endId) {
     )
   );
 }
+
 
 function analysisSizeForGroupStart(
   controlStartId,
@@ -83,15 +125,20 @@ function analysisSizeForGroupStart(
   );
 }
 
+
 function isAlignedGroupStart(
   groupStartId,
   firstSelectionEndId
 ) {
   const start =
-    Number(groupStartId);
+    Number(
+      groupStartId
+    );
 
   const first =
-    Number(firstSelectionEndId);
+    Number(
+      firstSelectionEndId
+    );
 
   if (
     !start ||
@@ -103,8 +150,8 @@ function isAlignedGroupStart(
 
   return (
     (start - first) %
-    TRACK_DRAWS ===
-    0
+    TRACK_DRAWS
+    === 0
   );
 }
 
@@ -129,7 +176,9 @@ async function getControl() {
             r.name || ''
           )
         )
-    ) || null
+    )
+    ||
+    null
   );
 }
 
@@ -171,7 +220,9 @@ async function getCycleDraws(
           control.start_draw_id
         )}&order=draw_id.asc&limit=500`
       )
-    ) || []
+    )
+    ||
+    []
   );
 }
 
@@ -293,30 +344,18 @@ function fullWindowCompanionStats(
       }
 
       const old =
-        map.get(n) ||
+        map.get(n)
+        ||
         {
           number: n,
-
-          count:
-            0,
-
-          weightedCount:
-            0,
-
-          recentCount:
-            0,
-
-          lastIndex:
-            -1,
-
+          count: 0,
+          weightedCount: 0,
+          recentCount: 0,
+          lastIndex: -1,
           segments:
             new Set(),
-
-          coreOverlapHits:
-            0,
-
-          weightedCoreOverlap:
-            0
+          coreOverlapHits: 0,
+          weightedCoreOverlap: 0
         };
 
       old.count++;
@@ -460,32 +499,18 @@ function evaluatePair(
     ]);
 
   if (
-    numbers.length !==
-    5
+    numbers.length !== 5
   ) {
     return null;
   }
 
-  let exact5 =
-    0;
-
-  let fourPlus =
-    0;
-
-  let threePlus =
-    0;
-
-  let weightedStrong =
-    0;
-
-  let recentStrong =
-    0;
-
-  let pairTogether =
-    0;
-
-  let weightedPairTogether =
-    0;
+  let exact5 = 0;
+  let fourPlus = 0;
+  let threePlus = 0;
+  let weightedStrong = 0;
+  let recentStrong = 0;
+  let pairTogether = 0;
+  let weightedPairTogether = 0;
 
   const recentStart =
     Math.max(
@@ -617,13 +642,9 @@ function evaluatePair(
       scoreValue,
 
     exact5,
-
     fourPlus,
-
     threePlus,
-
     pairTogether,
-
     weightedPairTogether,
 
     companionA:
@@ -671,8 +692,7 @@ function selectGroupSix(
       coreInfo.core
     );
 
-  const pairs =
-    [];
+  const pairs = [];
 
   for (
     let i = 0;
@@ -823,7 +843,8 @@ function selectGroupSix(
 
           supportScore:
             Number(
-              x.supportScore
+              x
+                .supportScore
                 .toFixed(3)
             )
         })
@@ -857,8 +878,7 @@ function learnerNumberFeatures(
     new Map(
       Array.from(
         {
-          length:
-            80
+          length: 80
         },
         (
           _,
@@ -949,8 +969,7 @@ function learnerNumberFeatures(
   ]
     .map(
       item => {
-        const gaps =
-          [];
+        const gaps = [];
 
         for (
           let i = 1;
@@ -1153,6 +1172,7 @@ function learnerPairMatrix(
   return pairCounts;
 }
 
+
 function learnerPairCount(
   matrix,
   a,
@@ -1186,15 +1206,14 @@ function evaluateNumbersOnRows(
   numbers,
   rows
 ) {
-  const histogram =
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ];
+  const histogram = [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ];
 
   let totalHits =
     0;
@@ -1227,15 +1246,12 @@ function evaluateNumbersOnRows(
     histogram[5];
 
   const fourPlus =
-    histogram[4]
-    +
+    histogram[4] +
     histogram[5];
 
   const threePlus =
-    histogram[3]
-    +
-    histogram[4]
-    +
+    histogram[3] +
+    histogram[4] +
     histogram[5];
 
   const averageHits =
@@ -1296,6 +1312,7 @@ function evaluateNumbersOnRows(
     }
   };
 }
+
 
 function learnerValidationScore(
   result
@@ -1405,8 +1422,7 @@ function strategyHotStable(
     );
 
   if (
-    numbers.length !==
-    5
+    numbers.length !== 5
   ) {
     return null;
   }
@@ -1454,13 +1470,15 @@ function strategyHotStable(
 
               gapCv:
                 Number(
-                  x.gapCv
+                  x
+                    .gapCv
                     .toFixed(3)
                 ),
 
               strength:
                 Number(
-                  x.strength
+                  x
+                    .strength
                     .toFixed(3)
                 )
             })
@@ -1503,9 +1521,11 @@ function strategyCoreMomentum(
     features
       .filter(
         x =>
-          !coreInfo.core.includes(
-            x.number
-          )
+          !coreInfo
+            .core
+            .includes(
+              x.number
+            )
       )
       .map(
         x => {
@@ -1574,8 +1594,7 @@ function strategyCoreMomentum(
     ]);
 
   if (
-    numbers.length !==
-    5
+    numbers.length !== 5
   ) {
     return null;
   }
@@ -1618,7 +1637,8 @@ function strategyCoreMomentum(
 
               combined:
                 Number(
-                  x.combined
+                  x
+                    .combined
                     .toFixed(3)
                 )
             })
@@ -1706,6 +1726,7 @@ function learnerCombinationScore(
   };
 }
 
+
 function strategySynergyEnsemble(
   window
 ) {
@@ -1768,21 +1789,20 @@ function strategySynergyEnsemble(
             e < pool.length;
             e++
           ) {
-            const numbers =
-              [
-                pool[a],
-                pool[b],
-                pool[c],
-                pool[d],
-                pool[e]
-              ]
-                .sort(
-                  (
-                    x,
-                    y
-                  ) =>
-                    x - y
-                );
+            const numbers = [
+              pool[a],
+              pool[b],
+              pool[c],
+              pool[d],
+              pool[e]
+            ]
+              .sort(
+                (
+                  x,
+                  y
+                ) =>
+                  x - y
+              );
 
             const evaluated =
               learnerCombinationScore(
@@ -1876,7 +1896,8 @@ function strategySynergyEnsemble(
 
       combinationScore:
         Number(
-          best.score
+          best
+            .score
             .toFixed(3)
         ),
 
@@ -1918,6 +1939,7 @@ function learnerStrategies(
       Boolean
     );
 }
+
 
 function learnerPickByStrategyId(
   strategyId,
@@ -2575,13 +2597,15 @@ async function runDailyPatternLearner() {
 
               averageHits:
                 Number(
-                  item.averageHits
+                  item
+                    .averageHits
                     .toFixed(3)
                 ),
 
               validationScore:
                 Number(
-                  item.validationScore
+                  item
+                    .validationScore
                     .toFixed(3)
                 )
             })
@@ -2613,19 +2637,22 @@ async function runDailyPatternLearner() {
 
             meanGap:
               Number(
-                x.meanGap
+                x
+                  .meanGap
                   .toFixed(2)
               ),
 
             gapCv:
               Number(
-                x.gapCv
+                x
+                  .gapCv
                   .toFixed(3)
               ),
 
             strength:
               Number(
-                x.strength
+                x
+                  .strength
                   .toFixed(3)
               )
           })
@@ -2722,6 +2749,7 @@ async function createGroup(
   );
 }
 
+
 async function discardGroup(
   group
 ) {
@@ -2753,6 +2781,7 @@ async function discardGroup(
     }
   );
 }
+
 
 async function archiveGroupAndClearResults(
   group
@@ -2828,8 +2857,7 @@ async function trackGroup(
     );
 
   if (
-    target <=
-    after
+    target <= after
   ) {
     return {
       processed:
@@ -2839,8 +2867,7 @@ async function trackGroup(
         after,
 
       capReached:
-        after >=
-        cutoff
+        after >= cutoff
     };
   }
 
@@ -2849,17 +2876,13 @@ async function trackGroup(
       d =>
         Number(
           d.draw_id
-        )
-        >
-        after
+        ) > after
 
         &&
 
         Number(
           d.draw_id
-        )
-        <=
-        target
+        ) <= target
     );
 
   for (
@@ -2952,9 +2975,7 @@ async function trackGroup(
     capReached:
       Number(
         lastSeen
-      )
-      >=
-      cutoff
+      ) >= cutoff
   };
 }
 
@@ -3186,8 +3207,7 @@ async function runGroupSix() {
       trackedNow.processed;
 
     if (
-      latestId <
-      cutoff
+      latestId < cutoff
     ) {
       break;
     }
@@ -3339,8 +3359,7 @@ async function runGroupSix() {
       TRACK_DRAWS,
 
     method:
-      method
-      ||
+      method ||
       'existing-active-group-six',
 
     selectionAnalysis,
@@ -3357,6 +3376,7 @@ async function runGroupSix() {
 /* =========================================================
    API HANDLER
 
+   Learner:
    /api/group-six?mode=learner
 
    Existing Group Six:
@@ -3390,8 +3410,7 @@ async function handler(
 
     const mode =
       String(
-        req.query?.mode
-        ||
+        req.query?.mode ||
         'group-six'
       )
         .trim()
@@ -3468,14 +3487,14 @@ async function handler(
           false,
 
         error:
-          error?.message
-          ||
+          error?.message ||
           String(
             error
           )
       });
   }
 }
+
 
 module.exports =
   handler;
