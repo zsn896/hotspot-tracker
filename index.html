@@ -2894,7 +2894,305 @@ function toggleManualResults(slot){
 }
 
 
-function renderManualSlot(
+function function renderManualSlot(
+  slot,
+  m
+){
+
+  const groupBox =
+    document.getElementById(
+      `manualGroup${slot}`
+    );
+
+
+  const state =
+    document.getElementById(
+      `manualState${slot}`
+    );
+
+
+  const content =
+    document.getElementById(
+      `manualContent${slot}`
+    );
+
+
+  if(!m){
+
+    groupBox
+      .classList
+      .remove(
+        'active'
+      );
+
+
+    state.className =
+      'manualState mut';
+
+
+    state.textContent =
+      '● Not tracking';
+
+
+    content.innerHTML =
+      `
+      <div class="empty">
+        No manual tracking data yet.
+      </div>
+      `;
+
+
+    return;
+  }
+
+
+  const nums =
+    (
+      m.numbers || []
+    ).map(
+      Number
+    );
+
+
+  fillInputs(
+    slot,
+    nums
+  );
+
+
+  if(m.active){
+
+    groupBox
+      .classList
+      .add(
+        'active'
+      );
+
+
+    state.className =
+      'manualState ok';
+
+
+    state.textContent =
+      '● Tracking';
+
+  }else{
+
+    groupBox
+      .classList
+      .remove(
+        'active'
+      );
+
+
+    state.className =
+      'manualState amber';
+
+
+    state.textContent =
+      '● Stopped';
+  }
+
+
+  const matches =
+    manualImportantMatches(
+      m
+    );
+
+
+  /*
+    IMPORTANT:
+
+    Best is supplied directly by /api/group.
+
+    This keeps Best independent from:
+    - Last Seen
+    - the visible results list
+    - the latest 100 strong results
+
+    Example:
+    old 4/5 + newer 3/5
+    => Best stays 4/5
+    => Last Seen becomes newest 3/5
+  */
+
+  const fallbackBest =
+    bestInfo(
+      matches
+    );
+
+
+  const apiBest =
+    Number(
+      m?.bestHit
+      ??
+      m?.bestResult?.hitCount
+      ??
+      0
+    );
+
+
+  const bi = {
+    best:
+      apiBest > 0
+        ?
+        apiBest
+        :
+        fallbackBest.best,
+
+    time:
+      String(
+        m?.bestResult?.time
+        ??
+        (
+          apiBest > 0
+            ?
+            ''
+            :
+            fallbackBest.time
+        )
+        ??
+        ''
+      ),
+
+    drawId:
+      m?.bestDrawId
+      ??
+      m?.bestResult?.drawId
+      ??
+      fallbackBest.drawId
+      ??
+      null
+  };
+
+
+  content.innerHTML =
+    `
+
+    <div class="manualMeta">
+
+      Started after draw
+      <b>
+        ${m.startDrawId ?? '—'}
+      </b>
+
+      &nbsp; • &nbsp;
+
+      Last checked
+      <b>
+        ${
+          m.trackingLastSeenDrawId
+          ??
+          '—'
+        }
+      </b>
+
+    </div>
+
+
+    <div class="manualSummary">
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          Best
+        </div>
+
+        <div class="manualMetricValue cGreen">
+          ${bi.best}/5
+        </div>
+
+        ${
+          bi.best >= 3
+          &&
+          bi.time
+            ?
+            `
+            <div class="bestTime">
+              ${esc(bi.time)}
+            </div>
+            `
+            :
+            ''
+        }
+
+      </div>
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          3/5+
+        </div>
+
+        <div class="manualMetricValue cBlue">
+          ${matches.length}
+        </div>
+
+      </div>
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          Last Seen
+        </div>
+
+        <div class="manualMetricValue cPurple">
+          ${
+            m.lastSeenDrawId
+            ??
+            '—'
+          }
+        </div>
+
+      </div>
+
+
+      <div class="manualShowCell">
+
+        <button
+          class="toggleBtn"
+          id="manualToggle${slot}"
+          onclick="toggleManualResults(${slot})"
+        >
+          Show Results
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div
+      class="manualResults"
+      id="manualResults${slot}"
+    >
+
+      ${
+        matches.length
+          ?
+          matches
+            .map(
+              r =>
+                resultCard(
+                  r,
+                  nums
+                )
+            )
+            .join('')
+          :
+          `
+          <div class="empty">
+            No 3/5 or better result yet.
+          </div>
+          `
+      }
+
+    </div>
+    `;
+}(
   slot,
   m
 ){
@@ -3141,13 +3439,609 @@ function renderManuals(j){
     normalizeManuals(j);
 
 
-  renderManualSlot(
+  function renderManualSlot(
+  slot,
+  m
+){
+
+  const groupBox =
+    document.getElementById(
+      `manualGroup${slot}`
+    );
+
+
+  const state =
+    document.getElementById(
+      `manualState${slot}`
+    );
+
+
+  const content =
+    document.getElementById(
+      `manualContent${slot}`
+    );
+
+
+  if(!m){
+
+    groupBox
+      .classList
+      .remove(
+        'active'
+      );
+
+
+    state.className =
+      'manualState mut';
+
+
+    state.textContent =
+      '● Not tracking';
+
+
+    content.innerHTML =
+      `
+      <div class="empty">
+        No manual tracking data yet.
+      </div>
+      `;
+
+
+    return;
+  }
+
+
+  const nums =
+    (
+      m.numbers || []
+    ).map(
+      Number
+    );
+
+
+  fillInputs(
+    slot,
+    nums
+  );
+
+
+  if(m.active){
+
+    groupBox
+      .classList
+      .add(
+        'active'
+      );
+
+
+    state.className =
+      'manualState ok';
+
+
+    state.textContent =
+      '● Tracking';
+
+  }else{
+
+    groupBox
+      .classList
+      .remove(
+        'active'
+      );
+
+
+    state.className =
+      'manualState amber';
+
+
+    state.textContent =
+      '● Stopped';
+  }
+
+
+  const matches =
+    manualImportantMatches(
+      m
+    );
+
+
+  /*
+    IMPORTANT:
+
+    Best is supplied directly by /api/group.
+
+    This keeps Best independent from:
+    - Last Seen
+    - the visible results list
+    - the latest 100 strong results
+
+    Example:
+    old 4/5 + newer 3/5
+    => Best stays 4/5
+    => Last Seen becomes newest 3/5
+  */
+
+  const fallbackBest =
+    bestInfo(
+      matches
+    );
+
+
+  const apiBest =
+    Number(
+      m?.bestHit
+      ??
+      m?.bestResult?.hitCount
+      ??
+      0
+    );
+
+
+  const bi = {
+    best:
+      apiBest > 0
+        ?
+        apiBest
+        :
+        fallbackBest.best,
+
+    time:
+      String(
+        m?.bestResult?.time
+        ??
+        (
+          apiBest > 0
+            ?
+            ''
+            :
+            fallbackBest.time
+        )
+        ??
+        ''
+      ),
+
+    drawId:
+      m?.bestDrawId
+      ??
+      m?.bestResult?.drawId
+      ??
+      fallbackBest.drawId
+      ??
+      null
+  };
+
+
+  content.innerHTML =
+    `
+
+    <div class="manualMeta">
+
+      Started after draw
+      <b>
+        ${m.startDrawId ?? '—'}
+      </b>
+
+      &nbsp; • &nbsp;
+
+      Last checked
+      <b>
+        ${
+          m.trackingLastSeenDrawId
+          ??
+          '—'
+        }
+      </b>
+
+    </div>
+
+
+    <div class="manualSummary">
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          Best
+        </div>
+
+        <div class="manualMetricValue cGreen">
+          ${bi.best}/5
+        </div>
+
+        ${
+          bi.best >= 3
+          &&
+          bi.time
+            ?
+            `
+            <div class="bestTime">
+              ${esc(bi.time)}
+            </div>
+            `
+            :
+            ''
+        }
+
+      </div>
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          3/5+
+        </div>
+
+        <div class="manualMetricValue cBlue">
+          ${matches.length}
+        </div>
+
+      </div>
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          Last Seen
+        </div>
+
+        <div class="manualMetricValue cPurple">
+          ${
+            m.lastSeenDrawId
+            ??
+            '—'
+          }
+        </div>
+
+      </div>
+
+
+      <div class="manualShowCell">
+
+        <button
+          class="toggleBtn"
+          id="manualToggle${slot}"
+          onclick="toggleManualResults(${slot})"
+        >
+          Show Results
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div
+      class="manualResults"
+      id="manualResults${slot}"
+    >
+
+      ${
+        matches.length
+          ?
+          matches
+            .map(
+              r =>
+                resultCard(
+                  r,
+                  nums
+                )
+            )
+            .join('')
+          :
+          `
+          <div class="empty">
+            No 3/5 or better result yet.
+          </div>
+          `
+      }
+
+    </div>
+    `;
+}(
     1,
     m[0]
   );
 
 
-  renderManualSlot(
+  function renderManualSlot(
+  slot,
+  m
+){
+
+  const groupBox =
+    document.getElementById(
+      `manualGroup${slot}`
+    );
+
+
+  const state =
+    document.getElementById(
+      `manualState${slot}`
+    );
+
+
+  const content =
+    document.getElementById(
+      `manualContent${slot}`
+    );
+
+
+  if(!m){
+
+    groupBox
+      .classList
+      .remove(
+        'active'
+      );
+
+
+    state.className =
+      'manualState mut';
+
+
+    state.textContent =
+      '● Not tracking';
+
+
+    content.innerHTML =
+      `
+      <div class="empty">
+        No manual tracking data yet.
+      </div>
+      `;
+
+
+    return;
+  }
+
+
+  const nums =
+    (
+      m.numbers || []
+    ).map(
+      Number
+    );
+
+
+  fillInputs(
+    slot,
+    nums
+  );
+
+
+  if(m.active){
+
+    groupBox
+      .classList
+      .add(
+        'active'
+      );
+
+
+    state.className =
+      'manualState ok';
+
+
+    state.textContent =
+      '● Tracking';
+
+  }else{
+
+    groupBox
+      .classList
+      .remove(
+        'active'
+      );
+
+
+    state.className =
+      'manualState amber';
+
+
+    state.textContent =
+      '● Stopped';
+  }
+
+
+  const matches =
+    manualImportantMatches(
+      m
+    );
+
+
+  /*
+    IMPORTANT:
+
+    Best is supplied directly by /api/group.
+
+    This keeps Best independent from:
+    - Last Seen
+    - the visible results list
+    - the latest 100 strong results
+
+    Example:
+    old 4/5 + newer 3/5
+    => Best stays 4/5
+    => Last Seen becomes newest 3/5
+  */
+
+  const fallbackBest =
+    bestInfo(
+      matches
+    );
+
+
+  const apiBest =
+    Number(
+      m?.bestHit
+      ??
+      m?.bestResult?.hitCount
+      ??
+      0
+    );
+
+
+  const bi = {
+    best:
+      apiBest > 0
+        ?
+        apiBest
+        :
+        fallbackBest.best,
+
+    time:
+      String(
+        m?.bestResult?.time
+        ??
+        (
+          apiBest > 0
+            ?
+            ''
+            :
+            fallbackBest.time
+        )
+        ??
+        ''
+      ),
+
+    drawId:
+      m?.bestDrawId
+      ??
+      m?.bestResult?.drawId
+      ??
+      fallbackBest.drawId
+      ??
+      null
+  };
+
+
+  content.innerHTML =
+    `
+
+    <div class="manualMeta">
+
+      Started after draw
+      <b>
+        ${m.startDrawId ?? '—'}
+      </b>
+
+      &nbsp; • &nbsp;
+
+      Last checked
+      <b>
+        ${
+          m.trackingLastSeenDrawId
+          ??
+          '—'
+        }
+      </b>
+
+    </div>
+
+
+    <div class="manualSummary">
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          Best
+        </div>
+
+        <div class="manualMetricValue cGreen">
+          ${bi.best}/5
+        </div>
+
+        ${
+          bi.best >= 3
+          &&
+          bi.time
+            ?
+            `
+            <div class="bestTime">
+              ${esc(bi.time)}
+            </div>
+            `
+            :
+            ''
+        }
+
+      </div>
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          3/5+
+        </div>
+
+        <div class="manualMetricValue cBlue">
+          ${matches.length}
+        </div>
+
+      </div>
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          Last Seen
+        </div>
+
+        <div class="manualMetricValue cPurple">
+          ${
+            m.lastSeenDrawId
+            ??
+            '—'
+          }
+        </div>
+
+      </div>
+
+
+      <div class="manualShowCell">
+
+        <button
+          class="toggleBtn"
+          id="manualToggle${slot}"
+          onclick="toggleManualResults(${slot})"
+        >
+          Show Results
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div
+      class="manualResults"
+      id="manualResults${slot}"
+    >
+
+      ${
+        matches.length
+          ?
+          matches
+            .map(
+              r =>
+                resultCard(
+                  r,
+                  nums
+                )
+            )
+            .join('')
+          :
+          `
+          <div class="empty">
+            No 3/5 or better result yet.
+          </div>
+          `
+      }
+
+    </div>
+    `;
+}(
     2,
     m[1]
   );
