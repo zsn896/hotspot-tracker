@@ -279,8 +279,54 @@ module.exports = async (req, res) => {
             )
           : null;
 
+      /*
+        Last Seen for UI means:
+        latest result with 3/5 or better.
+
+        The real tracking cursor is preserved separately
+        as tracking_last_seen_draw_id.
+      */
+      const lastStrong =
+        [...rows]
+          .reverse()
+          .find(
+            r =>
+              Number(r.hit_count || 0) >= 3
+          ) || null;
+
       raw.push({
         ...g,
+
+        tracking_last_seen_draw_id:
+          g.last_seen_draw_id,
+
+        last_seen_draw_id:
+          g.name === GROUP_FIVE_NAME
+            ? g.last_seen_draw_id
+            : (
+                lastStrong?.draw_id
+                ?? null
+              ),
+
+        lastStrongResult:
+          lastStrong
+            ? {
+                drawId:
+                  lastStrong.draw_id,
+
+                hitCount:
+                  Number(
+                    lastStrong.hit_count || 0
+                  ),
+
+                time:
+                  lastStrong.time || '',
+
+                date:
+                  lastStrong.date || ''
+              }
+            : null,
+
         analysis,
         results: rows
       });
@@ -355,15 +401,26 @@ module.exports = async (req, res) => {
           trackingWindow: GROUP_FIVE_TRACK_DRAWS,
           numbers: g.numbers,
           startDrawId: Number(g.start_draw_id),
-          lastSeenDrawId: Number(g.last_seen_draw_id),
+
+          /*
+            Group Five tracking cursor remains untouched.
+          */
+          lastSeenDrawId:
+            Number(
+              g.tracking_last_seen_draw_id
+            ),
+
           tracked: haveFive,
+
           remaining: Math.max(
             0,
             GROUP_FIVE_TRACK_DRAWS - haveFive
           ),
+
           nextSelectionAfterDrawId:
             Number(g.start_draw_id) +
             GROUP_FIVE_TRACK_DRAWS,
+
           rule:
             'Cumulative daily analysis: 50 → track 20 → analyze 70 → track 20 → analyze 90 → track 20 → repeat.'
         };
@@ -397,9 +454,12 @@ module.exports = async (req, res) => {
           6,
           completed + 1
         ),
+
         have:
           g.results.length % 20,
+
         need: 20,
+
         remaining:
           g.results.length >= 120
             ? 0
@@ -443,21 +503,28 @@ module.exports = async (req, res) => {
             numbers: activeGroupFive.numbers,
             analysisWindow: activeAnalysisWindow,
             trackingWindow: GROUP_FIVE_TRACK_DRAWS,
+
             tracked:
               activeGroupFive.currentBlock?.have || 0,
+
             remaining:
               activeGroupFive.currentBlock?.remaining ??
               GROUP_FIVE_TRACK_DRAWS,
+
             startDrawId:
               activeGroupFive.start_draw_id,
+
             lastSeenDrawId:
-              activeGroupFive.last_seen_draw_id,
+              activeGroupFive.tracking_last_seen_draw_id,
+
             nextSelectionAfterDrawId:
               Number(
                 activeGroupFive.start_draw_id
               ) + GROUP_FIVE_TRACK_DRAWS,
+
             completedCycles:
               groupFiveArchives.length,
+
             rule:
               'Cumulative daily analysis: 50 → 70 → 90 → 110 → ...; each selection is fixed for the next 20 draws.'
           }
@@ -465,26 +532,33 @@ module.exports = async (req, res) => {
             active: false,
             cycle: groupFiveCycle,
             numbers: null,
+
             analysisWindow:
               GROUP_FIVE_FIRST_ANALYSIS_DRAWS,
+
             trackingWindow:
               GROUP_FIVE_TRACK_DRAWS,
+
             waitingForFirstSelection:
               collectionHave <
               GROUP_FIVE_FIRST_ANALYSIS_DRAWS,
+
             analysisHave:
               Math.min(
                 GROUP_FIVE_FIRST_ANALYSIS_DRAWS,
                 collectionHave
               ),
+
             analysisRemaining:
               Math.max(
                 0,
                 GROUP_FIVE_FIRST_ANALYSIS_DRAWS -
                 collectionHave
               ),
+
             completedCycles:
               groupFiveArchives.length,
+
             rule:
               'First analyze 50 draws, then keep all same-day draws and add 20 after every completed tracking cycle.'
           };
@@ -505,39 +579,54 @@ module.exports = async (req, res) => {
 
     res.status(200).json({
       ok: true,
+
       mode,
+
       schedule: {
         collection:
           '6:00 AM – 6:00 PM',
+
         selection:
           '6:05 PM',
+
         tracking:
           '6:05 PM – 2:00 AM',
+
         cleanup:
           '2:30 AM',
+
         groupFive:
           'Cumulative same-day analysis: first 50 draws, then add every completed 20-draw block: 70, 90, 110, ...'
       },
+
       collection: {
         have: collectionHave,
         need: COLLECTION_DRAWS,
+
         remaining: Math.max(
           0,
           COLLECTION_DRAWS -
           collectionHave
         ),
+
         startDrawId:
           control?.start_draw_id || null
       },
+
       groupFive,
+
       groups: raw,
+
       latest:
         latest?.[0] || null,
+
       serverStored: true
     });
+
   } catch (e) {
     res.status(500).json({
       ok: false,
+
       error:
         e.message || String(e)
     });
