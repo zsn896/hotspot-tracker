@@ -1,201 +1,94 @@
 'use strict';
 
 const { db } = require('./lib');
+const { selectFive: persistentSelectFive } = require('../lib/group-five');
 
-const {
-  selectFive: persistentSelectFive
-} = require('../lib/group-five');
-
-
-const TRACK_DRAWS = 20;
+const FIXED_CUTOFF_DRAW_ID = 3298607;
+const WINDOW_SIZE = 250;
+const WINDOW_COUNT = 4;
 const FIRST_ANALYSIS = 50;
-const CYCLES_PER_DAY = 10;
+const TRACK_DRAWS = 20;
+const CYCLES_PER_WINDOW = 10;
 
 const RECENT_WINDOW = 15;
 const TOP_CORES = 70;
 const TOP_COMPANIONS = 12;
 const MIN_CORE_OCCURRENCES = 2;
 
-
-/*
-  Fixed historical days.
-
-  These names never move when new draws arrive.
-*/
-const FIXED_WINDOWS = [
-  'AUTO_CONTROL_2026-09-01',
-  'AUTO_CONTROL_2026-09-02',
-  'AUTO_CONTROL_2026-09-03',
-  'AUTO_CONTROL_2026-09-04'
-];
-
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
 function norm(values) {
-  return [
-    ...new Set(
-      (values || [])
-        .map(Number)
-    )
-  ]
+  return [...new Set((values || []).map(Number))]
     .filter(
       n =>
         Number.isInteger(n) &&
         n >= 1 &&
         n <= 80
     )
-    .sort(
-      (a, b) =>
-        a - b
-    );
+    .sort((a, b) => a - b);
 }
 
+function combinations(values, size, fn) {
+  const a = norm(values);
 
-function combinations(
-  values,
-  size,
-  fn
-) {
-  const a =
-    norm(values);
-
-  function walk(
-    start,
-    picked
-  ) {
-    if (
-      picked.length === size
-    ) {
-      fn([
-        ...picked
-      ]);
-
+  function walk(start, picked) {
+    if (picked.length === size) {
+      fn([...picked]);
       return;
     }
 
     for (
       let i = start;
-      i <=
-      a.length -
-      (
-        size -
-        picked.length
-      );
+      i <= a.length - (size - picked.length);
       i++
     ) {
-      picked.push(
-        a[i]
-      );
-
-      walk(
-        i + 1,
-        picked
-      );
-
+      picked.push(a[i]);
+      walk(i + 1, picked);
       picked.pop();
     }
   }
 
-  walk(
-    0,
-    []
-  );
+  walk(0, []);
 }
 
-
-function combos2(
-  values,
-  fn
-) {
-  combinations(
-    values,
-    2,
-    fn
-  );
+function combos2(values, fn) {
+  combinations(values, 2, fn);
 }
 
-
-function combos3(
-  values,
-  fn
-) {
-  combinations(
-    values,
-    3,
-    fn
-  );
+function combos3(values, fn) {
+  combinations(values, 3, fn);
 }
-
 
 function mean(values) {
-  if (
-    !values.length
-  ) {
-    return 0;
-  }
-
-  return (
-    values.reduce(
-      (sum, n) =>
-        sum + n,
-      0
-    )
-    /
-    values.length
-  );
+  return values.length
+    ? values.reduce((sum, n) => sum + n, 0) / values.length
+    : 0;
 }
 
-
 function stdDev(values) {
-  if (
-    values.length < 2
-  ) {
+  if (values.length < 2) {
     return 0;
   }
 
-  const avg =
-    mean(values);
+  const avg = mean(values);
 
   return Math.sqrt(
     mean(
       values.map(
         n =>
-          (
-            n - avg
-          ) ** 2
+          (n - avg) ** 2
       )
     )
   );
 }
 
-
-function recencyWeight(
-  index,
-  total
-) {
-  if (
-    total <= 1
-  ) {
+function recencyWeight(index, total) {
+  if (total <= 1) {
     return 1;
   }
 
-  return (
-    1 +
-    index /
-    (
-      total - 1
-    )
-  );
+  return 1 + index / (total - 1);
 }
 
-
-function hitCount(
-  draw,
-  numbers
-) {
+function hitCount(draw, numbers) {
   const set =
     new Set(
       norm(
@@ -205,15 +98,8 @@ function hitCount(
 
   let count = 0;
 
-  for (
-    const n
-    of numbers
-  ) {
-    if (
-      set.has(
-        Number(n)
-      )
-    ) {
+  for (const n of numbers) {
+    if (set.has(Number(n))) {
       count++;
     }
   }
@@ -223,26 +109,21 @@ function hitCount(
 
 
 /* =========================================================
-   LEGACY CORE MAP
+   LEGACY SELECTOR
 ========================================================= */
 
-function buildCoreMap(
-  window
-) {
+function buildCoreMap(window) {
   const coreMap =
     new Map();
 
   for (
     let drawIndex = 0;
-    drawIndex <
-    window.length;
+    drawIndex < window.length;
     drawIndex++
   ) {
     const numbers =
       norm(
-        window[
-          drawIndex
-        ]?.numbers
+        window[drawIndex]?.numbers
       );
 
     const weight =
@@ -269,16 +150,9 @@ function buildCoreMap(
           };
 
         old.count++;
-
-        old.weightedCount +=
-          weight;
-
-        old.lastIndex =
-          drawIndex;
-
-        old.drawIndexes.push(
-          drawIndex
-        );
+        old.weightedCount += weight;
+        old.lastIndex = drawIndex;
+        old.drawIndexes.push(drawIndex);
 
         coreMap.set(
           key,
@@ -291,14 +165,9 @@ function buildCoreMap(
   return coreMap;
 }
 
-
-function topCores(
-  window
-) {
+function topCores(window) {
   return [
-    ...buildCoreMap(
-      window
-    ).values()
+    ...buildCoreMap(window).values()
   ]
     .filter(
       x =>
@@ -325,11 +194,6 @@ function topCores(
       TOP_CORES
     );
 }
-
-
-/* =========================================================
-   LEGACY COMPANIONS
-========================================================= */
 
 function companionsForCore(
   window,
@@ -377,12 +241,8 @@ function companionsForCore(
         };
 
       old.count++;
-
-      old.weighted +=
-        weight;
-
-      old.lastIndex =
-        drawIndex;
+      old.weighted += weight;
+      old.lastIndex = drawIndex;
 
       counts.set(
         n,
@@ -420,25 +280,13 @@ function companionsForCore(
     );
 }
 
-
-/* =========================================================
-   LEGACY CANDIDATES
-========================================================= */
-
-function buildLegacyCandidates(
-  window
-) {
+function buildLegacyCandidates(window) {
   const candidates =
     new Map();
 
-  const cores =
-    topCores(
-      window
-    );
-
   for (
     const coreInfo
-    of cores
+    of topCores(window)
   ) {
     const companions =
       companionsForCore(
@@ -448,8 +296,7 @@ function buildLegacyCandidates(
 
     const companionNumbers =
       companions.map(
-        x =>
-          x.number
+        x => x.number
       );
 
     const lookup =
@@ -568,11 +415,6 @@ function buildLegacyCandidates(
   ];
 }
 
-
-/* =========================================================
-   GAP CONSISTENCY
-========================================================= */
-
 function strongGapStats(
   strongIndexes
 ) {
@@ -591,15 +433,12 @@ function strongGapStats(
 
   for (
     let i = 1;
-    i <
-    strongIndexes.length;
+    i < strongIndexes.length;
     i++
   ) {
     gaps.push(
       strongIndexes[i] -
-      strongIndexes[
-        i - 1
-      ]
+      strongIndexes[i - 1]
     );
   }
 
@@ -632,11 +471,6 @@ function strongGapStats(
           )
   };
 }
-
-
-/* =========================================================
-   LEGACY EVALUATION
-========================================================= */
 
 function evaluateLegacyCandidate(
   window,
@@ -687,17 +521,14 @@ function evaluateLegacyCandidate(
       window.length -
       RECENT_WINDOW
     ) {
-      recentHits +=
-        hits;
+      recentHits += hits;
     }
 
     if (
       hits === 5
     ) {
       exact5++;
-
-      lastExactIndex =
-        i;
+      lastExactIndex = i;
     }
 
     if (
@@ -710,9 +541,7 @@ function evaluateLegacyCandidate(
       hits >= 3
     ) {
       three++;
-
-      lastStrongIndex =
-        i;
+      lastStrongIndex = i;
 
       strongIndexes.push(
         i
@@ -757,10 +586,8 @@ function evaluateLegacyCandidate(
       ? 1 /
         (
           1 +
-          (
-            latestIndex -
-            lastStrongIndex
-          )
+          latestIndex -
+          lastStrongIndex
         )
       : 0;
 
@@ -769,10 +596,8 @@ function evaluateLegacyCandidate(
       ? 1 /
         (
           1 +
-          (
-            latestIndex -
-            lastExactIndex
-          )
+          latestIndex -
+          lastExactIndex
         )
       : 0;
 
@@ -831,10 +656,7 @@ function evaluateLegacyCandidate(
   };
 }
 
-
-function legacySelectFive(
-  window
-) {
+function legacySelectFive(window) {
   const evaluated =
     buildLegacyCandidates(
       window
@@ -887,8 +709,7 @@ function legacySelectFive(
       a.numbers
         .join(',')
         .localeCompare(
-          b.numbers
-            .join(',')
+          b.numbers.join(',')
         )
   );
 
@@ -902,7 +723,7 @@ function legacySelectFive(
 
 
 /* =========================================================
-   FUTURE TEST
+   TEST RESULTS
 ========================================================= */
 
 function scoreFuture(
@@ -962,11 +783,6 @@ function scoreFuture(
   };
 }
 
-
-/* =========================================================
-   COMPARISON
-========================================================= */
-
 function compareResults(
   a,
   b
@@ -1010,7 +826,6 @@ function compareResults(
   return 0;
 }
 
-
 function getWinner(
   oldResult,
   persistentResult
@@ -1043,26 +858,14 @@ function getWinner(
 
 function emptyTotals() {
   return {
-    wins:
-      0,
-
-    threePlus:
-      0,
-
-    fourPlus:
-      0,
-
-    exact5:
-      0,
-
-    bestOverall:
-      0,
-
-    averageAccumulator:
-      0
+    wins: 0,
+    threePlus: 0,
+    fourPlus: 0,
+    exact5: 0,
+    bestOverall: 0,
+    averageAccumulator: 0
   };
 }
-
 
 function addResult(
   totals,
@@ -1087,7 +890,6 @@ function addResult(
     result.averageHits;
 }
 
-
 function finalizeTotals(
   totals,
   cycleCount
@@ -1108,143 +910,99 @@ function finalizeTotals(
 
 
 /* =========================================================
-   LOAD FIXED DAY
+   FIXED DRAW POOL
 ========================================================= */
 
-async function loadFixedWindow(
-  controlName
-) {
-  const controls =
-    await db(
-      `tracker_groups?select=id,name,start_draw_id,last_seen_draw_id&name=eq.${encodeURIComponent(
-        controlName
-      )}&order=id.desc&limit=1`
-    );
-
-  const control =
-    controls?.[0];
-
-  if (
-    !control
-  ) {
-    return {
-      ok:
-        false,
-
-      controlName,
-
-      error:
-        'Control not found.'
-    };
-  }
-
-  const startId =
-    Number(
-      control.start_draw_id || 0
-    );
-
-  if (
-    !startId
-  ) {
-    return {
-      ok:
-        false,
-
-      controlName,
-
-      error:
-        'Control has no valid start_draw_id.'
-    };
-  }
-
-  /*
-    10 cycles require:
-
-    50 initial analysis
-    +
-    10 * 20 future draws
-
-    = 250 same-day draws.
-  */
-  const need =
-    FIRST_ANALYSIS
-    +
-    CYCLES_PER_DAY *
-    TRACK_DRAWS;
-
-  const draws =
-    await db(
-      `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gte.${startId}&order=draw_id.asc&limit=${need}`
-    );
+async function loadFixedDrawPool() {
+  const totalNeeded =
+    WINDOW_SIZE *
+    WINDOW_COUNT;
 
   const rows =
-    draws || [];
+    await db(
+      `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=lte.${FIXED_CUTOFF_DRAW_ID}&order=draw_id.desc&limit=${totalNeeded}`
+    );
+
+  const draws =
+    [
+      ...(rows || [])
+    ].reverse();
 
   if (
-    rows.length !== need
+    draws.length !==
+    totalNeeded
   ) {
     return {
       ok:
         false,
 
-      controlName,
-
-      startDrawId:
-        startId,
-
-      expectedDraws:
-        need,
-
-      foundDraws:
-        rows.length,
-
       error:
-        'Fixed day does not contain the required 250 stored draws.'
+        `Need ${totalNeeded} fixed historical draws through ${FIXED_CUTOFF_DRAW_ID}, found ${draws.length}.`
     };
   }
 
-  /*
-    Verify exact consecutive draw IDs.
+  if (
+    Number(
+      draws.at(-1)
+        ?.draw_id
+    )
+    !==
+    FIXED_CUTOFF_DRAW_ID
+  ) {
+    return {
+      ok:
+        false,
 
-    This prevents silently testing through
-    a missing stored draw.
-  */
+      error:
+        'Fixed cutoff draw is not the last loaded draw.',
+
+      expectedCutoff:
+        FIXED_CUTOFF_DRAW_ID,
+
+      actualLastDrawId:
+        Number(
+          draws.at(-1)
+            ?.draw_id || 0
+        )
+    };
+  }
+
   for (
-    let i = 0;
-    i < rows.length;
+    let i = 1;
+    i < draws.length;
     i++
   ) {
-    const expectedId =
-      startId + i;
-
-    const actualId =
+    const previous =
       Number(
-        rows[i]?.draw_id
+        draws[i - 1]
+          ?.draw_id
+      );
+
+    const current =
+      Number(
+        draws[i]
+          ?.draw_id
       );
 
     if (
-      actualId !== expectedId
+      current !==
+      previous + 1
     ) {
       return {
         ok:
           false,
 
-        controlName,
+        error:
+          'Fixed historical draw pool is not contiguous.',
 
-        startDrawId:
-          startId,
+        previousDrawId:
+          previous,
+
+        currentDrawId:
+          current,
 
         index:
-          i,
-
-        expectedDrawId:
-          expectedId,
-
-        actualDrawId:
-          actualId,
-
-        error:
-          'Stored draw sequence is not contiguous.'
+          i
       };
     }
   }
@@ -1253,29 +1011,19 @@ async function loadFixedWindow(
     ok:
       true,
 
-    controlName,
-
-    startDrawId:
-      startId,
-
-    draws:
-      rows
+    draws
   };
 }
 
 
 /* =========================================================
-   TEST ONE FIXED DAY
+   ONE 250-DRAW WINDOW
 ========================================================= */
 
-function testFixedWindow(
-  loaded
+function testWindow(
+  draws,
+  windowIndex
 ) {
-  const draws =
-    loaded.draws;
-
-  const cycles = [];
-
   const totals = {
     old:
       emptyTotals(),
@@ -1287,33 +1035,14 @@ function testFixedWindow(
       0
   };
 
+  const cycles = [];
+
   for (
     let cycleIndex = 0;
     cycleIndex <
-    CYCLES_PER_DAY;
+    CYCLES_PER_WINDOW;
     cycleIndex++
   ) {
-    /*
-      Exact Group Five cumulative rhythm:
-
-      Cycle 1:
-      analyze first 50
-      test next 20
-
-      Cycle 2:
-      analyze first 70
-      test next 20
-
-      Cycle 3:
-      analyze first 90
-      test next 20
-
-      ...
-
-      Cycle 10:
-      analyze first 230
-      test final 20.
-    */
     const analysisSize =
       FIRST_ANALYSIS
       +
@@ -1399,7 +1128,9 @@ function testFixedWindow(
     else if (
       winner === 'persistent'
     ) {
-      totals.persistent.wins++;
+      totals
+        .persistent
+        .wins++;
     }
     else {
       totals.ties++;
@@ -1458,15 +1189,15 @@ function testFixedWindow(
 
   finalizeTotals(
     totals.old,
-    CYCLES_PER_DAY
+    CYCLES_PER_WINDOW
   );
 
   finalizeTotals(
     totals.persistent,
-    CYCLES_PER_DAY
+    CYCLES_PER_WINDOW
   );
 
-  const dayComparison =
+  const windowComparison =
     compareResults(
       {
         exact5:
@@ -1488,39 +1219,35 @@ function testFixedWindow(
 
       {
         exact5:
-          totals.persistent.exact5,
+          totals
+            .persistent
+            .exact5,
 
         fourPlus:
-          totals.persistent.fourPlus,
+          totals
+            .persistent
+            .fourPlus,
 
         threePlus:
-          totals.persistent.threePlus,
+          totals
+            .persistent
+            .threePlus,
 
         best:
-          totals.persistent.bestOverall,
+          totals
+            .persistent
+            .bestOverall,
 
         averageHits:
-          totals.persistent
+          totals
+            .persistent
             .meanCycleAverageHits
       }
     );
 
-  const dayWinner =
-    dayComparison > 0
-      ? 'old'
-      : dayComparison < 0
-        ? 'persistent'
-        : 'tie';
-
   return {
-    controlName:
-      loaded.controlName,
-
-    startDrawId:
-      loaded.startDrawId,
-
-    drawCount:
-      draws.length,
+    window:
+      windowIndex + 1,
 
     firstDrawId:
       draws[0]
@@ -1530,9 +1257,17 @@ function testFixedWindow(
       draws.at(-1)
         ?.draw_id,
 
+    drawCount:
+      draws.length,
+
     totals,
 
-    dayWinner,
+    windowWinner:
+      windowComparison > 0
+        ? 'old'
+        : windowComparison < 0
+          ? 'persistent'
+          : 'tie',
 
     cycles
   };
@@ -1554,30 +1289,11 @@ async (
   );
 
   try {
-    const loadedWindows = [];
-
-    for (
-      const controlName
-      of FIXED_WINDOWS
-    ) {
-      const loaded =
-        await loadFixedWindow(
-          controlName
-        );
-
-      loadedWindows.push(
-        loaded
-      );
-    }
-
-    const failed =
-      loadedWindows.filter(
-        x =>
-          !x.ok
-      );
+    const loaded =
+      await loadFixedDrawPool();
 
     if (
-      failed.length
+      !loaded.ok
     ) {
       return res
         .status(409)
@@ -1586,22 +1302,37 @@ async (
             false,
 
           test:
-            'Fixed four-day cumulative Group Five backtest',
+            'Fixed Draw-ID Group Five backtest',
 
-          error:
-            'One or more fixed historical windows are incomplete.',
-
-          failed
+          ...loaded
         });
     }
 
-    const windows =
-      loadedWindows.map(
-        loaded =>
-          testFixedWindow(
-            loaded
-          )
+    const windows = [];
+
+    for (
+      let i = 0;
+      i < WINDOW_COUNT;
+      i++
+    ) {
+      const start =
+        i *
+        WINDOW_SIZE;
+
+      const slice =
+        loaded.draws.slice(
+          start,
+          start +
+          WINDOW_SIZE
+        );
+
+      windows.push(
+        testWindow(
+          slice,
+          i
+        )
       );
+    }
 
     const overall = {
       old:
@@ -1613,7 +1344,7 @@ async (
       ties:
         0,
 
-      dayWins: {
+      windowWins: {
         old:
           0,
 
@@ -1630,92 +1361,125 @@ async (
       of windows
     ) {
       overall.old.wins +=
-        window.totals.old.wins;
+        window
+          .totals
+          .old
+          .wins;
 
       overall.old.threePlus +=
-        window.totals.old.threePlus;
+        window
+          .totals
+          .old
+          .threePlus;
 
       overall.old.fourPlus +=
-        window.totals.old.fourPlus;
+        window
+          .totals
+          .old
+          .fourPlus;
 
       overall.old.exact5 +=
-        window.totals.old.exact5;
+        window
+          .totals
+          .old
+          .exact5;
 
       overall.old.bestOverall =
         Math.max(
-          overall.old.bestOverall,
-          window.totals.old.bestOverall
+          overall
+            .old
+            .bestOverall,
+
+          window
+            .totals
+            .old
+            .bestOverall
         );
 
       overall.old.averageAccumulator +=
-        window.totals.old
-          .meanCycleAverageHits *
-        CYCLES_PER_DAY;
+        window
+          .totals
+          .old
+          .meanCycleAverageHits
+        *
+        CYCLES_PER_WINDOW;
 
 
       overall.persistent.wins +=
-        window.totals
+        window
+          .totals
           .persistent
           .wins;
 
       overall.persistent.threePlus +=
-        window.totals
+        window
+          .totals
           .persistent
           .threePlus;
 
       overall.persistent.fourPlus +=
-        window.totals
+        window
+          .totals
           .persistent
           .fourPlus;
 
       overall.persistent.exact5 +=
-        window.totals
+        window
+          .totals
           .persistent
           .exact5;
 
       overall.persistent.bestOverall =
         Math.max(
-          overall.persistent.bestOverall,
-          window.totals
+          overall
+            .persistent
+            .bestOverall,
+
+          window
+            .totals
             .persistent
             .bestOverall
         );
 
       overall.persistent.averageAccumulator +=
-        window.totals
+        window
+          .totals
           .persistent
-          .meanCycleAverageHits *
-        CYCLES_PER_DAY;
-
+          .meanCycleAverageHits
+        *
+        CYCLES_PER_WINDOW;
 
       overall.ties +=
-        window.totals.ties;
-
+        window
+          .totals
+          .ties;
 
       if (
-        window.dayWinner ===
+        window.windowWinner ===
         'old'
       ) {
-        overall.dayWins.old++;
+        overall
+          .windowWins
+          .old++;
       }
       else if (
-        window.dayWinner ===
+        window.windowWinner ===
         'persistent'
       ) {
         overall
-          .dayWins
+          .windowWins
           .persistent++;
       }
       else {
         overall
-          .dayWins
+          .windowWins
           .ties++;
       }
     }
 
     const totalCycles =
-      FIXED_WINDOWS.length *
-      CYCLES_PER_DAY;
+      WINDOW_COUNT *
+      CYCLES_PER_WINDOW;
 
     finalizeTotals(
       overall.old,
@@ -1727,7 +1491,7 @@ async (
       totalCycles
     );
 
-    const overallComparison =
+    const comparison =
       compareResults(
         {
           exact5:
@@ -1776,9 +1540,9 @@ async (
       );
 
     const verdict =
-      overallComparison > 0
+      comparison > 0
         ? 'old'
-        : overallComparison < 0
+        : comparison < 0
           ? 'persistent'
           : 'tie';
 
@@ -1789,17 +1553,28 @@ async (
           true,
 
         test:
-          'Fixed four-day cumulative Group Five backtest',
+          'Fixed Draw-ID Group Five backtest',
 
         rules: {
-          fixedControls:
-            FIXED_WINDOWS,
+          fixedCutoffDrawId:
+            FIXED_CUTOFF_DRAW_ID,
 
-          days:
-            FIXED_WINDOWS.length,
+          firstLoadedDrawId:
+            loaded.draws[0]
+              ?.draw_id,
 
-          cyclesPerDay:
-            CYCLES_PER_DAY,
+          lastLoadedDrawId:
+            loaded.draws.at(-1)
+              ?.draw_id,
+
+          windows:
+            WINDOW_COUNT,
+
+          drawsPerWindow:
+            WINDOW_SIZE,
+
+          cyclesPerWindow:
+            CYCLES_PER_WINDOW,
 
           totalCycles,
 
@@ -1827,11 +1602,8 @@ async (
           futureLeakage:
             false,
 
-          sameDay:
-            true,
-
-          fixedHistoricalWindows:
-            true
+          movingWithNewDraws:
+            false
         },
 
         overall,
