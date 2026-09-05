@@ -1,180 +1,165 @@
 'use strict';
 
-const {
-  getDraw,
-  getMany,
-  db,
-  score
-} = require('./lib');
+const { db, score } = require('../api/lib');
+const { deepAnalyze50 } = require('./group-five');
 
-const MANUAL_NAMES = {
-  1: 'MANUAL Group',
-  2: 'MANUAL Group 2'
-};
+const CONTROL_PREFIX = 'AUTO_CONTROL_';
+const GROUP_NAME = 'AUTO Group Six';
+const ARCHIVE_PREFIX = 'AUTO Group Six Archive ';
 
-const MAX_BACKFILL = 80;
+const MIN_ANALYSIS_DRAWS = 50;
+const TRACK_DRAWS = 20;
+const PERSISTENCE_SEGMENTS = 4;
+const RECENT_WINDOW = 40;
+const TOP_COMPANIONS = 18;
 
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function normalizeSlot(value) {
-  const slot =
-    Number(
-      value ?? 1
-    );
-
-  if (
-    slot !== 1 &&
-    slot !== 2
-  ) {
-    throw new Error(
-      'Manual slot must be 1 or 2.'
-    );
-  }
-
-  return slot;
-}
-
-
-function getManualName(slot) {
-  return MANUAL_NAMES[
-    normalizeSlot(slot)
-  ];
-}
-
-
-function validateNumbers(input) {
-  const nums =
-    Array.isArray(input)
-      ? input.map(Number)
-      : [];
-
-  if (
-    nums.length !== 5
-  ) {
-    throw new Error(
-      'Enter exactly 5 numbers.'
-    );
-  }
-
-  if (
-    nums.some(
+function norm(values) {
+  return [...new Set((values || []).map(Number))]
+    .filter(
       n =>
-        !Number.isInteger(n) ||
-        n < 1 ||
-        n > 80
+        Number.isInteger(n) &&
+        n >= 1 &&
+        n <= 80
     )
-  ) {
-    throw new Error(
-      'Each number must be from 1 to 80.'
-    );
-  }
+    .sort((a, b) => a - b);
+}
 
-  if (
-    new Set(nums).size !== 5
-  ) {
-    throw new Error(
-      'The 5 numbers must be different.'
-    );
-  }
+function recencyWeight(index, total) {
+  if (total <= 1) return 1;
+  return 1 + index / (total - 1);
+}
 
-  return [...nums].sort(
-    (a, b) =>
-      a - b
+function segmentForIndex(index, total) {
+  if (total <= 1) return 0;
+
+  return Math.min(
+    PERSISTENCE_SEGMENTS - 1,
+    Math.floor(
+      index *
+      PERSISTENCE_SEGMENTS /
+      total
+    )
   );
 }
 
+function hitCount(draw, numbers) {
+  const set =
+    new Set(
+      norm(
+        draw?.numbers
+      )
+    );
 
-function sameNumbers(a, b) {
-  const aa =
-    Array.isArray(a)
-      ? a
-          .map(Number)
-          .sort(
-            (x, y) =>
-              x - y
-          )
+  let count = 0;
+
+  for (const n of numbers) {
+    if (set.has(Number(n))) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+function cumulativeWindow(inputDraws) {
+  const rows =
+    Array.isArray(inputDraws)
+      ? [...inputDraws]
       : [];
 
-  const bb =
-    Array.isArray(b)
-      ? b
-          .map(Number)
-          .sort(
-            (x, y) =>
-              x - y
-          )
+  return rows.length >=
+    MIN_ANALYSIS_DRAWS
+      ? rows
       : [];
+}
+
+function getWindowEndingAt(
+  draws,
+  endId
+) {
+  return cumulativeWindow(
+    (draws || []).filter(
+      d =>
+        Number(d.draw_id) <=
+        Number(endId)
+    )
+  );
+}
+
+function analysisSizeForGroupStart(
+  controlStartId,
+  groupStartId
+) {
+  return (
+    Number(groupStartId) -
+    Number(controlStartId) +
+    1
+  );
+}
+
+function isAlignedGroupStart(
+  groupStartId,
+  firstSelectionEndId
+) {
+  const start =
+    Number(groupStartId);
+
+  const first =
+    Number(firstSelectionEndId);
+
+  if (
+    !start ||
+    !first ||
+    start < first
+  ) {
+    return false;
+  }
 
   return (
-    aa.length === 5 &&
-    bb.length === 5 &&
-    aa.every(
-      (n, i) =>
-        n === bb[i]
-    )
+    (start - first) %
+    TRACK_DRAWS
+    === 0
   );
 }
 
 
 /* =========================================================
-   DRAW STORAGE
+   DAILY CONTROL
 ========================================================= */
 
-async function storeDraw(draw) {
-  if (
-    !draw?.id
-  ) {
-    return;
-  }
-
-  await db(
-    'hotspot_draws?on_conflict=draw_id',
-    {
-      method:
-        'POST',
-
-      prefer:
-        'resolution=merge-duplicates,return=minimal',
-
-      body: {
-        draw_id:
-          draw.id,
-
-        draw_date:
-          draw.date,
-
-        draw_time:
-          draw.time,
-
-        numbers:
-          draw.numbers,
-
-        bulls_eye:
-          draw.bullsEye
-      }
-    }
-  );
-}
-
-
-/* =========================================================
-   MANUAL GROUP DATABASE
-========================================================= */
-
-async function getManual(slot) {
-  const name =
-    getManualName(
-      slot
+async function getControl() {
+  const rows =
+    await db(
+      `tracker_groups?select=id,name,start_draw_id,last_seen_draw_id&name=like.${encodeURIComponent(
+        CONTROL_PREFIX + '*'
+      )}&order=id.desc&limit=20`
     );
 
+  return (
+    (rows || []).find(
+      r =>
+        /^AUTO_CONTROL_\d{4}-\d{2}-\d{2}$/.test(
+          String(
+            r.name || ''
+          )
+        )
+    )
+    ||
+    null
+  );
+}
+
+
+/* =========================================================
+   CURRENT GROUP SIX
+========================================================= */
+
+async function getCurrentGroup() {
   const rows =
     await db(
       `tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&name=eq.${encodeURIComponent(
-        name
-      )}&order=id.desc&limit=1`
+        GROUP_NAME
+      )}&active=eq.true&order=id.desc&limit=1`
     );
 
   return (
@@ -185,768 +170,685 @@ async function getManual(slot) {
 
 
 /* =========================================================
-   SAFE DRAW FETCH
+   DAILY DRAWS
 ========================================================= */
 
-async function getSafeDraw(
-  id,
-  batchMap
+async function getCycleDraws(
+  control
 ) {
-  const fromBatch =
-    batchMap.get(
-      Number(id)
-    );
-
-  if (
-    fromBatch?.id
-  ) {
-    return fromBatch;
+  if (!control) {
+    return [];
   }
 
-  try {
-    const direct =
-      await getDraw(
-        Number(id)
-      );
-
-    if (
-      Number(direct?.id) ===
-      Number(id)
-    ) {
-      return direct;
-    }
-  } catch (_) {
-    // Stop safely in caller.
-  }
-
-  return null;
-}
-
-
-/* =========================================================
-   TRACKING / BACKFILL
-========================================================= */
-
-async function backfillManual(
-  group,
-  suppliedLatest = null
-) {
-  if (
-    !group ||
-    !group.active
-  ) {
-    return {
-      latest:
-        suppliedLatest,
-
-      processed:
-        0,
-
-      stoppedAtMissing:
-        null
-    };
-  }
-
-
-  const latest =
-    suppliedLatest ||
-    await getDraw(
-      null
-    );
-
-
-  await storeDraw(
-    latest
-  );
-
-
-  const after =
-    Number(
-      group.last_seen_draw_id
-      ??
-      group.start_draw_id
-      ??
-      latest.id
-    );
-
-
-  if (
-    !Number.isFinite(after) ||
-    after >=
-    Number(latest.id)
-  ) {
-    return {
-      latest,
-
-      processed:
-        0,
-
-      stoppedAtMissing:
-        null
-    };
-  }
-
-
-  const end =
-    Math.min(
-      Number(
-        latest.id
-      ),
-      after +
-      MAX_BACKFILL
-    );
-
-
-  const count =
-    end -
-    after;
-
-
-  if (
-    count <= 0
-  ) {
-    return {
-      latest,
-
-      processed:
-        0,
-
-      stoppedAtMissing:
-        null
-    };
-  }
-
-
-  const ids =
-    Array.from(
-      {
-        length:
-          count
-      },
-      (_, i) =>
-        after +
-        i +
-        1
-    );
-
-
-  let batchDraws = [];
-
-  try {
-    batchDraws =
-      (
-        await getMany(
-          ids
-        )
-      )
-      ||
-      [];
-  } catch (_) {
-    batchDraws = [];
-  }
-
-
-  const batchMap =
-    new Map(
-      batchDraws
-        .filter(
-          d =>
-            d?.id
-        )
-        .map(
-          d => [
-            Number(d.id),
-            d
-          ]
-        )
-    );
-
-
-  let lastProcessed =
-    after;
-
-  let processed =
-    0;
-
-  let stoppedAtMissing =
-    null;
-
-
-  for (
-    const expectedId
-    of ids
-  ) {
-
-    const draw =
-      await getSafeDraw(
-        expectedId,
-        batchMap
-      );
-
-
-    if (
-      !draw ||
-      Number(draw.id) !==
-      Number(expectedId)
-    ) {
-      stoppedAtMissing =
-        Number(
-          expectedId
-        );
-
-      break;
-    }
-
-
-    await storeDraw(
-      draw
-    );
-
-
-    const result =
-      score(
-        draw,
-        group.numbers
-      );
-
-
-    /*
-      Only 3/5 or better is stored.
-
-      Every confirmed draw still advances
-      the internal tracking cursor.
-    */
-
-    if (
-      Number(
-        result?.count || 0
-      ) >= 3
-    ) {
+  return (
+    (
       await db(
-        'tracker_results?on_conflict=group_id,draw_id',
-        {
-          method:
-            'POST',
-
-          prefer:
-            'resolution=merge-duplicates,return=minimal',
-
-          body: {
-            group_id:
-              group.id,
-
-            draw_id:
-              draw.id,
-
-            hit_count:
-              result.count,
-
-            hit_numbers:
-              result.hit,
-
-            bulls_eye:
-              result.bullsEye,
-
-            bulls_eye_match:
-              result.bullsEyeMatch
-          }
-        }
-      );
-    }
-
-
-    lastProcessed =
-      Number(
-        draw.id
-      );
-
-    processed++;
-  }
-
-
-  if (
-    lastProcessed >
-    after
-  ) {
-    await db(
-      `tracker_groups?id=eq.${group.id}`,
-      {
-        method:
-          'PATCH',
-
-        prefer:
-          'return=minimal',
-
-        body: {
-          last_seen_draw_id:
-            lastProcessed
-        }
-      }
-    );
-
-
-    group.last_seen_draw_id =
-      lastProcessed;
-  }
-
-
-  return {
-    latest,
-
-    processed,
-
-    lastProcessed,
-
-    stoppedAtMissing
-  };
+        `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gte.${Number(
+          control.start_draw_id
+        )}&order=draw_id.asc&limit=500`
+      )
+    )
+    ||
+    []
+  );
 }
 
 
 /* =========================================================
-   READ RESULTS
+   CORE 3
 
-   IMPORTANT:
-
-   trackingLastSeenDrawId =
-   latest sequential draw checked by the tracker.
-
-   lastSeenDrawId =
-   latest draw where this manual group achieved
-   3/5, 4/5 or 5/5.
-
-   These are deliberately separate.
+   We reuse the proven Persistent Core 3 from Group Five,
+   but ONLY take its 3-number core.
 ========================================================= */
 
-async function readManual(
-  group,
-  slot
+function selectPersistentCore3(
+  window
 ) {
+  const ranked =
+    deepAnalyze50(
+      window
+    );
+
+  const core =
+    norm(
+      ranked?.[0]?.core ||
+      []
+    );
+
   if (
-    !group
+    core.length !== 3
   ) {
     return null;
   }
 
-
-  let rows =
-    (
-      await db(
-        `tracker_results?select=draw_id,hit_count,hit_numbers,bulls_eye,bulls_eye_match,created_at&group_id=eq.${group.id}&hit_count=gte.3&order=draw_id.desc&limit=100`
-      )
-    )
-    ||
-    [];
-
-
-  const ids =
-    rows
-      .map(
-        r =>
-          Number(
-            r.draw_id
-          )
-      )
-      .filter(
-        Number.isFinite
-      );
-
-
-  let meta = {};
-
-
-  if (
-    ids.length
-  ) {
-    const draws =
-      (
-        await db(
-          `hotspot_draws?select=draw_id,draw_date,draw_time&draw_id=in.(${ids.join(
-            ','
-          )})`
-        )
-      )
-      ||
-      [];
-
-
-    meta =
-      Object.fromEntries(
-        draws.map(
-          draw => [
-            Number(
-              draw.draw_id
-            ),
-            draw
-          ]
-        )
-      );
-  }
-
-
-  rows =
-    rows.map(
-      row => ({
-        ...row,
-
-        date:
-          meta[
-            Number(
-              row.draw_id
-            )
-          ]?.draw_date ||
-          '',
-
-        time:
-          meta[
-            Number(
-              row.draw_id
-            )
-          ]?.draw_time ||
-          ''
-      })
-    );
-
-
-  /*
-    rows are ordered newest first,
-    therefore rows[0] is the true
-    latest 3/5+ result.
-  */
-
-  const lastStrong =
-    rows[0] ||
-    null;
-
-
   return {
-    id:
-      group.id,
+    core,
 
-    slot,
-
-    name:
-      group.name,
-
-    numbers:
-      Array.isArray(
-        group.numbers
-      )
-        ?
-        group.numbers
-          .map(Number)
-        :
-        [],
-
-    active:
-      Boolean(
-        group.active
+    sourceScore:
+      Number(
+        ranked?.[0]?.score ||
+        0
       ),
 
-    startDrawId:
-      group.start_draw_id,
+    coreCount:
+      Number(
+        ranked?.[0]?.coreCount ||
+        0
+      ),
 
+    coreRecentCount:
+      Number(
+        ranked?.[0]?.coreRecentCount ||
+        0
+      ),
 
-    /*
-      Internal tracking position.
-    */
+    coreSegmentCount:
+      Number(
+        ranked?.[0]?.coreSegmentCount ||
+        0
+      ),
 
-    trackingLastSeenDrawId:
-      group.last_seen_draw_id,
-
-
-    /*
-      UI Last Seen:
-      latest 3/5+ result only.
-    */
-
-    lastSeenDrawId:
-      lastStrong?.draw_id
-      ??
-      null,
-
-
-    lastSeenResult:
-      lastStrong
-        ? {
-            drawId:
-              lastStrong.draw_id,
-
-            hitCount:
-              Number(
-                lastStrong.hit_count || 0
-              ),
-
-            hitNumbers:
-              Array.isArray(
-                lastStrong.hit_numbers
-              )
-                ?
-                lastStrong.hit_numbers
-                  .map(Number)
-                :
-                [],
-
-            date:
-              lastStrong.date || '',
-
-            time:
-              lastStrong.time || '',
-
-            bullsEye:
-              lastStrong.bulls_eye,
-
-            bullsEyeMatch:
-              Boolean(
-                lastStrong.bulls_eye_match
-              )
-          }
-        :
-        null,
-
-
-    createdAt:
-      group.created_at,
-
-    matches:
-      rows
+    coreConsistency:
+      Number(
+        ranked?.[0]?.coreConsistency ||
+        0
+      )
   };
 }
 
 
-async function readAllManuals() {
-  const group1 =
-    await getManual(
-      1
+/* =========================================================
+   FULL-WINDOW COMPANIONS
+
+   Group Six differs from Group Five here.
+
+   Group Five:
+   companions are mostly judged from draws where the Core appeared.
+
+   Group Six:
+   companions are judged using EVERY draw in the full
+   50 / 70 / 90 / 110 ... cumulative window.
+========================================================= */
+
+function fullWindowCompanionStats(
+  window,
+  core
+) {
+  const map =
+    new Map();
+
+  const recentStart =
+    Math.max(
+      0,
+      window.length -
+      RECENT_WINDOW
     );
 
-  const group2 =
-    await getManual(
-      2
-    );
+  for (
+    let i = 0;
+    i < window.length;
+    i++
+  ) {
+    const nums =
+      norm(
+        window[i]?.numbers
+      );
 
+    const weight =
+      recencyWeight(
+        i,
+        window.length
+      );
+
+    const segment =
+      segmentForIndex(
+        i,
+        window.length
+      );
+
+    const coreHits =
+      hitCount(
+        window[i],
+        core
+      );
+
+    for (
+      const n
+      of nums
+    ) {
+      if (
+        core.includes(n)
+      ) {
+        continue;
+      }
+
+      const old =
+        map.get(n)
+        ||
+        {
+          number: n,
+          count: 0,
+          weightedCount: 0,
+          recentCount: 0,
+          lastIndex: -1,
+          segments:
+            new Set(),
+          coreOverlapHits: 0,
+          weightedCoreOverlap: 0
+        };
+
+      old.count++;
+
+      old.weightedCount +=
+        weight;
+
+      old.lastIndex =
+        Math.max(
+          old.lastIndex,
+          i
+        );
+
+      old.segments.add(
+        segment
+      );
+
+      if (
+        i >= recentStart
+      ) {
+        old.recentCount++;
+      }
+
+      if (
+        coreHits > 0
+      ) {
+        old.coreOverlapHits +=
+          coreHits;
+
+        old.weightedCoreOverlap +=
+          coreHits *
+          weight;
+      }
+
+      map.set(
+        n,
+        old
+      );
+    }
+  }
 
   return [
-    await readManual(
-      group1,
-      1
-    ),
+    ...map.values()
+  ]
+    .map(
+      item => {
+        const segmentCount =
+          item.segments.size;
 
-    await readManual(
-      group2,
-      2
+        const age =
+          window.length -
+          1 -
+          item.lastIndex;
+
+        const recency =
+          1 /
+          (
+            1 +
+            Math.max(
+              0,
+              age
+            )
+          );
+
+        const supportScore =
+          item.count * 4
+          +
+          item.weightedCount * 5
+          +
+          item.recentCount * 7
+          +
+          segmentCount * 8
+          +
+          item.coreOverlapHits * 3
+          +
+          item.weightedCoreOverlap * 4
+          +
+          recency * 12;
+
+        return {
+          ...item,
+          segmentCount,
+          age,
+          recency,
+          supportScore
+        };
+      }
     )
-  ];
+    .sort(
+      (a, b) =>
+        b.supportScore -
+        a.supportScore
+
+        ||
+
+        b.recentCount -
+        a.recentCount
+
+        ||
+
+        b.segmentCount -
+        a.segmentCount
+
+        ||
+
+        b.count -
+        a.count
+
+        ||
+
+        b.lastIndex -
+        a.lastIndex
+
+        ||
+
+        a.number -
+        b.number
+    )
+    .slice(
+      0,
+      TOP_COMPANIONS
+    );
 }
 
 
 /* =========================================================
-   START
+   PAIR ANALYSIS
+
+   Core remains fixed.
+   Only the final two numbers compete.
 ========================================================= */
 
-async function startManual(
-  slot,
-  numbers
+function evaluatePair(
+  window,
+  core,
+  a,
+  b
 ) {
-  const latest =
-    await getDraw(
-      null
-    );
-
-
-  await storeDraw(
-    latest
-  );
-
-
-  const old =
-    await getManual(
-      slot
-    );
-
-
-  /*
-    Same numbers already active.
-  */
+  const numbers =
+    norm([
+      ...core,
+      a.number,
+      b.number
+    ]);
 
   if (
-    old &&
-    old.active &&
-    sameNumbers(
-      old.numbers,
-      numbers
-    )
+    numbers.length !== 5
   ) {
-    const sync =
-      await backfillManual(
-        old,
-        latest
+    return null;
+  }
+
+  let exact5 = 0;
+  let fourPlus = 0;
+  let threePlus = 0;
+  let weightedStrong = 0;
+  let recentStrong = 0;
+  let pairTogether = 0;
+  let weightedPairTogether = 0;
+
+  const recentStart =
+    Math.max(
+      0,
+      window.length -
+      RECENT_WINDOW
+    );
+
+  for (
+    let i = 0;
+    i < window.length;
+    i++
+  ) {
+    const drawNums =
+      new Set(
+        norm(
+          window[i]?.numbers
+        )
       );
 
+    const hits =
+      hitCount(
+        window[i],
+        numbers
+      );
 
-    const manuals =
-      await readAllManuals();
+    const weight =
+      recencyWeight(
+        i,
+        window.length
+      );
 
+    if (
+      hits === 5
+    ) {
+      exact5++;
+    }
 
-    return {
-      ok:
-        true,
+    if (
+      hits >= 4
+    ) {
+      fourPlus++;
+    }
 
-      unchanged:
-        true,
+    if (
+      hits >= 3
+    ) {
+      threePlus++;
 
-      resumed:
-        false,
+      weightedStrong +=
+        (
+          hits === 5
+            ? 10
+            : hits === 4
+              ? 5
+              : 2
+        )
+        *
+        weight;
 
-      message:
-        'These numbers are already being tracked. Original start draw was preserved.',
-
-      manuals,
-
-      manual:
-        manuals[
-          slot - 1
-        ],
-
-      processed:
-        sync.processed,
-
-      stoppedAtMissing:
-        sync.stoppedAtMissing,
-
-      latest: {
-        id:
-          latest.id,
-
-        date:
-          latest.date,
-
-        time:
-          latest.time
+      if (
+        i >= recentStart
+      ) {
+        recentStrong +=
+          hits === 5
+            ? 10
+            : hits === 4
+              ? 5
+              : 2;
       }
-    };
+    }
+
+    if (
+      drawNums.has(
+        a.number
+      )
+      &&
+      drawNums.has(
+        b.number
+      )
+    ) {
+      pairTogether++;
+
+      weightedPairTogether +=
+        weight;
+    }
   }
 
-
-  /*
-    Same numbers but previously stopped.
-    Resume from current draw.
-  */
-
-  if (
-    old &&
-    !old.active &&
-    sameNumbers(
-      old.numbers,
-      numbers
-    )
-  ) {
-    await db(
-      `tracker_groups?id=eq.${old.id}`,
-      {
-        method:
-          'PATCH',
-
-        prefer:
-          'return=minimal',
-
-        body: {
-          active:
-            true,
-
-          last_seen_draw_id:
-            latest.id
-        }
-      }
+  const balance =
+    1 /
+    (
+      1 +
+      Math.abs(
+        a.supportScore -
+        b.supportScore
+      )
     );
 
+  const scoreValue =
+    a.supportScore
+    +
+    b.supportScore
+    +
+    pairTogether * 5
+    +
+    weightedPairTogether * 5
+    +
+    threePlus * 3
+    +
+    fourPlus * 16
+    +
+    exact5 * 45
+    +
+    weightedStrong * 2
+    +
+    recentStrong * 4
+    +
+    balance * 10;
 
-    const manuals =
-      await readAllManuals();
+  return {
+    numbers,
+
+    pair: [
+      a.number,
+      b.number
+    ],
+
+    score:
+      scoreValue,
+
+    exact5,
+
+    fourPlus,
+
+    threePlus,
+
+    pairTogether,
+
+    weightedPairTogether,
+
+    companionA:
+      a,
+
+    companionB:
+      b
+  };
+}
 
 
-    return {
-      ok:
-        true,
+/* =========================================================
+   GROUP SIX SELECTOR
+========================================================= */
 
-      unchanged:
-        false,
+function selectGroupSix(
+  inputDraws
+) {
+  const window =
+    cumulativeWindow(
+      inputDraws
+    );
 
-      resumed:
-        true,
-
-      message:
-        'Manual tracking resumed. Previous results were preserved.',
-
-      manuals,
-
-      manual:
-        manuals[
-          slot - 1
-        ],
-
-      latest: {
-        id:
-          latest.id,
-
-        date:
-          latest.date,
-
-        time:
-          latest.time
-      }
-    };
+  if (
+    window.length <
+    MIN_ANALYSIS_DRAWS
+  ) {
+    return null;
   }
 
-
-  /*
-    Different numbers in existing slot.
-  */
+  const coreInfo =
+    selectPersistentCore3(
+      window
+    );
 
   if (
-    old
+    !coreInfo
   ) {
-    await db(
-      `tracker_results?group_id=eq.${old.id}`,
-      {
-        method:
-          'DELETE',
+    return null;
+  }
 
-        prefer:
-          'return=minimal'
-      }
+  const companions =
+    fullWindowCompanionStats(
+      window,
+      coreInfo.core
     );
 
+  const pairs = [];
 
-    await db(
-      `tracker_groups?id=eq.${old.id}`,
-      {
-        method:
-          'PATCH',
+  for (
+    let i = 0;
+    i < companions.length;
+    i++
+  ) {
+    for (
+      let j = i + 1;
+      j < companions.length;
+      j++
+    ) {
+      const evaluated =
+        evaluatePair(
+          window,
+          coreInfo.core,
+          companions[i],
+          companions[j]
+        );
 
-        prefer:
-          'return=minimal',
-
-        body: {
-          numbers,
-
-          active:
-            true,
-
-          start_draw_id:
-            latest.id,
-
-          last_seen_draw_id:
-            latest.id
-        }
+      if (
+        evaluated
+      ) {
+        pairs.push(
+          evaluated
+        );
       }
-    );
+    }
+  }
 
-  } else {
+  pairs.sort(
+    (a, b) =>
+      b.score -
+      a.score
 
-    /*
-      Empty manual slot.
-    */
+      ||
 
+      b.exact5 -
+      a.exact5
+
+      ||
+
+      b.fourPlus -
+      a.fourPlus
+
+      ||
+
+      b.threePlus -
+      a.threePlus
+
+      ||
+
+      b.pairTogether -
+      a.pairTogether
+
+      ||
+
+      a.numbers
+        .join(',')
+        .localeCompare(
+          b.numbers.join(',')
+        )
+  );
+
+  const winner =
+    pairs[0];
+
+  if (
+    !winner ||
+    winner.numbers.length !== 5
+  ) {
+    return null;
+  }
+
+  return {
+    numbers:
+      winner.numbers,
+
+    method:
+      'group-six-core3-plus-full-window-companion-pair',
+
+    analysis: {
+      window:
+        window.length,
+
+      core:
+        coreInfo.core,
+
+      coreCount:
+        coreInfo.coreCount,
+
+      coreRecentCount:
+        coreInfo.coreRecentCount,
+
+      coreSegmentCount:
+        coreInfo.coreSegmentCount,
+
+      coreConsistency:
+        Number(
+          coreInfo
+            .coreConsistency
+            .toFixed(3)
+        ),
+
+      companionPool:
+        companions.length,
+
+      pairCandidates:
+        pairs.length,
+
+      selectedPair:
+        winner.pair,
+
+      score:
+        Number(
+          winner
+            .score
+            .toFixed(3)
+        ),
+
+      historicalThreePlus:
+        winner.threePlus,
+
+      historicalFourPlus:
+        winner.fourPlus,
+
+      historicalExact5:
+        winner.exact5,
+
+      pairTogether:
+        winner.pairTogether,
+
+      companions: [
+        winner.companionA,
+        winner.companionB
+      ].map(
+        x => ({
+          number:
+            x.number,
+
+          count:
+            x.count,
+
+          recentCount:
+            x.recentCount,
+
+          segmentCount:
+            x.segmentCount,
+
+          supportScore:
+            Number(
+              x
+                .supportScore
+                .toFixed(3)
+            )
+        })
+      )
+    }
+  };
+}
+
+
+/* =========================================================
+   DATABASE GROUP
+========================================================= */
+
+async function createGroup(
+  numbers,
+  startDrawId
+) {
+  const rows =
     await db(
       'tracker_groups',
       {
@@ -958,534 +860,660 @@ async function startManual(
 
         body: {
           name:
-            getManualName(
-              slot
-            ),
+            GROUP_NAME,
 
-          numbers,
+          numbers:
+            norm(numbers),
 
           active:
             true,
 
           start_draw_id:
-            latest.id,
+            Number(
+              startDrawId
+            ),
 
           last_seen_draw_id:
-            latest.id
+            Number(
+              startDrawId
+            )
+        }
+      }
+    );
+
+  return (
+    rows?.[0] ||
+    null
+  );
+}
+
+async function discardGroup(
+  group
+) {
+  if (
+    !group?.id
+  ) {
+    return;
+  }
+
+  await db(
+    `tracker_results?group_id=eq.${group.id}`,
+    {
+      method:
+        'DELETE',
+
+      prefer:
+        'return=minimal'
+    }
+  );
+
+  await db(
+    `tracker_groups?id=eq.${group.id}`,
+    {
+      method:
+        'DELETE',
+
+      prefer:
+        'return=minimal'
+    }
+  );
+}
+
+async function archiveGroupAndClearResults(
+  group
+) {
+  await db(
+    `tracker_results?group_id=eq.${group.id}`,
+    {
+      method:
+        'DELETE',
+
+      prefer:
+        'return=minimal'
+    }
+  );
+
+  await db(
+    `tracker_groups?id=eq.${group.id}`,
+    {
+      method:
+        'PATCH',
+
+      prefer:
+        'return=minimal',
+
+      body: {
+        name:
+          `${ARCHIVE_PREFIX}${group.start_draw_id}`,
+
+        active:
+          false,
+
+        last_seen_draw_id:
+          Number(
+            group.start_draw_id
+          )
+          +
+          TRACK_DRAWS
+      }
+    }
+  );
+}
+
+
+/* =========================================================
+   TRACK NEXT 20
+========================================================= */
+
+async function trackGroup(
+  group,
+  draws,
+  latestId
+) {
+  const after =
+    Number(
+      group.last_seen_draw_id
+      ??
+      group.start_draw_id
+    );
+
+  const cutoff =
+    Number(
+      group.start_draw_id
+    )
+    +
+    TRACK_DRAWS;
+
+  const target =
+    Math.min(
+      Number(
+        latestId
+      ),
+      cutoff
+    );
+
+  if (
+    target <= after
+  ) {
+    return {
+      processed:
+        0,
+
+      lastSeen:
+        after,
+
+      capReached:
+        after >= cutoff
+    };
+  }
+
+  const pending =
+    draws.filter(
+      d =>
+        Number(
+          d.draw_id
+        ) > after
+
+        &&
+
+        Number(
+          d.draw_id
+        ) <= target
+    );
+
+  for (
+    const d
+    of pending
+  ) {
+    const s =
+      score(
+        {
+          numbers:
+            d.numbers,
+
+          bullsEye:
+            d.bulls_eye
+        },
+
+        group.numbers
+      );
+
+    await db(
+      'tracker_results?on_conflict=group_id,draw_id',
+      {
+        method:
+          'POST',
+
+        prefer:
+          'resolution=merge-duplicates,return=minimal',
+
+        body: {
+          group_id:
+            group.id,
+
+          draw_id:
+            d.draw_id,
+
+          hit_count:
+            s.count,
+
+          hit_numbers:
+            s.hit,
+
+          bulls_eye:
+            s.bullsEye,
+
+          bulls_eye_match:
+            s.bullsEyeMatch
         }
       }
     );
   }
 
+  const lastSeen =
+    pending.at(-1)
+      ?.draw_id
+    ??
+    after;
 
-  const manuals =
-    await readAllManuals();
+  await db(
+    `tracker_groups?id=eq.${group.id}`,
+    {
+      method:
+        'PATCH',
 
+      prefer:
+        'return=minimal',
+
+      body: {
+        last_seen_draw_id:
+          Number(
+            lastSeen
+          )
+      }
+    }
+  );
+
+  group.last_seen_draw_id =
+    Number(
+      lastSeen
+    );
 
   return {
-    ok:
-      true,
+    processed:
+      pending.length,
 
-    unchanged:
-      false,
+    lastSeen:
+      Number(
+        lastSeen
+      ),
 
-    resumed:
-      false,
-
-    message:
-      'Manual tracking started. Only future draws will be counted.',
-
-    manuals,
-
-    manual:
-      manuals[
-        slot - 1
-      ],
-
-    latest: {
-      id:
-        latest.id,
-
-      date:
-        latest.date,
-
-      time:
-        latest.time
-    }
+    capReached:
+      Number(
+        lastSeen
+      ) >= cutoff
   };
 }
 
 
 /* =========================================================
-   STOP
+   GROUP SIX ENGINE
+
+   50 -> track 20
+   70 -> track 20
+   90 -> track 20
+   110 -> track 20
+   ...
 ========================================================= */
 
-async function stopManual(slot) {
-  const group =
-    await getManual(
-      slot
-    );
-
+async function runGroupSix() {
+  const control =
+    await getControl();
 
   if (
-    !group
+    !control
   ) {
-    const manuals =
-      await readAllManuals();
-
-
     return {
       ok:
         true,
 
-      message:
-        'No manual group exists in this slot.',
+      active:
+        false,
 
-      manuals,
-
-      manual:
-        manuals[
-          slot - 1
-        ]
+      reason:
+        'no-daily-control'
     };
   }
 
+  const draws =
+    await getCycleDraws(
+      control
+    );
 
-  let latest =
-    null;
+  if (
+    draws.length <
+    MIN_ANALYSIS_DRAWS
+  ) {
+    return {
+      ok:
+        true,
+
+      active:
+        false,
+
+      waitingFor:
+        MIN_ANALYSIS_DRAWS,
+
+      have:
+        draws.length,
+
+      remaining:
+        MIN_ANALYSIS_DRAWS -
+        draws.length,
+
+      rule:
+        'Group Six waits for the first 50 daily draws.'
+    };
+  }
+
+  const firstSelectionEndId =
+    Number(
+      control.start_draw_id
+    )
+    +
+    MIN_ANALYSIS_DRAWS
+    -
+    1;
+
+  const firstWindow =
+    getWindowEndingAt(
+      draws,
+      firstSelectionEndId
+    );
+
+  if (
+    firstWindow.length !==
+    MIN_ANALYSIS_DRAWS
+  ) {
+    return {
+      ok:
+        true,
+
+      active:
+        false,
+
+      waitingFor:
+        MIN_ANALYSIS_DRAWS,
+
+      have:
+        Math.min(
+          draws.length,
+          MIN_ANALYSIS_DRAWS
+        ),
+
+      remaining:
+        Math.max(
+          0,
+          MIN_ANALYSIS_DRAWS -
+          draws.length
+        ),
+
+      error:
+        'First exact 50-draw cumulative window is not complete.'
+    };
+  }
+
+  let group =
+    await getCurrentGroup();
+
+  let created =
+    false;
+
+  let rotated =
+    0;
 
   let processed =
     0;
 
-  let stoppedAtMissing =
+  let repairedAlignment =
+    false;
+
+  let method =
     null;
 
-
-  if (
-    group.active
-  ) {
-    latest =
-      await getDraw(
-        null
-      );
-
-
-    await storeDraw(
-      latest
-    );
-
-
-    const sync =
-      await backfillManual(
-        group,
-        latest
-      );
-
-
-    processed =
-      sync.processed;
-
-
-    stoppedAtMissing =
-      sync.stoppedAtMissing;
-
-
-    await db(
-      `tracker_groups?id=eq.${group.id}`,
-      {
-        method:
-          'PATCH',
-
-        prefer:
-          'return=minimal',
-
-        body: {
-          active:
-            false
-        }
-      }
-    );
-  }
-
-
-  const manuals =
-    await readAllManuals();
-
-
-  return {
-    ok:
-      true,
-
-    message:
-      'Manual tracking stopped. Existing results were kept.',
-
-    manuals,
-
-    manual:
-      manuals[
-        slot - 1
-      ],
-
-    processed,
-
-    stoppedAtMissing,
-
-    latest:
-      latest
-        ? {
-            id:
-              latest.id,
-
-            date:
-              latest.date,
-
-            time:
-              latest.time
-          }
-        :
-        null
-  };
-}
-
-
-/* =========================================================
-   CLEAR
-========================================================= */
-
-async function clearManual(slot) {
-  const group =
-    await getManual(
-      slot
-    );
-
+  let selectionAnalysis =
+    null;
 
   if (
     group
+    &&
+    !isAlignedGroupStart(
+      group.start_draw_id,
+      firstSelectionEndId
+    )
   ) {
-    await db(
-      `tracker_results?group_id=eq.${group.id}`,
-      {
-        method:
-          'DELETE',
-
-        prefer:
-          'return=minimal'
-      }
+    await discardGroup(
+      group
     );
 
+    group =
+      null;
 
-    await db(
-      `tracker_groups?id=eq.${group.id}`,
-      {
-        method:
-          'DELETE',
-
-        prefer:
-          'return=minimal'
-      }
-    );
+    repairedAlignment =
+      true;
   }
-
-
-  const manuals =
-    await readAllManuals();
-
-
-  return {
-    ok:
-      true,
-
-    message:
-      'Manual group cleared.',
-
-    manuals,
-
-    manual:
-      manuals[
-        slot - 1
-      ]
-  };
-}
-
-
-/* =========================================================
-   GET / SYNC
-========================================================= */
-
-async function getManualState() {
-  const group1 =
-    await getManual(
-      1
-    );
-
-  const group2 =
-    await getManual(
-      2
-    );
-
-
-  const groups = [
-    group1,
-    group2
-  ];
-
-
-  const activeGroups =
-    groups.filter(
-      group =>
-        group &&
-        group.active
-    );
-
-
-  let latest =
-    null;
-
-  let processed =
-    0;
-
-  const missing = [];
-
 
   if (
-    activeGroups.length
+    !group
   ) {
-    latest =
-      await getDraw(
-        null
+    const pick =
+      selectGroupSix(
+        firstWindow
       );
 
-
-    await storeDraw(
-      latest
-    );
-
-
-    for (
-      const group
-      of activeGroups
+    if (
+      !pick
     ) {
-      const sync =
-        await backfillManual(
-          group,
-          latest
-        );
+      return {
+        ok:
+          false,
 
+        active:
+          false,
 
-      processed +=
-        Number(
-          sync.processed ||
-          0
-        );
-
-
-      if (
-        sync.stoppedAtMissing
-      ) {
-        missing.push({
-          groupId:
-            group.id,
-
-          drawId:
-            sync.stoppedAtMissing
-        });
-      }
+        error:
+          'Unable to select Group Six from first 50 cumulative draws.'
+      };
     }
+
+    group =
+      await createGroup(
+        pick.numbers,
+        firstSelectionEndId
+      );
+
+    if (
+      !group
+    ) {
+      return {
+        ok:
+          false,
+
+        active:
+          false,
+
+        error:
+          'Unable to create Group Six.'
+      };
+    }
+
+    created =
+      true;
+
+    method =
+      pick.method;
+
+    selectionAnalysis =
+      pick.analysis ||
+      null;
   }
 
+  const latestId =
+    Number(
+      draws.at(-1)
+        .draw_id
+    );
 
-  const manuals =
-    await readAllManuals();
+  for (
+    let guard = 0;
+    guard < 20;
+    guard++
+  ) {
+    const startId =
+      Number(
+        group.start_draw_id
+      );
 
+    const cutoff =
+      startId +
+      TRACK_DRAWS;
+
+    const trackedNow =
+      await trackGroup(
+        group,
+        draws,
+        latestId
+      );
+
+    processed +=
+      trackedNow.processed;
+
+    if (
+      latestId < cutoff
+    ) {
+      break;
+    }
+
+    const window =
+      getWindowEndingAt(
+        draws,
+        cutoff
+      );
+
+    const expectedWindowSize =
+      analysisSizeForGroupStart(
+        control.start_draw_id,
+        cutoff
+      );
+
+    if (
+      window.length <
+      MIN_ANALYSIS_DRAWS
+
+      ||
+
+      window.length !==
+      expectedWindowSize
+    ) {
+      break;
+    }
+
+    const pick =
+      selectGroupSix(
+        window
+      );
+
+    if (
+      !pick
+    ) {
+      break;
+    }
+
+    await archiveGroupAndClearResults(
+      group
+    );
+
+    group =
+      await createGroup(
+        pick.numbers,
+        cutoff
+      );
+
+    if (
+      !group
+    ) {
+      break;
+    }
+
+    rotated++;
+
+    method =
+      pick.method;
+
+    selectionAnalysis =
+      pick.analysis ||
+      null;
+  }
+
+  const startId =
+    Number(
+      group?.start_draw_id ||
+      0
+    );
+
+  const lastSeen =
+    Number(
+      group?.last_seen_draw_id
+      ??
+      startId
+    );
+
+  const tracked =
+    Math.max(
+      0,
+      Math.min(
+        TRACK_DRAWS,
+        lastSeen -
+        startId
+      )
+    );
+
+  const analysisWindow =
+    analysisSizeForGroupStart(
+      control.start_draw_id,
+      startId
+    );
 
   return {
     ok:
       true,
 
-    manuals,
+    active:
+      true,
 
-    manual:
-      manuals[0] ||
-      null,
+    created,
+
+    rotated,
 
     processed,
 
-    missing,
+    repairedAlignment,
 
-    latest:
-      latest
-        ? {
-            id:
-              latest.id,
+    groupId:
+      group?.id ||
+      null,
 
-            date:
-              latest.date,
+    name:
+      GROUP_NAME,
 
-            time:
-              latest.time
-          }
-        :
-        null
+    numbers:
+      norm(
+        group?.numbers ||
+        []
+      ),
+
+    startDrawId:
+      startId,
+
+    lastSeenDrawId:
+      lastSeen,
+
+    tracked,
+
+    remaining:
+      Math.max(
+        0,
+        TRACK_DRAWS -
+        tracked
+      ),
+
+    nextSelectionAfterDrawId:
+      startId +
+      TRACK_DRAWS,
+
+    firstSelectionEndId,
+
+    analysisWindow,
+
+    trackingWindow:
+      TRACK_DRAWS,
+
+    method:
+      method ||
+      'existing-active-group-six',
+
+    selectionAnalysis,
+
+    rule:
+      'Group Six: Persistent Core 3 chooses the fixed three-number core, then two companions are selected from the full cumulative 50/70/90/... window. The five numbers are fixed for exactly 20 future draws.',
+
+    bestRule:
+      'Every future draw counts toward 20. Group Six is independent from Group Five.'
   };
 }
 
-
-/* =========================================================
-   API HANDLER
-========================================================= */
-
-module.exports =
-async function handler(
-  req,
-  res
-) {
-  res.setHeader(
-    'Cache-Control',
-    'no-store,max-age=0'
-  );
-
-
-  try {
-
-    if (
-      req.method ===
-      'POST'
-    ) {
-      const action =
-        String(
-          req.body?.action ||
-          'start'
-        )
-          .trim()
-          .toLowerCase();
-
-
-      const slot =
-        normalizeSlot(
-          req.body?.slot ??
-          1
-        );
-
-
-      if (
-        action ===
-        'start'
-      ) {
-        const numbers =
-          validateNumbers(
-            req.body?.numbers
-          );
-
-
-        const result =
-          await startManual(
-            slot,
-            numbers
-          );
-
-
-        return res
-          .status(200)
-          .json(
-            result
-          );
-      }
-
-
-      if (
-        action ===
-        'stop'
-      ) {
-        const result =
-          await stopManual(
-            slot
-          );
-
-
-        return res
-          .status(200)
-          .json(
-            result
-          );
-      }
-
-
-      if (
-        action ===
-        'clear'
-      ) {
-        const result =
-          await clearManual(
-            slot
-          );
-
-
-        return res
-          .status(200)
-          .json(
-            result
-          );
-      }
-
-
-      return res
-        .status(400)
-        .json({
-          ok:
-            false,
-
-          error:
-            'Unknown manual action.'
-        });
-    }
-
-
-    if (
-      req.method ===
-      'GET'
-    ) {
-      const state =
-        await getManualState();
-
-
-      return res
-        .status(200)
-        .json(
-          state
-        );
-    }
-
-
-    return res
-      .status(405)
-      .json({
-        ok:
-          false,
-
-        error:
-          'Method not allowed'
-      });
-
-
-  } catch (error) {
-
-    console.error(
-      'Manual group API error:',
-      error
-    );
-
-
-    return res
-      .status(500)
-      .json({
-        ok:
-          false,
-
-        error:
-          error?.message ||
-          String(
-            error
-          )
-      });
-  }
+module.exports = {
+  runGroupSix,
+  selectGroupSix,
+  fullWindowCompanionStats
 };
