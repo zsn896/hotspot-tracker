@@ -193,7 +193,7 @@ async (
     lastSeenUsesLatest3Plus:
       simulated
         .lastSeenDrawId
-      === 9002,
+      === 9003,
 
     lastSeenHitCountCorrect:
       simulated
@@ -233,10 +233,10 @@ async (
           9003,
 
         lastSeenDrawId:
-          9002,
+          9003,
 
         note:
-          '2:04 AM must be excluded; Last Seen must remain the newest 3/5+ result.'
+          '2:04 AM must be excluded; Last Seen must be the newest 3/5+ result, including the 2:00 AM draw.'
       },
 
       actual:
