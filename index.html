@@ -681,7 +681,11 @@ h1{
 .fusionInputs input{
   color:#69adff;
   border-color:#345981;
-  cursor:default
+  cursor:text
+}
+
+.fusionInputs input:focus{
+  border-color:#2f80ff
 }
 
 .manualActions{
@@ -689,6 +693,10 @@ h1{
   grid-template-columns:1.3fr 1fr 1fr;
   gap:7px;
   margin-top:10px
+}
+
+.fusionActions{
+  grid-template-columns:1fr 1.35fr 1fr 1fr
 }
 
 .manualMsg{
@@ -828,6 +836,10 @@ footer{
     padding:10px 7px;
     font-size:12px
   }
+
+  .fusionActions{
+    grid-template-columns:1fr 1fr
+  }
 }
 </style>
 </head>
@@ -925,7 +937,7 @@ footer{
     <div>
       <h2>Manual Analysis</h2>
       <p>
-        Manual Groups 1 + 2 and automatic Fusion Group 3.
+        Manual Groups 1 + 2 and Manual/Automatic Fusion Group 3.
       </p>
     </div>
 
@@ -1044,7 +1056,7 @@ footer{
           </div>
 
           <div class="small mut" style="margin-top:4px">
-            Generated automatically from Manual Group 1 + 2
+            Enter 5 numbers manually or Generate automatically from Manual Group 1 + 2
           </div>
         </div>
 
@@ -1056,15 +1068,19 @@ footer{
 
 
       <div class="manualInputs fusionInputs">
-        <input id="m3_1" readonly placeholder="—">
-        <input id="m3_2" readonly placeholder="—">
-        <input id="m3_3" readonly placeholder="—">
-        <input id="m3_4" readonly placeholder="—">
-        <input id="m3_5" readonly placeholder="—">
+        <input inputmode="numeric" maxlength="2" id="m3_1" placeholder="—">
+        <input inputmode="numeric" maxlength="2" id="m3_2" placeholder="—">
+        <input inputmode="numeric" maxlength="2" id="m3_3" placeholder="—">
+        <input inputmode="numeric" maxlength="2" id="m3_4" placeholder="—">
+        <input inputmode="numeric" maxlength="2" id="m3_5" placeholder="—">
       </div>
 
 
-      <div class="manualActions">
+      <div class="manualActions fusionActions">
+
+        <button class="btn btnGreen" id="start3">
+          ▶ Start
+        </button>
 
         <button class="btn btnBlue" id="generate3">
           ⚡ Generate Numbers
@@ -1082,7 +1098,7 @@ footer{
 
 
       <div class="manualMsg mut" id="msg3">
-        Press Generate Numbers to analyze Manual Group 1 + 2.
+        Enter 5 numbers and press Start, or press Generate Numbers for automatic selection.
       </div>
 
       <div id="fusionSelectionInfo"></div>
@@ -2994,13 +3010,6 @@ function renderManualSlot(
     );
 
 
-  /*
-    MANUAL DISPLAY RULE:
-
-    Show the newest 3/5+ result,
-    NOT the highest historical result.
-  */
-
   const latestStrong =
     m?.lastSeenResult
     ??
@@ -3605,6 +3614,14 @@ function setFusionBusy(
 
   document
     .getElementById(
+      'start3'
+    )
+    .disabled =
+      isBusy;
+
+
+  document
+    .getElementById(
       'generate3'
     )
     .disabled =
@@ -3625,6 +3642,130 @@ function setFusionBusy(
     )
     .disabled =
       isBusy;
+}
+
+
+async function startFusion(){
+
+  const msg =
+    document.getElementById(
+      'msg3'
+    );
+
+
+  try{
+
+    const numbers =
+      readNumbers(
+        3
+      );
+
+
+    setFusionBusy(
+      true
+    );
+
+
+    msg.className =
+      'manualMsg mut';
+
+
+    msg.textContent =
+      'Starting Manual Group 3…';
+
+
+    const j =
+      await api(
+        '/api/fusion',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'start',
+              numbers
+            })
+        }
+      );
+
+
+    msg.className =
+      'manualMsg ok';
+
+
+    if(j?.unchanged){
+
+      msg.textContent =
+        `Already tracking these numbers. Original start draw ${
+          j?.manual?.startDrawId
+          ??
+          '—'
+        } was preserved.`;
+
+    }else if(j?.resumed){
+
+      msg.textContent =
+        `Manual Group 3 resumed from draw ${
+          j?.latest?.id
+          ??
+          '—'
+        }. Previous results were preserved.`;
+
+    }else{
+
+      msg.textContent =
+        `Manual Group 3 started after draw ${
+          j?.latest?.id
+          ??
+          j?.manual?.startDrawId
+          ??
+          '—'
+        }.`;
+    }
+
+
+    const info =
+      document.getElementById(
+        'fusionSelectionInfo'
+      );
+
+
+    if(info){
+      info.innerHTML =
+        `
+        <div class="fusionSelection">
+          Manual mode — tracking the 5 numbers you entered.
+        </div>
+        `;
+    }
+
+
+    renderFusion(
+      j
+    );
+
+  }catch(e){
+
+    msg.className =
+      'manualMsg bad';
+
+
+    msg.textContent =
+      String(
+        e?.message || e
+      );
+
+  }finally{
+
+    setFusionBusy(
+      false
+    );
+  }
 }
 
 
@@ -3851,11 +3992,17 @@ async function clearFusion(){
 
 
     msg.textContent =
-      'Fusion Group 3 cleared. Press Generate Numbers when you want a new group.';
+      'Manual Group 3 cleared. Enter numbers and press Start, or press Generate Numbers.';
 
 
     renderFusion(
       j
+    );
+
+
+    fillInputs(
+      3,
+      []
     );
 
   }catch(e){
@@ -4264,6 +4411,16 @@ for(
         )
     );
 }
+
+
+document
+  .getElementById(
+    'start3'
+  )
+  .addEventListener(
+    'click',
+    startFusion
+  );
 
 
 document
