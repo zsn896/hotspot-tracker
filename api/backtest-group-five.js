@@ -5,7 +5,7 @@ const { selectFive: persistentSelectFive } = require('../lib/group-five');
 
 const FIXED_CUTOFF_DRAW_ID = 3298607;
 const WINDOW_SIZE = 250;
-const WINDOW_COUNT = 4;
+const WINDOW_COUNT = 3;
 const FIRST_ANALYSIS = 50;
 const TRACK_DRAWS = 20;
 const CYCLES_PER_WINDOW = 10;
