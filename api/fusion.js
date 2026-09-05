@@ -12,14 +12,14 @@ const VALIDATION_RATIO = 0.30;
 const RECENT_WINDOW = 40;
 
 
-const nums = v =>
-  Array.isArray(v)
-    ? v.map(Number).filter(Number.isFinite)
+const nums = value =>
+  Array.isArray(value)
+    ? value.map(Number).filter(Number.isFinite)
     : [];
 
 
-const uniqueSorted = v =>
-  [...new Set(nums(v))]
+const uniqueSorted = value =>
+  [...new Set(nums(value))]
     .sort((a, b) => a - b);
 
 
@@ -32,6 +32,33 @@ function sameNumbers(a, b) {
     y.length === 5 &&
     x.every((n, i) => n === y[i])
   );
+}
+
+
+function validateManualNumbers(value) {
+  const numbers =
+    uniqueSorted(value);
+
+  if (numbers.length !== 5) {
+    throw new Error(
+      'Manual Group 3 requires exactly 5 unique numbers.'
+    );
+  }
+
+  if (
+    numbers.some(
+      number =>
+        !Number.isInteger(number) ||
+        number < 1 ||
+        number > 80
+    )
+  ) {
+    throw new Error(
+      'Manual Group 3 numbers must be whole numbers from 1 to 80.'
+    );
+  }
+
+  return numbers;
 }
 
 
@@ -61,9 +88,10 @@ async function storeDraw(draw) {
 
 
 async function getByName(name) {
-  const rows = await db(
-    `tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&name=eq.${encodeURIComponent(name)}&order=id.desc&limit=1`
-  );
+  const rows =
+    await db(
+      `tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&name=eq.${encodeURIComponent(name)}&order=id.desc&limit=1`
+    );
 
   return rows?.[0] || null;
 }
@@ -83,7 +111,9 @@ async function safeDraw(id, map) {
 
   try {
     const draw =
-      await getDraw(Number(id));
+      await getDraw(
+        Number(id)
+      );
 
     return (
       Number(draw?.id) === Number(id)
@@ -141,15 +171,22 @@ async function backfill(
 
   const ids =
     Array.from(
-      { length: end - after },
-      (_, i) => after + i + 1
+      {
+        length:
+          end - after
+      },
+
+      (_, i) =>
+        after + i + 1
     );
 
   let batch = [];
 
   try {
     batch =
-      (await getMany(ids)) || [];
+      (
+        await getMany(ids)
+      ) || [];
   } catch {
     batch = [];
   }
@@ -157,19 +194,26 @@ async function backfill(
   const map =
     new Map(
       batch
-        .filter(d => d?.id)
-        .map(d => [
-          Number(d.id),
-          d
-        ])
+        .filter(
+          draw =>
+            draw?.id
+        )
+        .map(
+          draw => [
+            Number(draw.id),
+            draw
+          ]
+        )
     );
 
   let processed = 0;
   let last = after;
   let stoppedAtMissing = null;
 
-  for (const id of ids) {
-
+  for (
+    const id
+    of ids
+  ) {
     const draw =
       await safeDraw(
         id,
@@ -178,7 +222,8 @@ async function backfill(
 
     if (
       !draw ||
-      Number(draw.id) !== Number(id)
+      Number(draw.id) !==
+      Number(id)
     ) {
       stoppedAtMissing =
         Number(id);
@@ -208,12 +253,23 @@ async function backfill(
             'resolution=merge-duplicates,return=minimal',
 
           body: {
-            group_id: group.id,
-            draw_id: draw.id,
-            hit_count: result.count,
-            hit_numbers: result.hit,
-            bulls_eye: result.bullsEye,
-            bulls_eye_match: result.bullsEyeMatch
+            group_id:
+              group.id,
+
+            draw_id:
+              draw.id,
+
+            hit_count:
+              result.count,
+
+            hit_numbers:
+              result.hit,
+
+            bulls_eye:
+              result.bullsEye,
+
+            bulls_eye_match:
+              result.bullsEyeMatch
           }
         }
       );
@@ -225,7 +281,9 @@ async function backfill(
     processed++;
   }
 
-  if (last > after) {
+  if (
+    last > after
+  ) {
     await db(
       `tracker_groups?id=eq.${group.id}`,
       {
@@ -235,7 +293,8 @@ async function backfill(
           'return=minimal',
 
         body: {
-          last_seen_draw_id: last
+          last_seen_draw_id:
+            last
         }
       }
     );
@@ -268,7 +327,9 @@ async function attachMeta(rows) {
       rows
         .map(
           row =>
-            Number(row.draw_id)
+            Number(
+              row.draw_id
+            )
         )
         .filter(
           Number.isFinite
@@ -291,7 +352,9 @@ async function attachMeta(rows) {
     Object.fromEntries(
       draws.map(
         draw => [
-          Number(draw.draw_id),
+          Number(
+            draw.draw_id
+          ),
           draw
         ]
       )
@@ -303,12 +366,16 @@ async function attachMeta(rows) {
 
       date:
         meta[
-          Number(row.draw_id)
+          Number(
+            row.draw_id
+          )
         ]?.draw_date || '',
 
       time:
         meta[
-          Number(row.draw_id)
+          Number(
+            row.draw_id
+          )
         ]?.draw_time || ''
     })
   );
@@ -334,16 +401,27 @@ async function readFusion(group) {
     withMeta[0] || null;
 
   return {
-    id: group.id,
-    slot: 3,
-    name: group.name,
-    generated: true,
+    id:
+      group.id,
+
+    slot:
+      3,
+
+    name:
+      group.name,
+
+    generated:
+      true,
 
     numbers:
-      nums(group.numbers),
+      nums(
+        group.numbers
+      ),
 
     active:
-      Boolean(group.active),
+      Boolean(
+        group.active
+      ),
 
     startDrawId:
       group.start_draw_id,
@@ -352,7 +430,8 @@ async function readFusion(group) {
       group.last_seen_draw_id,
 
     lastSeenDrawId:
-      last?.draw_id ?? null,
+      last?.draw_id ??
+      null,
 
     lastSeenResult:
       last
@@ -535,11 +614,20 @@ function buildNumberStats(
         number:
           Number(number),
 
-        count: 0,
-        weightedCount: 0,
-        recentCount: 0,
-        segments: new Set(),
-        lastIndex: -1
+        count:
+          0,
+
+        weightedCount:
+          0,
+
+        recentCount:
+          0,
+
+        segments:
+          new Set(),
+
+        lastIndex:
+          -1
       }
     );
   }
@@ -690,10 +778,17 @@ function buildPairStats(
           candidates[j]
         ),
         {
-          count: 0,
-          weightedCount: 0,
-          recentCount: 0,
-          segments: new Set()
+          count:
+            0,
+
+          weightedCount:
+            0,
+
+          recentCount:
+            0,
+
+          segments:
+            new Set()
         }
       );
     }
@@ -876,10 +971,17 @@ function buildTripleStats(
         ...triple
       ),
       {
-        count: 0,
-        weightedCount: 0,
-        recentCount: 0,
-        segments: new Set()
+        count:
+          0,
+
+        weightedCount:
+          0,
+
+        recentCount:
+          0,
+
+        segments:
+          new Set()
       }
     );
   }
@@ -1035,7 +1137,9 @@ function resultProfile(
           )
         );
 
-      if (hits >= 3) {
+      if (
+        hits >= 3
+      ) {
         threePlus++;
 
         strongSegments.add(
@@ -1054,14 +1158,18 @@ function resultProfile(
           );
       }
 
-      if (hits === 3) {
+      if (
+        hits === 3
+      ) {
         threeOnly++;
 
         weightedStrong +=
           5 * weight;
       }
 
-      if (hits === 4) {
+      if (
+        hits === 4
+      ) {
         fourOnly++;
         fourPlus++;
 
@@ -1069,7 +1177,9 @@ function resultProfile(
           32 * weight;
       }
 
-      if (hits >= 5) {
+      if (
+        hits >= 5
+      ) {
         exact5++;
         fourPlus++;
 
@@ -1085,16 +1195,25 @@ function resultProfile(
           RECENT_WINDOW
         )
       ) {
-        if (hits === 3) {
-          recentStrong += 6;
+        if (
+          hits === 3
+        ) {
+          recentStrong +=
+            6;
         }
 
-        if (hits === 4) {
-          recentStrong += 40;
+        if (
+          hits === 4
+        ) {
+          recentStrong +=
+            40;
         }
 
-        if (hits >= 5) {
-          recentStrong += 220;
+        if (
+          hits >= 5
+        ) {
+          recentStrong +=
+            220;
         }
       }
     }
@@ -1430,7 +1549,6 @@ function evaluateCombo({
     },
 
     stabilityGap,
-
     deepScore
   };
 }
@@ -1798,9 +1916,7 @@ async function selectFusion() {
               n2,
 
             numberStats,
-
             pairStats,
-
             tripleStats
           })
       )
@@ -1819,7 +1935,6 @@ async function selectFusion() {
 
   return {
     latest,
-
     best,
 
     top10:
@@ -1935,6 +2050,256 @@ async function preview() {
 
       time:
         selection.latest.time
+    }
+  };
+}
+
+
+async function startManual(
+  inputNumbers
+) {
+  const numbers =
+    validateManualNumbers(
+      inputNumbers
+    );
+
+  const latest =
+    await getDraw(null);
+
+  await storeDraw(
+    latest
+  );
+
+  const old =
+    await getFusion();
+
+
+  /*
+    Same numbers already active:
+    keep original tracking start.
+  */
+  if (
+    old &&
+    old.active &&
+    sameNumbers(
+      old.numbers,
+      numbers
+    )
+  ) {
+    const sync =
+      await backfill(
+        old,
+        latest
+      );
+
+    return {
+      ok:
+        true,
+
+      manualStart:
+        true,
+
+      unchanged:
+        true,
+
+      resumed:
+        false,
+
+      message:
+        'These Manual Group 3 numbers are already being tracked. Original start draw was preserved.',
+
+      manual:
+        await readFusion(
+          old
+        ),
+
+      processed:
+        sync.processed,
+
+      stoppedAtMissing:
+        sync.stoppedAtMissing,
+
+      latest: {
+        id:
+          latest.id,
+
+        date:
+          latest.date,
+
+        time:
+          latest.time
+      }
+    };
+  }
+
+
+  /*
+    Same numbers but tracking was stopped:
+    resume from now without counting the
+    period while it was stopped.
+  */
+  if (
+    old &&
+    !old.active &&
+    sameNumbers(
+      old.numbers,
+      numbers
+    )
+  ) {
+    await db(
+      `tracker_groups?id=eq.${old.id}`,
+      {
+        method:
+          'PATCH',
+
+        prefer:
+          'return=minimal',
+
+        body: {
+          active:
+            true,
+
+          last_seen_draw_id:
+            latest.id
+        }
+      }
+    );
+
+    return {
+      ok:
+        true,
+
+      manualStart:
+        true,
+
+      unchanged:
+        false,
+
+      resumed:
+        true,
+
+      message:
+        'Manual Group 3 tracking resumed. Previous results were preserved.',
+
+      manual:
+        await readFusion(
+          await getFusion()
+        ),
+
+      latest: {
+        id:
+          latest.id,
+
+        date:
+          latest.date,
+
+        time:
+          latest.time
+      }
+    };
+  }
+
+
+  /*
+    New manual numbers:
+    clear old Group 3 results and begin
+    tracking only from future draws.
+  */
+  if (old) {
+    await db(
+      `tracker_results?group_id=eq.${old.id}`,
+      {
+        method:
+          'DELETE',
+
+        prefer:
+          'return=minimal'
+      }
+    );
+
+    await db(
+      `tracker_groups?id=eq.${old.id}`,
+      {
+        method:
+          'PATCH',
+
+        prefer:
+          'return=minimal',
+
+        body: {
+          numbers,
+
+          active:
+            true,
+
+          start_draw_id:
+            latest.id,
+
+          last_seen_draw_id:
+            latest.id
+        }
+      }
+    );
+
+  } else {
+    await db(
+      'tracker_groups',
+      {
+        method:
+          'POST',
+
+        prefer:
+          'return=representation',
+
+        body: {
+          name:
+            GROUP_NAME,
+
+          numbers,
+
+          active:
+            true,
+
+          start_draw_id:
+            latest.id,
+
+          last_seen_draw_id:
+            latest.id
+        }
+      }
+    );
+  }
+
+  return {
+    ok:
+      true,
+
+    manualStart:
+      true,
+
+    unchanged:
+      false,
+
+    resumed:
+      false,
+
+    message:
+      'Manual Group 3 started. Only future draws will be counted.',
+
+    manual:
+      await readFusion(
+        await getFusion()
+      ),
+
+    latest: {
+      id:
+        latest.id,
+
+      date:
+        latest.date,
+
+      time:
+        latest.time
     }
   };
 }
@@ -2164,10 +2529,15 @@ async function stop() {
     };
   }
 
-  let latest = null;
-  let processed = 0;
+  let latest =
+    null;
 
-  if (group.active) {
+  let processed =
+    0;
+
+  if (
+    group.active
+  ) {
     latest =
       await getDraw(null);
 
@@ -2276,11 +2646,18 @@ async function state() {
   const group =
     await getFusion();
 
-  let latest = null;
-  let processed = 0;
-  let stoppedAtMissing = null;
+  let latest =
+    null;
 
-  if (group?.active) {
+  let processed =
+    0;
+
+  let stoppedAtMissing =
+    null;
+
+  if (
+    group?.active
+  ) {
     latest =
       await getDraw(null);
 
@@ -2384,6 +2761,20 @@ async function handler(
           .trim()
           .toLowerCase();
 
+
+      if (
+        action === 'start'
+      ) {
+        return res
+          .status(200)
+          .json(
+            await startManual(
+              req.body?.numbers
+            )
+          );
+      }
+
+
       if (
         action === 'preview'
       ) {
@@ -2393,6 +2784,7 @@ async function handler(
             await preview()
           );
       }
+
 
       if (
         action === 'generate'
@@ -2404,6 +2796,7 @@ async function handler(
           );
       }
 
+
       if (
         action === 'stop'
       ) {
@@ -2414,6 +2807,7 @@ async function handler(
           );
       }
 
+
       if (
         action === 'clear'
       ) {
@@ -2423,6 +2817,7 @@ async function handler(
             await clear()
           );
       }
+
 
       return res
         .status(400)
