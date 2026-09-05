@@ -186,9 +186,6 @@ async function getManual(slot) {
 
 /* =========================================================
    SAFE DRAW FETCH
-
-   First try the batch result.
-   If one draw is missing, retry that draw individually.
 ========================================================= */
 
 async function getSafeDraw(
@@ -213,7 +210,7 @@ async function getSafeDraw(
       );
 
     if (
-      direct?.id ===
+      Number(direct?.id) ===
       Number(id)
     ) {
       return direct;
@@ -228,20 +225,6 @@ async function getSafeDraw(
 
 /* =========================================================
    TRACKING / BACKFILL
-
-   IMPORTANT:
-   last_seen_draw_id can advance ONLY through
-   a continuous sequence of confirmed draws.
-
-   Example:
-   expected: 100,101,102,103
-
-   if 102 is missing:
-   process 100,101
-   STOP
-   last_seen = 101
-
-   Never jump to 103.
 ========================================================= */
 
 async function backfillManual(
@@ -389,10 +372,6 @@ async function backfillManual(
     null;
 
 
-  /*
-    STRICTLY process IDs in order.
-  */
-
   for (
     const expectedId
     of ids
@@ -404,14 +383,6 @@ async function backfillManual(
         batchMap
       );
 
-
-    /*
-      If this exact draw is unavailable:
-      STOP HERE.
-
-      Do NOT process anything after it.
-      Do NOT advance last_seen past it.
-    */
 
     if (
       !draw ||
@@ -440,11 +411,10 @@ async function backfillManual(
 
 
     /*
-      Only 3/5 or better is stored
-      in tracker_results.
+      Only 3/5 or better is stored.
 
-      But every confirmed draw still
-      advances last_seen_draw_id.
+      Every confirmed draw still advances
+      the internal tracking cursor.
     */
 
     if (
@@ -485,10 +455,6 @@ async function backfillManual(
     }
 
 
-    /*
-      Advance exactly one confirmed draw.
-    */
-
     lastProcessed =
       Number(
         draw.id
@@ -497,11 +463,6 @@ async function backfillManual(
     processed++;
   }
 
-
-  /*
-    Only update last_seen when we actually
-    confirmed at least one new sequential draw.
-  */
 
   if (
     lastProcessed >
@@ -543,6 +504,17 @@ async function backfillManual(
 
 /* =========================================================
    READ RESULTS
+
+   IMPORTANT:
+
+   trackingLastSeenDrawId =
+   latest sequential draw checked by the tracker.
+
+   lastSeenDrawId =
+   latest draw where this manual group achieved
+   3/5, 4/5 or 5/5.
+
+   These are deliberately separate.
 ========================================================= */
 
 async function readManual(
@@ -635,6 +607,17 @@ async function readManual(
     );
 
 
+  /*
+    rows are ordered newest first,
+    therefore rows[0] is the true
+    latest 3/5+ result.
+  */
+
+  const lastStrong =
+    rows[0] ||
+    null;
+
+
   return {
     id:
       group.id,
@@ -662,8 +645,64 @@ async function readManual(
     startDrawId:
       group.start_draw_id,
 
-    lastSeenDrawId:
+
+    /*
+      Internal tracking position.
+    */
+
+    trackingLastSeenDrawId:
       group.last_seen_draw_id,
+
+
+    /*
+      UI Last Seen:
+      latest 3/5+ result only.
+    */
+
+    lastSeenDrawId:
+      lastStrong?.draw_id
+      ??
+      null,
+
+
+    lastSeenResult:
+      lastStrong
+        ? {
+            drawId:
+              lastStrong.draw_id,
+
+            hitCount:
+              Number(
+                lastStrong.hit_count || 0
+              ),
+
+            hitNumbers:
+              Array.isArray(
+                lastStrong.hit_numbers
+              )
+                ?
+                lastStrong.hit_numbers
+                  .map(Number)
+                :
+                [],
+
+            date:
+              lastStrong.date || '',
+
+            time:
+              lastStrong.time || '',
+
+            bullsEye:
+              lastStrong.bulls_eye,
+
+            bullsEyeMatch:
+              Boolean(
+                lastStrong.bulls_eye_match
+              )
+          }
+        :
+        null,
+
 
     createdAt:
       group.created_at,
@@ -725,11 +764,9 @@ async function startManual(
     );
 
 
-  /* =====================================================
-     CASE 1:
-     Same numbers already active.
-     Keep original start and results.
-  ===================================================== */
+  /*
+    Same numbers already active.
+  */
 
   if (
     old &&
@@ -790,13 +827,10 @@ async function startManual(
   }
 
 
-  /* =====================================================
-     CASE 2:
-     Same numbers, but previously stopped.
-
-     Resume from NOW.
-     Draws while stopped are intentionally skipped.
-  ===================================================== */
+  /*
+    Same numbers but previously stopped.
+    Resume from current draw.
+  */
 
   if (
     old &&
@@ -864,13 +898,9 @@ async function startManual(
   }
 
 
-  /* =====================================================
-     CASE 3:
-     Different numbers in existing slot.
-
-     New manual test.
-     Delete previous results for this slot.
-  ===================================================== */
+  /*
+    Different numbers in existing slot.
+  */
 
   if (
     old
@@ -913,10 +943,9 @@ async function startManual(
 
   } else {
 
-    /* ===================================================
-       CASE 4:
-       Empty slot.
-    =================================================== */
+    /*
+      Empty manual slot.
+    */
 
     await db(
       'tracker_groups',
@@ -1032,11 +1061,6 @@ async function stopManual(slot) {
     null;
 
 
-  /*
-    Before stopping:
-    sync only through continuous confirmed draws.
-  */
-
   if (
     group.active
   ) {
@@ -1108,17 +1132,16 @@ async function stopManual(slot) {
 
     latest:
       latest
-        ?
-        {
-          id:
-            latest.id,
+        ? {
+            id:
+              latest.id,
 
-          date:
-            latest.date,
+            date:
+              latest.date,
 
-          time:
-            latest.time
-        }
+            time:
+              latest.time
+          }
         :
         null
   };
@@ -1224,11 +1247,6 @@ async function getManualState() {
   const missing = [];
 
 
-  /*
-    Only fetch current draw if at least
-    one manual group is active.
-  */
-
   if (
     activeGroups.length
   ) {
@@ -1276,11 +1294,6 @@ async function getManualState() {
   }
 
 
-  /*
-    Re-read after syncing so
-    lastSeenDrawId is always current.
-  */
-
   const manuals =
     await readAllManuals();
 
@@ -1301,17 +1314,16 @@ async function getManualState() {
 
     latest:
       latest
-        ?
-        {
-          id:
-            latest.id,
+        ? {
+            id:
+              latest.id,
 
-          date:
-            latest.date,
+            date:
+              latest.date,
 
-          time:
-            latest.time
-        }
+            time:
+              latest.time
+          }
         :
         null
   };
@@ -1335,10 +1347,6 @@ async function handler(
 
   try {
 
-    /* =====================================================
-       POST
-    ===================================================== */
-
     if (
       req.method ===
       'POST'
@@ -1358,8 +1366,6 @@ async function handler(
           1
         );
 
-
-      /* START */
 
       if (
         action ===
@@ -1386,8 +1392,6 @@ async function handler(
       }
 
 
-      /* STOP */
-
       if (
         action ===
         'stop'
@@ -1405,8 +1409,6 @@ async function handler(
           );
       }
 
-
-      /* CLEAR */
 
       if (
         action ===
@@ -1438,10 +1440,6 @@ async function handler(
     }
 
 
-    /* =====================================================
-       GET
-    ===================================================== */
-
     if (
       req.method ===
       'GET'
@@ -1457,10 +1455,6 @@ async function handler(
         );
     }
 
-
-    /* =====================================================
-       OTHER METHODS
-    ===================================================== */
 
     return res
       .status(405)
