@@ -846,29 +846,20 @@ footer{
 
   <div class="toolbar">
 
-    <button
-      class="btn btnBlue"
-      id="refresh"
-    >
+    <button class="btn btnBlue" id="refresh">
       ↻ Refresh Now
     </button>
 
     <span id="busy"></span>
 
-    <span
-      class="statusText"
-      id="status"
-    >
+    <span class="statusText" id="status">
       <span class="dot"></span>
       Connecting…
     </span>
 
   </div>
 
-  <div
-    id="syncInfo"
-    class="syncInfo"
-  >
+  <div id="syncInfo" class="syncInfo">
     Checking official draw…
   </div>
 
@@ -921,10 +912,7 @@ footer{
 
   <div class="manualGrid">
 
-    <div
-      class="manualGroup"
-      id="manualGroup1"
-    >
+    <div class="manualGroup" id="manualGroup1">
 
       <div class="manualHead">
 
@@ -932,10 +920,7 @@ footer{
           Manual Group 1
         </div>
 
-        <div
-          class="manualState mut"
-          id="manualState1"
-        >
+        <div class="manualState mut" id="manualState1">
           ● Not tracking
         </div>
 
@@ -943,56 +928,39 @@ footer{
 
 
       <div class="manualInputs">
-
         <input inputmode="numeric" maxlength="2" id="m1_1">
         <input inputmode="numeric" maxlength="2" id="m1_2">
         <input inputmode="numeric" maxlength="2" id="m1_3">
         <input inputmode="numeric" maxlength="2" id="m1_4">
         <input inputmode="numeric" maxlength="2" id="m1_5">
-
       </div>
 
 
       <div class="manualActions">
 
-        <button
-          class="btn btnGreen"
-          id="start1"
-        >
+        <button class="btn btnGreen" id="start1">
           ▶ Start
         </button>
 
-        <button
-          class="btn btnRed"
-          id="stop1"
-        >
+        <button class="btn btnRed" id="stop1">
           ■ Stop
         </button>
 
-        <button
-          class="btn btnDark"
-          id="clear1"
-        >
+        <button class="btn btnDark" id="clear1">
           Clear
         </button>
 
       </div>
 
 
-      <div
-        class="manualMsg mut"
-        id="msg1"
-      ></div>
+      <div class="manualMsg mut" id="msg1"></div>
 
       <div id="manualContent1"></div>
 
     </div>
 
 
-    <div
-      class="manualGroup"
-      id="manualGroup2"
-    >
+    <div class="manualGroup" id="manualGroup2">
 
       <div class="manualHead">
 
@@ -1000,10 +968,7 @@ footer{
           Manual Group 2
         </div>
 
-        <div
-          class="manualState mut"
-          id="manualState2"
-        >
+        <div class="manualState mut" id="manualState2">
           ● Not tracking
         </div>
 
@@ -1011,46 +976,32 @@ footer{
 
 
       <div class="manualInputs">
-
         <input inputmode="numeric" maxlength="2" id="m2_1">
         <input inputmode="numeric" maxlength="2" id="m2_2">
         <input inputmode="numeric" maxlength="2" id="m2_3">
         <input inputmode="numeric" maxlength="2" id="m2_4">
         <input inputmode="numeric" maxlength="2" id="m2_5">
-
       </div>
 
 
       <div class="manualActions">
 
-        <button
-          class="btn btnGreen"
-          id="start2"
-        >
+        <button class="btn btnGreen" id="start2">
           ▶ Start
         </button>
 
-        <button
-          class="btn btnRed"
-          id="stop2"
-        >
+        <button class="btn btnRed" id="stop2">
           ■ Stop
         </button>
 
-        <button
-          class="btn btnDark"
-          id="clear2"
-        >
+        <button class="btn btnDark" id="clear2">
           Clear
         </button>
 
       </div>
 
 
-      <div
-        class="manualMsg mut"
-        id="msg2"
-      ></div>
+      <div class="manualMsg mut" id="msg2"></div>
 
       <div id="manualContent2"></div>
 
@@ -1265,47 +1216,27 @@ function renderStatus(mode){
       'status'
     );
 
-  if(
-    mode ===
-    'collecting'
-  ){
-
+  if(mode === 'collecting'){
     el.innerHTML =
       '<span class="dot"></span>Live: Collecting';
-
     return;
   }
 
-  if(
-    mode ===
-    'preparing'
-  ){
-
+  if(mode === 'preparing'){
     el.innerHTML =
       '<span class="amber">● Preparing</span>';
-
     return;
   }
 
-  if(
-    mode ===
-    'tracking'
-  ){
-
+  if(mode === 'tracking'){
     el.innerHTML =
       '<span class="redStatus">● Automatic Tracking</span>';
-
     return;
   }
 
-  if(
-    mode ===
-    'cleanup'
-  ){
-
+  if(mode === 'cleanup'){
     el.innerHTML =
       '<span class="blue">● Cleanup</span>';
-
     return;
   }
 
@@ -1363,50 +1294,39 @@ function renderSummary(j){
       <div class="stats">
 
         <div class="stat">
-
           <div class="statLabel">
             Mode
           </div>
-
           <div class="big cBlue">
             ${esc(j?.mode || '—')}
           </div>
-
         </div>
 
 
         <div class="stat">
-
           <div class="statLabel">
             Collection
           </div>
-
           <div class="big cGreen">
             ${have}/${need}
           </div>
-
         </div>
 
 
         <div class="stat">
-
           <div class="statLabel">
             Remaining
           </div>
-
           <div class="big cOrange">
             ${remaining}
           </div>
-
         </div>
 
 
         <div class="stat">
-
           <div class="statLabel">
             Stored Draw
           </div>
-
           <div class="big cPurple">
             ${
               j?.latest?.draw_id
@@ -1416,7 +1336,6 @@ function renderSummary(j){
               '—'
             }
           </div>
-
         </div>
 
       </div>
@@ -1424,9 +1343,7 @@ function renderSummary(j){
 
       <div class="progress">
 
-        <i
-          style="width:${pct}%"
-        ></i>
+        <i style="width:${pct}%"></i>
 
         <span>
           ${pct}%
@@ -1456,9 +1373,7 @@ function latestFromTrack(j){
       :
       [];
 
-  if(
-    !pool.length
-  ){
+  if(!pool.length){
     return null;
   }
 
@@ -1925,9 +1840,7 @@ function bestInfo(results){
   }
 
 
-  if(
-    best < 3
-  ){
+  if(best < 3){
 
     return {
       best,
@@ -1975,9 +1888,7 @@ function bestInfo(results){
 }
 
 
-/* =========================================================
-   GROUP FIVE
-========================================================= */
+/* GROUP FIVE */
 
 function renderGroupFive(state){
 
@@ -2071,54 +1982,42 @@ function renderGroupFive(state){
         <div class="fiveStats">
 
           <div class="fiveStat">
-
             <div class="fiveStatLabel">
               Analysis
             </div>
-
             <div class="fiveStatValue cBlue">
               ${have}/${analysisTarget}
             </div>
-
           </div>
 
 
           <div class="fiveStat">
-
             <div class="fiveStatLabel">
               Remaining
             </div>
-
             <div class="fiveStatValue cOrange">
               ${remain}
             </div>
-
           </div>
 
 
           <div class="fiveStat">
-
             <div class="fiveStatLabel">
               Tracking
             </div>
-
             <div class="fiveStatValue">
               0/20
             </div>
-
           </div>
 
 
           <div class="fiveStat">
-
             <div class="fiveStatLabel">
               Cycle
             </div>
-
             <div class="fiveStatValue cPurple">
               ${top.cycle ?? '—'}
             </div>
-
           </div>
 
         </div>
@@ -2461,18 +2360,12 @@ function groupLabel(
     );
 
 
-  if(
-    name ===
-    'AUTO Group Special'
-  ){
+  if(name === 'AUTO Group Special'){
     return 'Special Group';
   }
 
 
-  if(
-    name ===
-    'AUTO Group Advanced'
-  ){
+  if(name === 'AUTO Group Advanced'){
     return 'Advanced Group';
   }
 
@@ -2484,7 +2377,6 @@ function groupLabel(
 
 
   if(match){
-
     return (
       `Automatic Group ${match[1]}`
     );
@@ -2997,60 +2889,61 @@ function renderManualSlot(
 
 
   /*
-    Manual Best comes from /api/group.
+    MANUAL DISPLAY RULE:
 
-    This keeps Best independent from
-    Last Seen and from the visible
-    matches list.
+    Show the newest 3/5+ result,
+    NOT the highest historical result.
+
+    Therefore:
+    older 4/5 + newer 3/5
+    => display 3/5.
   */
-  const fallbackBest =
-    bestInfo(
-      matches
+
+  const latestStrong =
+    m?.lastSeenResult
+    ??
+    (
+      matches.length
+        ?
+        {
+          drawId:
+            matches[0].draw_id,
+
+          hitCount:
+            Number(
+              matches[0].hit_count || 0
+            ),
+
+          time:
+            matches[0].time || ''
+        }
+        :
+        null
     );
 
 
-  const apiBest =
+  const latestHit =
     Number(
-      m?.bestHit
-      ??
-      m?.bestResult?.hitCount
+      latestStrong?.hitCount
       ??
       0
     );
 
 
-  const bi = {
-    best:
-      apiBest > 0
-        ?
-        apiBest
-        :
-        fallbackBest.best,
+  const latestTime =
+    String(
+      latestStrong?.time
+      ??
+      ''
+    );
 
-    time:
-      String(
-        m?.bestResult?.time
-        ??
-        (
-          apiBest > 0
-            ?
-            ''
-            :
-            fallbackBest.time
-        )
-        ??
-        ''
-      ),
 
-    drawId:
-      m?.bestDrawId
-      ??
-      m?.bestResult?.drawId
-      ??
-      fallbackBest.drawId
-      ??
-      null
-  };
+  const latestDrawId =
+    latestStrong?.drawId
+    ??
+    m?.lastSeenDrawId
+    ??
+    null;
 
 
   content.innerHTML =
@@ -3087,17 +2980,17 @@ function renderManualSlot(
         </div>
 
         <div class="manualMetricValue cGreen">
-          ${bi.best}/5
+          ${latestHit}/5
         </div>
 
         ${
-          bi.best >= 3
+          latestHit >= 3
           &&
-          bi.time
+          latestTime
             ?
             `
             <div class="bestTime">
-              ${esc(bi.time)}
+              ${esc(latestTime)}
             </div>
             `
             :
@@ -3128,7 +3021,7 @@ function renderManualSlot(
 
         <div class="manualMetricValue cPurple">
           ${
-            m.lastSeenDrawId
+            latestDrawId
             ??
             '—'
           }
