@@ -1,103 +1,51 @@
 'use strict';
 
-const {
-  getDraw,
-  getMany,
-  db,
-  score
-} = require('./lib');
+const { getDraw, getMany, db, score } = require('./lib');
 
-
-const SOURCE_NAMES = [
-  'MANUAL Group',
-  'MANUAL Group 2'
-];
-
-const GROUP_NAME =
-  'MANUAL Group 3';
-
+const SOURCE_NAMES = ['MANUAL Group', 'MANUAL Group 2'];
+const GROUP_NAME = 'MANUAL Group 3';
 const MAX_BACKFILL = 80;
 const MAX_ANALYSIS_DRAWS = 500;
-
 const MIN_ANALYSIS_DRAWS = 20;
 const VALIDATION_RATIO = 0.30;
 const RECENT_WINDOW = 40;
 
+const nums = v => Array.isArray(v)
+  ? v.map(Number).filter(Number.isFinite)
+  : [];
 
-/* =========================================================
-   BASIC HELPERS
-========================================================= */
-
-function nums(value) {
-  return Array.isArray(value)
-    ? value
-        .map(Number)
-        .filter(Number.isFinite)
-    : [];
-}
-
-
-function uniqueSorted(value) {
-  return [
-    ...new Set(
-      nums(value)
-    )
-  ].sort(
-    (a, b) => a - b
-  );
-}
+const uniqueSorted = v =>
+  [...new Set(nums(v))].sort((a, b) => a - b);
 
 
 function sameNumbers(a, b) {
-  const x =
-    uniqueSorted(a);
-
-  const y =
-    uniqueSorted(b);
+  const x = uniqueSorted(a);
+  const y = uniqueSorted(b);
 
   return (
     x.length === 5 &&
     y.length === 5 &&
-    x.every(
-      (n, i) =>
-        n === y[i]
-    )
+    x.every((n, i) => n === y[i])
   );
 }
 
 
-/* =========================================================
-   DATABASE HELPERS
-========================================================= */
-
 async function storeDraw(draw) {
-  if (!draw?.id) {
-    return;
-  }
+  if (!draw?.id) return;
 
   await db(
     'hotspot_draws?on_conflict=draw_id',
     {
       method: 'POST',
-
       prefer:
         'resolution=merge-duplicates,return=minimal',
 
       body: {
-        draw_id:
-          draw.id,
-
-        draw_date:
-          draw.date,
-
-        draw_time:
-          draw.time,
-
-        numbers:
-          draw.numbers,
-
-        bulls_eye:
-          draw.bullsEye
+        draw_id: draw.id,
+        draw_date: draw.date,
+        draw_time: draw.time,
+        numbers: draw.numbers,
+        bulls_eye: draw.bullsEye
       }
     }
   );
@@ -105,63 +53,41 @@ async function storeDraw(draw) {
 
 
 async function getByName(name) {
-  const rows =
-    await db(
-      `tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&name=eq.${encodeURIComponent(
-        name
-      )}&order=id.desc&limit=1`
-    );
+  const rows = await db(
+    `tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&name=eq.${encodeURIComponent(name)}&order=id.desc&limit=1`
+  );
 
   return rows?.[0] || null;
 }
 
 
-const getFusion =
-  () =>
-    getByName(
-      GROUP_NAME
-    );
+const getFusion = () =>
+  getByName(GROUP_NAME);
 
 
-/* =========================================================
-   SAFE DRAW FETCH
-========================================================= */
+async function safeDraw(id, map) {
+  const cached =
+    map.get(Number(id));
 
-async function safeDraw(
-  id,
-  map
-) {
-  const fromBatch =
-    map.get(
-      Number(id)
-    );
-
-  if (fromBatch?.id) {
-    return fromBatch;
+  if (cached?.id) {
+    return cached;
   }
 
   try {
-    const draw =
-      await getDraw(
-        Number(id)
-      );
+    const d =
+      await getDraw(Number(id));
 
     return (
-      Number(draw?.id) ===
-      Number(id)
-    )
-      ? draw
-      : null;
+      Number(d?.id) === Number(id)
+        ? d
+        : null
+    );
 
-  } catch (_) {
+  } catch {
     return null;
   }
 }
 
-
-/* =========================================================
-   FUSION TRACKING
-========================================================= */
 
 async function backfill(
   group,
@@ -170,10 +96,8 @@ async function backfill(
   if (!group?.active) {
     return {
       processed: 0,
-      latest:
-        suppliedLatest,
-      stoppedAtMissing:
-        null
+      latest: suppliedLatest,
+      stoppedAtMissing: null
     };
   }
 
@@ -183,32 +107,25 @@ async function backfill(
     await getDraw(null);
 
 
-  await storeDraw(
-    latest
-  );
+  await storeDraw(latest);
 
 
   const after =
     Number(
-      group.last_seen_draw_id
-      ??
-      group.start_draw_id
-      ??
+      group.last_seen_draw_id ??
+      group.start_draw_id ??
       latest.id
     );
 
 
   if (
-    !Number.isFinite(after)
-    ||
-    after >=
-      Number(latest.id)
+    !Number.isFinite(after) ||
+    after >= Number(latest.id)
   ) {
     return {
       processed: 0,
       latest,
-      stoppedAtMissing:
-        null
+      stoppedAtMissing: null
     };
   }
 
@@ -216,20 +133,14 @@ async function backfill(
   const end =
     Math.min(
       Number(latest.id),
-      after +
-      MAX_BACKFILL
+      after + MAX_BACKFILL
     );
 
 
   const ids =
     Array.from(
-      {
-        length:
-          end - after
-      },
-
-      (_, i) =>
-        after + i + 1
+      { length: end - after },
+      (_, i) => after + i + 1
     );
 
 
@@ -237,23 +148,14 @@ async function backfill(
 
   try {
     batch =
-      (
-        await getMany(
-          ids
-        )
-      ) || [];
-
-  } catch (_) {
-    batch = [];
-  }
+      (await getMany(ids)) || [];
+  } catch {}
 
 
   const map =
     new Map(
       batch
-        .filter(
-          d => d?.id
-        )
+        .filter(d => d?.id)
         .map(
           d => [
             Number(d.id),
@@ -265,15 +167,10 @@ async function backfill(
 
   let processed = 0;
   let last = after;
-
-  let stoppedAtMissing =
-    null;
+  let stoppedAtMissing = null;
 
 
-  for (
-    const id
-    of ids
-  ) {
+  for (const id of ids) {
 
     const draw =
       await safeDraw(
@@ -284,8 +181,7 @@ async function backfill(
 
     if (
       !draw ||
-      Number(draw.id) !==
-        Number(id)
+      Number(draw.id) !== Number(id)
     ) {
       stoppedAtMissing =
         Number(id);
@@ -294,12 +190,10 @@ async function backfill(
     }
 
 
-    await storeDraw(
-      draw
-    );
+    await storeDraw(draw);
 
 
-    const result =
+    const r =
       score(
         draw,
         group.numbers
@@ -308,10 +202,9 @@ async function backfill(
 
     if (
       Number(
-        result?.count || 0
+        r?.count || 0
       ) >= 3
     ) {
-
       await db(
         'tracker_results?on_conflict=group_id,draw_id',
         {
@@ -328,16 +221,16 @@ async function backfill(
               draw.id,
 
             hit_count:
-              result.count,
+              r.count,
 
             hit_numbers:
-              result.hit,
+              r.hit,
 
             bulls_eye:
-              result.bullsEye,
+              r.bullsEye,
 
             bulls_eye_match:
-              result.bullsEyeMatch
+              r.bullsEyeMatch
           }
         }
       );
@@ -345,9 +238,7 @@ async function backfill(
 
 
     last =
-      Number(
-        draw.id
-      );
+      Number(draw.id);
 
     processed++;
   }
@@ -379,16 +270,11 @@ async function backfill(
   return {
     processed,
     latest,
-    lastProcessed:
-      last,
+    lastProcessed: last,
     stoppedAtMissing
   };
 }
 
-
-/* =========================================================
-   RESULT META
-========================================================= */
 
 async function attachMeta(rows) {
   rows =
@@ -406,10 +292,8 @@ async function attachMeta(rows) {
     ...new Set(
       rows
         .map(
-          row =>
-            Number(
-              row.draw_id
-            )
+          r =>
+            Number(r.draw_id)
         )
         .filter(
           Number.isFinite
@@ -426,9 +310,7 @@ async function attachMeta(rows) {
   const draws =
     (
       await db(
-        `hotspot_draws?select=draw_id,draw_date,draw_time&draw_id=in.(${ids.join(
-          ','
-        )})`
+        `hotspot_draws?select=draw_id,draw_date,draw_time&draw_id=in.(${ids.join(',')})`
       )
     ) || [];
 
@@ -436,45 +318,33 @@ async function attachMeta(rows) {
   const meta =
     Object.fromEntries(
       draws.map(
-        draw => [
-          Number(
-            draw.draw_id
-          ),
-          draw
+        d => [
+          Number(d.draw_id),
+          d
         ]
       )
     );
 
 
   return rows.map(
-    row => ({
-      ...row,
+    r => ({
+      ...r,
 
       date:
         meta[
-          Number(
-            row.draw_id
-          )
+          Number(r.draw_id)
         ]?.draw_date || '',
 
       time:
         meta[
-          Number(
-            row.draw_id
-          )
+          Number(r.draw_id)
         ]?.draw_time || ''
     })
   );
 }
 
 
-/* =========================================================
-   READ GROUP 3
-========================================================= */
-
-async function readFusion(
-  group
-) {
+async function readFusion(group) {
   if (!group) {
     return null;
   }
@@ -489,14 +359,11 @@ async function readFusion(
 
 
   const withMeta =
-    await attachMeta(
-      rows
-    );
+    await attachMeta(rows);
 
 
   const last =
-    withMeta[0] ||
-    null;
+    withMeta[0] || null;
 
 
   return {
@@ -513,14 +380,10 @@ async function readFusion(
       true,
 
     numbers:
-      nums(
-        group.numbers
-      ),
+      nums(group.numbers),
 
     active:
-      Boolean(
-        group.active
-      ),
+      Boolean(group.active),
 
     startDrawId:
       group.start_draw_id,
@@ -529,9 +392,7 @@ async function readFusion(
       group.last_seen_draw_id,
 
     lastSeenDrawId:
-      last?.draw_id
-      ??
-      null,
+      last?.draw_id ?? null,
 
     lastSeenResult:
       last
@@ -574,12 +435,9 @@ async function readFusion(
 }
 
 
-/* =========================================================
-   COMBINATIONS
-========================================================= */
-
 function combos5(values) {
   const out = [];
+
 
   for (
     let a = 0;
@@ -624,33 +482,26 @@ function combos5(values) {
     }
   }
 
+
   return out;
 }
 
-
-/* =========================================================
-   HIT HELPERS
-========================================================= */
 
 function hitCount(
   drawNumbers,
   combo
 ) {
-  const drawSet =
+  const s =
     new Set(
-      nums(
-        drawNumbers
-      )
+      nums(drawNumbers)
     );
 
 
   return combo.reduce(
-    (count, number) =>
-      count +
+    (n, x) =>
+      n +
       (
-        drawSet.has(
-          Number(number)
-        )
+        s.has(Number(x))
           ? 1
           : 0
       ),
@@ -664,65 +515,52 @@ function containsAll(
   drawNumbers,
   values
 ) {
-  const set =
+  const s =
     new Set(
-      nums(
-        drawNumbers
-      )
+      nums(drawNumbers)
     );
 
+
   return values.every(
-    number =>
-      set.has(
-        Number(number)
+    n =>
+      s.has(
+        Number(n)
       )
   );
 }
 
 
-/* =========================================================
-   SOURCE BALANCE
-========================================================= */
-
 function coverage(
   combo,
-  group1,
-  group2
+  g1,
+  g2
 ) {
   const a =
-    new Set(
-      nums(group1)
-    );
+    new Set(nums(g1));
 
   const b =
-    new Set(
-      nums(group2)
-    );
+    new Set(nums(g2));
 
 
   return {
     from1:
       combo.filter(
-        number =>
+        n =>
           a.has(
-            Number(number)
+            Number(n)
           )
       ).length,
 
     from2:
       combo.filter(
-        number =>
+        n =>
           b.has(
-            Number(number)
+            Number(n)
           )
       ).length
   };
 }
 
-
-/* =========================================================
-   INDIVIDUAL NUMBER STRENGTH
-========================================================= */
 
 function buildNumberStats(
   candidates,
@@ -740,23 +578,11 @@ function buildNumberStats(
     map.set(
       Number(number),
       {
-        number:
-          Number(number),
-
-        count:
-          0,
-
-        weightedCount:
-          0,
-
-        recentCount:
-          0,
-
-        segments:
-          new Set(),
-
-        lastIndex:
-          -1
+        count: 0,
+        weightedCount: 0,
+        recentCount: 0,
+        segments: new Set(),
+        lastIndex: -1
       }
     );
   }
@@ -772,7 +598,7 @@ function buildNumberStats(
   draws.forEach(
     (draw, index) => {
 
-      const drawSet =
+      const s =
         new Set(
           nums(
             draw.numbers
@@ -781,8 +607,8 @@ function buildNumberStats(
 
 
       const weight =
-        0.45 +
-        0.55 *
+        .45 +
+        .55 *
         (
           (index + 1) /
           total
@@ -808,41 +634,42 @@ function buildNumberStats(
       ) {
 
         if (
-          drawSet.has(
+          !s.has(
             Number(number)
           )
         ) {
-
-          const stat =
-            map.get(
-              Number(number)
-            );
+          continue;
+        }
 
 
-          stat.count++;
-
-          stat.weightedCount +=
-            weight;
-
-          stat.lastIndex =
-            index;
-
-          stat.segments.add(
-            segment
+        const stat =
+          map.get(
+            Number(number)
           );
 
 
-          if (
-            index >=
-            Math.max(
-              0,
-              total -
-              RECENT_WINDOW
-            )
-          ) {
+        stat.count++;
 
-            stat.recentCount++;
-          }
+        stat.weightedCount +=
+          weight;
+
+        stat.lastIndex =
+          index;
+
+        stat.segments.add(
+          segment
+        );
+
+
+        if (
+          index >=
+          Math.max(
+            0,
+            total -
+            RECENT_WINDOW
+          )
+        ) {
+          stat.recentCount++;
         }
       }
     }
@@ -857,8 +684,7 @@ function buildNumberStats(
     const recency =
       stat.lastIndex >= 0
         ? (
-            stat.lastIndex +
-            1
+            stat.lastIndex + 1
           ) /
           total
         : 0;
@@ -888,21 +714,17 @@ function buildNumberStats(
 }
 
 
-/* =========================================================
-   PAIR STRENGTH
-========================================================= */
-
-function pairKey(a, b) {
-  return [
-    Number(a),
-    Number(b)
-  ]
-    .sort(
-      (x, y) =>
-        x - y
-    )
-    .join(':');
-}
+const pairKey =
+  (a, b) =>
+    [
+      Number(a),
+      Number(b)
+    ]
+      .sort(
+        (x, y) =>
+          x - y
+      )
+      .join(':');
 
 
 function buildPairStats(
@@ -931,17 +753,10 @@ function buildPairStats(
           candidates[j]
         ),
         {
-          count:
-            0,
-
-          weightedCount:
-            0,
-
-          recentCount:
-            0,
-
-          segments:
-            new Set()
+          count: 0,
+          weightedCount: 0,
+          recentCount: 0,
+          segments: new Set()
         }
       );
     }
@@ -959,8 +774,8 @@ function buildPairStats(
     (draw, index) => {
 
       const weight =
-        0.45 +
-        0.55 *
+        .45 +
+        .55 *
         (
           (index + 1) /
           total
@@ -1000,42 +815,40 @@ function buildPairStats(
 
 
           if (
-            containsAll(
+            !containsAll(
               draw.numbers,
               [a, b]
             )
           ) {
-
-            const stat =
-              map.get(
-                pairKey(
-                  a,
-                  b
-                )
-              );
+            continue;
+          }
 
 
-            stat.count++;
-
-            stat.weightedCount +=
-              weight;
-
-            stat.segments.add(
-              segment
+          const stat =
+            map.get(
+              pairKey(a, b)
             );
 
 
-            if (
-              index >=
-              Math.max(
-                0,
-                total -
-                RECENT_WINDOW
-              )
-            ) {
+          stat.count++;
 
-              stat.recentCount++;
-            }
+          stat.weightedCount +=
+            weight;
+
+          stat.segments.add(
+            segment
+          );
+
+
+          if (
+            index >=
+            Math.max(
+              0,
+              total -
+              RECENT_WINDOW
+            )
+          ) {
+            stat.recentCount++;
           }
         }
       }
@@ -1070,30 +883,23 @@ function buildPairStats(
 }
 
 
-/* =========================================================
-   TRIPLE STRENGTH
-========================================================= */
-
-function tripleKey(
-  a,
-  b,
-  c
-) {
-  return [
-    Number(a),
-    Number(b),
-    Number(c)
-  ]
-    .sort(
-      (x, y) =>
-        x - y
-    )
-    .join(':');
-}
+const tripleKey =
+  (a, b, c) =>
+    [
+      Number(a),
+      Number(b),
+      Number(c)
+    ]
+      .sort(
+        (x, y) =>
+          x - y
+      )
+      .join(':');
 
 
 function comboTriples(combo) {
   const out = [];
+
 
   for (
     let a = 0;
@@ -1122,6 +928,7 @@ function comboTriples(combo) {
     }
   }
 
+
   return out;
 }
 
@@ -1141,26 +948,17 @@ function buildTripleStats(
 
 
   for (
-    const triple
+    const t
     of triples
   ) {
 
     map.set(
-      tripleKey(
-        ...triple
-      ),
+      tripleKey(...t),
       {
-        count:
-          0,
-
-        weightedCount:
-          0,
-
-        recentCount:
-          0,
-
-        segments:
-          new Set()
+        count: 0,
+        weightedCount: 0,
+        recentCount: 0,
+        segments: new Set()
       }
     );
   }
@@ -1177,8 +975,8 @@ function buildTripleStats(
     (draw, index) => {
 
       const weight =
-        0.45 +
-        0.55 *
+        .45 +
+        .55 *
         (
           (index + 1) /
           total
@@ -1199,46 +997,45 @@ function buildTripleStats(
 
 
       for (
-        const triple
+        const t
         of triples
       ) {
 
         if (
-          containsAll(
+          !containsAll(
             draw.numbers,
-            triple
+            t
           )
         ) {
-
-          const stat =
-            map.get(
-              tripleKey(
-                ...triple
-              )
-            );
+          continue;
+        }
 
 
-          stat.count++;
-
-          stat.weightedCount +=
-            weight;
-
-          stat.segments.add(
-            segment
+        const stat =
+          map.get(
+            tripleKey(...t)
           );
 
 
-          if (
-            index >=
-            Math.max(
-              0,
-              total -
-              RECENT_WINDOW
-            )
-          ) {
+        stat.count++;
 
-            stat.recentCount++;
-          }
+        stat.weightedCount +=
+          weight;
+
+        stat.segments.add(
+          segment
+        );
+
+
+        if (
+          index >=
+          Math.max(
+            0,
+            total -
+            RECENT_WINDOW
+          )
+        ) {
+          stat.recentCount++;
         }
       }
     }
@@ -1272,10 +1069,6 @@ function buildTripleStats(
 }
 
 
-/* =========================================================
-   COMBO RESULT PROFILE
-========================================================= */
-
 function resultProfile(
   combo,
   draws
@@ -1287,20 +1080,12 @@ function resultProfile(
   let threePlus = 0;
 
   let totalHits = 0;
+  let weightedStrong = 0;
+  let recentStrong = 0;
+  let longestDry = 0;
+  let currentDry = 0;
 
-  let weightedStrong =
-    0;
-
-  let recentStrong =
-    0;
-
-  let longestDry =
-    0;
-
-  let currentDry =
-    0;
-
-  let strongSegments =
+  const strongSegments =
     new Set();
 
 
@@ -1326,8 +1111,8 @@ function resultProfile(
 
 
       const weight =
-        0.50 +
-        0.50 *
+        .5 +
+        .5 *
         (
           (index + 1) /
           total
@@ -1370,6 +1155,7 @@ function resultProfile(
 
 
       if (hits === 3) {
+
         threeOnly++;
 
         weightedStrong +=
@@ -1378,6 +1164,7 @@ function resultProfile(
 
 
       if (hits === 4) {
+
         fourOnly++;
         fourPlus++;
 
@@ -1387,6 +1174,7 @@ function resultProfile(
 
 
       if (hits >= 5) {
+
         exact5++;
         fourPlus++;
 
@@ -1405,18 +1193,15 @@ function resultProfile(
       ) {
 
         if (hits === 3) {
-          recentStrong +=
-            6;
+          recentStrong += 6;
         }
 
         if (hits === 4) {
-          recentStrong +=
-            40;
+          recentStrong += 40;
         }
 
         if (hits >= 5) {
-          recentStrong +=
-            220;
+          recentStrong += 220;
         }
       }
     }
@@ -1429,7 +1214,6 @@ function resultProfile(
     fourPlus,
     threeOnly,
     threePlus,
-
     totalHits,
 
     averageHits:
@@ -1438,9 +1222,7 @@ function resultProfile(
         : 0,
 
     weightedStrong,
-
     recentStrong,
-
     longestDry,
 
     strongSegmentCount:
@@ -1448,10 +1230,6 @@ function resultProfile(
   };
 }
 
-
-/* =========================================================
-   SYNERGY SCORE
-========================================================= */
 
 function synergyScore(
   combo,
@@ -1465,14 +1243,14 @@ function synergyScore(
 
 
   for (
-    const number
+    const n
     of combo
   ) {
 
     numberScore +=
       Number(
         numberStats.get(
-          Number(number)
+          Number(n)
         )?.score || 0
       );
   }
@@ -1504,18 +1282,14 @@ function synergyScore(
 
 
   for (
-    const triple
-    of comboTriples(
-      combo
-    )
+    const t
+    of comboTriples(combo)
   ) {
 
     tripleScore +=
       Number(
         tripleStats.get(
-          tripleKey(
-            ...triple
-          )
+          tripleKey(...t)
         )?.score || 0
       );
   }
@@ -1535,10 +1309,6 @@ function synergyScore(
   };
 }
 
-
-/* =========================================================
-   WALK-FORWARD TEST
-========================================================= */
 
 function splitHistory(draws) {
   const total =
@@ -1587,10 +1357,6 @@ function splitHistory(draws) {
   };
 }
 
-
-/* =========================================================
-   FULL COMBO EVALUATION
-========================================================= */
 
 function evaluateCombo({
   combo,
@@ -1670,12 +1436,6 @@ function evaluateCombo({
     );
 
 
-  /*
-    This score is NOT used alone.
-    Final ranking is lexicographic below,
-    so 5/5 and 4/5 always dominate
-    ordinary 3/5 activity.
-  */
   const deepScore =
     validation.exact5 * 100000
     +
@@ -1712,9 +1472,6 @@ function evaluateCombo({
     numbers:
       combo,
 
-    /*
-      Compatibility with current frontend.
-    */
     exact5:
       full.exact5,
 
@@ -1741,9 +1498,6 @@ function evaluateCombo({
 
     balance,
 
-    /*
-      Deep-analysis details.
-    */
     training: {
       draws:
         trainDraws.length,
@@ -1810,20 +1564,6 @@ function evaluateCombo({
   };
 }
 
-
-/* =========================================================
-   FINAL RANKING
-
-   Priority:
-   1. Validation 5/5
-   2. Validation 4/5+
-   3. Validation 3/5+
-   4. Validation spread/stability
-   5. Training 5/5
-   6. Training 4/5+
-   7. Full-history strength
-   8. Pair/triple synergy
-========================================================= */
 
 function rankFusion(a, b) {
   return (
@@ -1911,9 +1651,57 @@ function rankFusion(a, b) {
 }
 
 
-/* =========================================================
-   SELECT FUSION
-========================================================= */
+function previewRow(
+  item,
+  rank
+) {
+  return {
+    rank,
+
+    numbers:
+      item.numbers,
+
+    exact5:
+      item.exact5,
+
+    fourPlus:
+      item.fourPlus,
+
+    threePlus:
+      item.threePlus,
+
+    averageHits:
+      item.averageHits,
+
+    recentStrong:
+      item.recentStrong,
+
+    fromGroup1:
+      item.fromGroup1,
+
+    fromGroup2:
+      item.fromGroup2,
+
+    balance:
+      item.balance,
+
+    training:
+      item.training,
+
+    validation:
+      item.validation,
+
+    synergy:
+      item.synergy,
+
+    stabilityGap:
+      item.stabilityGap,
+
+    deepScore:
+      item.deepScore
+  };
+}
+
 
 async function selectFusion() {
 
@@ -1932,7 +1720,6 @@ async function selectFusion() {
     !group1 ||
     !group2
   ) {
-
     throw new Error(
       'Manual Group 1 and Manual Group 2 are required first.'
     );
@@ -1955,7 +1742,6 @@ async function selectFusion() {
     n1.length !== 5 ||
     n2.length !== 5
   ) {
-
     throw new Error(
       'Groups 1 and 2 must each contain exactly 5 numbers.'
     );
@@ -1972,7 +1758,6 @@ async function selectFusion() {
   if (
     candidates.length < 5
   ) {
-
     throw new Error(
       'Not enough unique source numbers.'
     );
@@ -1988,14 +1773,6 @@ async function selectFusion() {
   );
 
 
-  /*
-    Only analyze the period where both
-    Manual Group 1 and Manual Group 2
-    existed together.
-
-    This prevents one group having more
-    historical exposure than the other.
-  */
   const start =
     Math.max(
       Number(
@@ -2011,31 +1788,24 @@ async function selectFusion() {
   const end =
     Math.min(
       Number(
-        group1.last_seen_draw_id
-        ||
+        group1.last_seen_draw_id ||
         latest.id
       ),
 
       Number(
-        group2.last_seen_draw_id
-        ||
+        group2.last_seen_draw_id ||
         latest.id
       ),
 
-      Number(
-        latest.id
-      )
+      Number(latest.id)
     );
 
 
   if (
-    !Number.isFinite(start)
-    ||
-    !Number.isFinite(end)
-    ||
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
     end <= start
   ) {
-
     throw new Error(
       'Not enough shared tracked history yet.'
     );
@@ -2045,7 +1815,6 @@ async function selectFusion() {
   const fromId =
     Math.max(
       start + 1,
-
       end -
       MAX_ANALYSIS_DRAWS +
       1
@@ -2063,21 +1832,21 @@ async function selectFusion() {
   const draws =
     rows
       .filter(
-        row =>
+        r =>
           Array.isArray(
-            row.numbers
+            r.numbers
           )
       )
       .map(
-        row => ({
+        r => ({
           id:
             Number(
-              row.draw_id
+              r.draw_id
             ),
 
           numbers:
             nums(
-              row.numbers
+              r.numbers
             )
         })
       );
@@ -2087,7 +1856,6 @@ async function selectFusion() {
     draws.length <
     MIN_ANALYSIS_DRAWS
   ) {
-
     throw new Error(
       `Need at least ${MIN_ANALYSIS_DRAWS} shared historical draws before generating Group 3.`
     );
@@ -2103,14 +1871,6 @@ async function selectFusion() {
     );
 
 
-  /*
-    Strength statistics are built ONLY
-    from training history.
-
-    The validation block remains unseen
-    until each five-number combination
-    is tested.
-  */
   const numberStats =
     buildNumberStats(
       candidates,
@@ -2138,18 +1898,11 @@ async function selectFusion() {
     );
 
 
-  /*
-    Fusion must genuinely combine
-    the two manual groups.
-
-    With 5 numbers total,
-    minimum 2 must come from each side.
-  */
   const balanced =
     combinations.filter(
       combo => {
 
-        const source =
+        const s =
           coverage(
             combo,
             n1,
@@ -2158,9 +1911,8 @@ async function selectFusion() {
 
 
         return (
-          source.from1 >= 2
-          &&
-          source.from2 >= 2
+          s.from1 >= 2 &&
+          s.from2 >= 2
         );
       }
     );
@@ -2213,7 +1965,6 @@ async function selectFusion() {
 
 
   if (!best) {
-
     throw new Error(
       'Unable to generate Group 3.'
     );
@@ -2224,6 +1975,17 @@ async function selectFusion() {
     latest,
 
     best,
+
+    top10:
+      ranked
+        .slice(0, 10)
+        .map(
+          (item, i) =>
+            previewRow(
+              item,
+              i + 1
+            )
+        ),
 
     combinationsTested:
       ranked.length,
@@ -2251,9 +2013,89 @@ async function selectFusion() {
 }
 
 
-/* =========================================================
-   GENERATE
-========================================================= */
+async function preview() {
+
+  const selection =
+    await selectFusion();
+
+
+  const current =
+    await getFusion();
+
+
+  return {
+    ok:
+      true,
+
+    preview:
+      true,
+
+    changed:
+      false,
+
+    message:
+      'Preview only. Manual Group 3 was not changed.',
+
+    method:
+      selection.method,
+
+    currentManual:
+      await readFusion(
+        current
+      ),
+
+    currentNumbers:
+      nums(
+        current?.numbers
+      ),
+
+    combinationsTested:
+      selection.combinationsTested,
+
+    analyzedDraws:
+      selection.analyzedDraws,
+
+    trainingDraws:
+      selection.trainingDraws,
+
+    validationDraws:
+      selection.validationDraws,
+
+    analyzedFromDrawId:
+      selection.analyzedFromDrawId,
+
+    analyzedToDrawId:
+      selection.analyzedToDrawId,
+
+    top10:
+      selection.top10.map(
+        row => ({
+          ...row,
+
+          isCurrent:
+            Boolean(
+              current &&
+              sameNumbers(
+                row.numbers,
+                current.numbers
+              )
+            )
+        })
+      ),
+
+    latest: {
+      id:
+        selection.latest.id,
+
+      date:
+        selection.latest.date,
+
+      time:
+        selection.latest.time
+    }
+  };
+}
+
 
 async function generate() {
 
@@ -2263,9 +2105,7 @@ async function generate() {
 
   const selected =
     uniqueSorted(
-      selection
-        .best
-        .numbers
+      selection.best.numbers
     );
 
 
@@ -2273,14 +2113,8 @@ async function generate() {
     await getFusion();
 
 
-  /*
-    If deep analysis still chooses
-    exactly the same five numbers,
-    preserve the original tracking start.
-  */
   if (
-    old?.active
-    &&
+    old?.active &&
     sameNumbers(
       old.numbers,
       selected
@@ -2311,28 +2145,22 @@ async function generate() {
         ...selection.best,
 
         combinationsTested:
-          selection
-            .combinationsTested,
+          selection.combinationsTested,
 
         analyzedDraws:
-          selection
-            .analyzedDraws,
+          selection.analyzedDraws,
 
         trainingDraws:
-          selection
-            .trainingDraws,
+          selection.trainingDraws,
 
         validationDraws:
-          selection
-            .validationDraws,
+          selection.validationDraws,
 
         analyzedFromDrawId:
-          selection
-            .analyzedFromDrawId,
+          selection.analyzedFromDrawId,
 
         analyzedToDrawId:
-          selection
-            .analyzedToDrawId
+          selection.analyzedToDrawId
       },
 
       manual:
@@ -2357,12 +2185,6 @@ async function generate() {
   }
 
 
-  /*
-    A new selection means:
-    - old Group 3 results are cleared
-    - new five numbers are frozen
-    - tracking begins AFTER current draw
-  */
   if (old) {
 
     await db(
@@ -2455,28 +2277,22 @@ async function generate() {
       ...selection.best,
 
       combinationsTested:
-        selection
-          .combinationsTested,
+        selection.combinationsTested,
 
       analyzedDraws:
-        selection
-          .analyzedDraws,
+        selection.analyzedDraws,
 
       trainingDraws:
-        selection
-          .trainingDraws,
+        selection.trainingDraws,
 
       validationDraws:
-        selection
-          .validationDraws,
+        selection.validationDraws,
 
       analyzedFromDrawId:
-        selection
-          .analyzedFromDrawId,
+        selection.analyzedFromDrawId,
 
       analyzedToDrawId:
-        selection
-          .analyzedToDrawId
+        selection.analyzedToDrawId
     },
 
     manual:
@@ -2498,10 +2314,6 @@ async function generate() {
 }
 
 
-/* =========================================================
-   STOP
-========================================================= */
-
 async function stop() {
 
   const group =
@@ -2509,7 +2321,6 @@ async function stop() {
 
 
   if (!group) {
-
     return {
       ok:
         true,
@@ -2523,8 +2334,11 @@ async function stop() {
   }
 
 
-  let latest = null;
-  let processed = 0;
+  let latest =
+    null;
+
+  let processed =
+    0;
 
 
   if (group.active) {
@@ -2596,10 +2410,6 @@ async function stop() {
 }
 
 
-/* =========================================================
-   CLEAR
-========================================================= */
-
 async function clear() {
 
   const group =
@@ -2646,18 +2456,17 @@ async function clear() {
 }
 
 
-/* =========================================================
-   STATE
-========================================================= */
-
 async function state() {
 
   const group =
     await getFusion();
 
 
-  let latest = null;
-  let processed = 0;
+  let latest =
+    null;
+
+  let processed =
+    0;
 
   let stoppedAtMissing =
     null;
@@ -2720,10 +2529,6 @@ async function state() {
 }
 
 
-/* =========================================================
-   API
-========================================================= */
-
 module.exports =
 async function handler(
   req,
@@ -2741,7 +2546,6 @@ async function handler(
     if (
       req.method === 'GET'
     ) {
-
       return res
         .status(200)
         .json(
@@ -2756,8 +2560,7 @@ async function handler(
 
       const action =
         String(
-          req.body?.action
-          ||
+          req.body?.action ||
           'generate'
         )
           .trim()
@@ -2765,10 +2568,19 @@ async function handler(
 
 
       if (
-        action ===
-        'generate'
+        action === 'preview'
       ) {
+        return res
+          .status(200)
+          .json(
+            await preview()
+          );
+      }
 
+
+      if (
+        action === 'generate'
+      ) {
         return res
           .status(200)
           .json(
@@ -2778,10 +2590,8 @@ async function handler(
 
 
       if (
-        action ===
-        'stop'
+        action === 'stop'
       ) {
-
         return res
           .status(200)
           .json(
@@ -2791,10 +2601,8 @@ async function handler(
 
 
       if (
-        action ===
-        'clear'
+        action === 'clear'
       ) {
-
         return res
           .status(200)
           .json(
@@ -2841,8 +2649,7 @@ async function handler(
           false,
 
         error:
-          error?.message
-          ||
+          error?.message ||
           String(error)
       });
   }
