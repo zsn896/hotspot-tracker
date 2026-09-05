@@ -2015,10 +2015,6 @@ function renderGroupFive(state){
     state?.groupFive || {};
 
 
-  /* =====================================================
-     WAITING FOR FIRST 50
-  ===================================================== */
-
   if(!g){
 
     const analysisTarget =
@@ -2139,10 +2135,6 @@ function renderGroupFive(state){
   }
 
 
-  /* =====================================================
-     ACTIVE GROUP FIVE
-  ===================================================== */
-
   const important =
     importantResults(g);
 
@@ -2198,16 +2190,6 @@ function renderGroupFive(state){
     '—';
 
 
-  /*
-    Current cumulative analysis:
-
-    Cycle 1 = 50
-    Cycle 2 = 70
-    Cycle 3 = 90
-    Cycle 4 = 110
-    ...
-  */
-
   const currentAnalysis =
     Number(
       five.analysisWindow
@@ -2217,10 +2199,6 @@ function renderGroupFive(state){
       50
     );
 
-
-  /*
-    Next analysis always adds 20.
-  */
 
   const nextAnalysis =
     currentAnalysis + 20;
@@ -3042,7 +3020,11 @@ function renderManualSlot(
 
       Last checked
       <b>
-        ${m.lastSeenDrawId ?? '—'}
+        ${
+          m.trackingLastSeenDrawId
+          ??
+          '—'
+        }
       </b>
 
     </div>
