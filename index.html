@@ -18,256 +18,165 @@
     const css=`
 .wavePanel{margin-top:14px;padding:14px;border-radius:13px;border:1px solid #3a4b60;background:rgba(7,17,31,.42)}
 .waveTop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.waveState{font-size:20px;font-weight:950}
-.waveMeta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.waveState{font-size:20px;font-weight:950}.waveMeta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .waveBadge{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;border:1px solid currentColor;font-size:11px;font-weight:900}
-.waveMessage{margin-top:10px;line-height:1.45;font-size:13px}
-.waveAlertBtn{border:1px solid #4b5f78;background:#203249;color:white;border-radius:9px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer}
-.wave-DORMANT{color:#9fb0c7;border-color:#3a4b60}
-.wave-EARLY_SIGNAL{color:#f6c453;border-color:rgba(246,196,83,.55);background:rgba(246,196,83,.06)}
-.wave-RISING{color:#55a2ff;border-color:rgba(85,162,255,.55);background:rgba(47,128,255,.08)}
-.wave-STRONG{color:#43ea82;border-color:rgba(67,234,130,.60);background:rgba(34,197,94,.09)}
-.wave-COOLING{color:#b5c3d6;border-color:#51647b;background:rgba(159,176,199,.05)}
-.wave-REBOUND_WATCH{color:#ff9d3b;border-color:rgba(255,157,59,.60);background:rgba(255,146,43,.08)}
-.learnerWaveTitle{font-size:12px;color:#b7c7da;font-weight:900;letter-spacing:.3px}
-.learnerGroupNums{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.waveMessage{margin-top:10px;line-height:1.45;font-size:13px}.waveAlertBtn{border:1px solid #4b5f78;background:#203249;color:white;border-radius:9px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer}
+.wave-DORMANT{color:#9fb0c7;border-color:#3a4b60}.wave-EARLY_SIGNAL{color:#f6c453;border-color:rgba(246,196,83,.55);background:rgba(246,196,83,.06)}
+.wave-RISING{color:#55a2ff;border-color:rgba(85,162,255,.55);background:rgba(47,128,255,.08)}.wave-STRONG{color:#43ea82;border-color:rgba(67,234,130,.60);background:rgba(34,197,94,.09)}
+.wave-COOLING{color:#b5c3d6;border-color:#51647b;background:rgba(159,176,199,.05)}.wave-REBOUND_WATCH{color:#ff9d3b;border-color:rgba(255,157,59,.60);background:rgba(255,146,43,.08)}
+.learnerWaveTitle{font-size:12px;color:#b7c7da;font-weight:900}.learnerGroupNums{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .learnerBall{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;font-size:16px;font-weight:950;color:#fff;border:1px solid #6d8fb8;background:linear-gradient(180deg,#24486e,#173653)}
-.learnerHits{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
-.learnerHit{font-size:12px;font-weight:900;padding:7px 9px;border-radius:8px;background:rgba(7,17,31,.35);border:1px solid rgba(159,176,199,.24);color:#d9e5f3}
-.trackerBox{margin-top:14px;padding:13px;border-radius:13px;border:1px solid rgba(67,234,130,.34);background:rgba(4,13,24,.46)}
-.trackerHead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.trackerTitle{font-size:14px;font-weight:1000;color:#fff}
-.trackerRule{font-size:11px;color:#91a5bd;margin-top:4px;line-height:1.4}
-.trackerSection{margin-top:13px}
-.trackerSectionTitle{font-size:11px;font-weight:950;color:#a9bad0;margin-bottom:7px}
-.trackerEmpty{font-size:12px;color:#869ab2;padding:9px;border:1px dashed #3d4d61;border-radius:10px}
-.trackerCard{padding:11px;margin-top:8px;border-radius:11px;border:1px solid #3c5067;background:rgba(10,25,42,.72)}
-.trackerCard.active{border-color:rgba(67,234,130,.48)}
-.trackerCard.historical{border-color:rgba(159,176,199,.32);opacity:.86}
-.trackerCard.hit{border-color:#43ea82;box-shadow:0 0 0 1px rgba(67,234,130,.18)}
-.trackerRow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.trackerNums{display:flex;gap:6px;flex-wrap:wrap}
-.trackerBall{min-width:34px;height:34px;padding:0 4px;display:grid;place-items:center;border-radius:50%;font-size:14px;font-weight:950;background:#18334e;border:1px solid #547493;color:#fff}
-.trackerStatus{font-size:17px;font-weight:1000;color:#f4d273}
-.trackerStatus.hitNow{color:#43ea82}
-.trackerMini{font-size:11px;color:#a9bad0;margin-top:7px;line-height:1.45}
-.trackerTag{display:inline-block;font-size:10px;font-weight:900;border-radius:999px;padding:4px 7px;margin-inline-start:5px;border:1px solid #50637a;color:#c9d5e3}
-.manualForm{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
-.manualInput{flex:1;min-width:190px;background:#07111f;color:#fff;border:1px solid #455b73;border-radius:9px;padding:10px 11px;font-size:14px;outline:none}
-.manualBtn{border:1px solid #3e8b60;background:#1d5838;color:#fff;border-radius:9px;padding:9px 12px;font-weight:950;cursor:pointer}
-.manualRemove{border:0;background:transparent;color:#ff9b9b;font-size:12px;font-weight:900;cursor:pointer;padding:4px}
-.manualError{font-size:11px;color:#ff9b9b;margin-top:6px;min-height:15px}
-.trackerUpdated{font-size:10px;color:#71879e}
+.learnerHits{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}.learnerHit{font-size:12px;font-weight:900;padding:7px 9px;border-radius:8px;background:rgba(7,17,31,.35);border:1px solid rgba(159,176,199,.24);color:#d9e5f3}
+.coreTracker{margin-top:14px;padding:13px;border-radius:13px;border:1px solid rgba(67,234,130,.42);background:rgba(5,16,29,.58)}
+.coreTrackerTitle{font-size:15px;font-weight:1000;color:#fff}.coreTrackerSub{font-size:11px;color:#91a5bd;margin-top:4px;line-height:1.45}
+.manualBlock{margin-top:12px;padding:11px;border-radius:11px;border:1px solid rgba(85,162,255,.38);background:rgba(47,128,255,.06)}
+.manualTitle{font-size:12px;font-weight:950;color:#c7dcff}.manualForm{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.manualInput{flex:1;min-width:185px;background:#07111f;color:#fff;border:1px solid #536c88;border-radius:9px;padding:10px 11px;font-size:14px}
+.manualBtn{border:1px solid #3e8b60;background:#1d5838;color:#fff;border-radius:9px;padding:9px 12px;font-weight:950;cursor:pointer}.manualError{font-size:11px;color:#ff9b9b;margin-top:6px;min-height:14px}
+.coreSection{margin-top:13px}.coreSectionTitle{font-size:11px;font-weight:950;color:#a9bad0;margin-bottom:7px}
+.coreEmpty{font-size:12px;color:#869ab2;padding:9px;border:1px dashed #3d4d61;border-radius:10px}.coreItem{padding:11px;margin-top:8px;border-radius:11px;border:1px solid #3c5067;background:rgba(10,25,42,.72)}
+.coreItem.active{border-color:rgba(67,234,130,.50)}.coreItem.historical{border-color:rgba(159,176,199,.32)}.coreItem.hit{border-color:#43ea82;box-shadow:0 0 0 1px rgba(67,234,130,.18)}
+.coreRow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.coreNums{display:flex;gap:6px;flex-wrap:wrap}
+.coreBall{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;font-size:15px;font-weight:950;background:#173653;border:1px solid #5d7f9f;color:#fff}
+.coreTag{font-size:10px;font-weight:900;border:1px solid #50637a;border-radius:999px;padding:4px 7px;color:#c9d5e3}.coreStatus{font-size:19px;font-weight:1000;color:#f4d273;margin-top:8px}.coreStatus.hit{color:#43ea82}
+.coreMini{font-size:11px;color:#a9bad0;margin-top:6px;line-height:1.45}.removeManual{margin-top:7px;border:0;background:transparent;color:#ff9b9b;font-size:11px;font-weight:900;cursor:pointer;padding:0}
 `;
 
     const addon=`<script>
 (function(){
-  const WAVE_KEY='hotspot_group_five_wave';
-  const AUTO_KEY='hotspot_core_auto_saved_v3';
-  const MANUAL_KEY='hotspot_core_manual_saved_v3';
-  const allowed=['DORMANT','EARLY_SIGNAL','RISING','STRONG','COOLING','REBOUND_WATCH'];
-  const labels={DORMANT:'DORMANT',EARLY_SIGNAL:'EARLY SIGNAL',RISING:'RISING',STRONG:'STRONG',COOLING:'COOLING',REBOUND_WATCH:'REBOUND WATCH'};
-  const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
-  let autoDetails=[];
-  let manualDetails=[];
-  let trackerLatest=null;
+  var WAVE_KEY='hotspot_group_five_wave';
+  var AUTO_KEY='hotspot_core_auto_saved_v4';
+  var MANUAL_KEY='hotspot_core_manual_saved_v4';
+  var allowed=['DORMANT','EARLY_SIGNAL','RISING','STRONG','COOLING','REBOUND_WATCH'];
+  var labels={DORMANT:'DORMANT',EARLY_SIGNAL:'EARLY SIGNAL',RISING:'RISING',STRONG:'STRONG',COOLING:'COOLING',REBOUND_WATCH:'REBOUND WATCH'};
+  var trackerLatest=null;
+  var autoDetails=[];
+  var manualDetails=[];
 
-  function stateClass(state){const s=String(state||'DORMANT').toUpperCase();return allowed.includes(s)?'wave-'+s:'wave-DORMANT';}
-  function label(state){const s=String(state||'DORMANT').toUpperCase();return labels[s]||s;}
-  function keyOf(nums){return (nums||[]).map(Number).filter(Number.isFinite).sort((a,b)=>a-b).join('-');}
-  function readJson(key,fallback){try{const x=JSON.parse(localStorage.getItem(key));return x??fallback;}catch(e){return fallback;}}
-  function writeJson(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch(e){}}
-  function readWave(){return readJson(WAVE_KEY,null);}
-  function storeWave(payload){writeJson(WAVE_KEY,payload);}
+  function esc(v){return String(v==null?'':v).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];});}
+  function keyOf(nums){return (nums||[]).map(Number).filter(Number.isFinite).sort(function(a,b){return a-b;}).join('-');}
+  function readJson(key,fallback){try{var v=JSON.parse(localStorage.getItem(key));return v==null?fallback:v;}catch(e){return fallback;}}
+  function writeJson(key,v){try{localStorage.setItem(key,JSON.stringify(v));}catch(e){}}
   function readSets(key){
-    const raw=readJson(key,[]);
-    if(!Array.isArray(raw)) return [];
-    const seen=new Set();
-    return raw.map(x=>Array.isArray(x)?x:[]).map(x=>[...new Set(x.map(Number))].filter(n=>Number.isInteger(n)&&n>=1&&n<=80).sort((a,b)=>a-b)).filter(x=>x.length>=3&&x.length<=5).filter(x=>{const k=keyOf(x);if(seen.has(k))return false;seen.add(k);return true;});
+    var raw=readJson(key,[]); if(!Array.isArray(raw)) return [];
+    var seen={}; var out=[];
+    raw.forEach(function(x){
+      if(!Array.isArray(x)) return;
+      var nums=Array.from(new Set(x.map(Number))).filter(function(n){return Number.isInteger(n)&&n>=1&&n<=80;}).sort(function(a,b){return a-b;});
+      if(nums.length<3||nums.length>5) return;
+      var k=keyOf(nums); if(seen[k]) return; seen[k]=1; out.push(nums);
+    });
+    return out;
   }
-  function saveSets(key,sets){writeJson(key,sets);}
-  function mergeAutoSets(coreData){
-    const old=readSets(AUTO_KEY);
-    const incoming=[...(coreData?.activeCore3||[]),...(coreData?.historicalStrongCore3||[])].map(x=>x?.numbers).filter(Array.isArray);
-    const all=[...old,...incoming];
-    const seen=new Set();
-    const merged=[];
-    for(const nums of all){
-      const n=[...new Set(nums.map(Number))].filter(x=>Number.isInteger(x)&&x>=1&&x<=80).sort((a,b)=>a-b);
-      if(n.length!==3) continue;
-      const k=keyOf(n);if(seen.has(k)) continue;seen.add(k);merged.push(n);
-    }
-    saveSets(AUTO_KEY,merged);
-    return merged;
-  }
-  function ensurePanel(id,afterId){
-    let panel=document.getElementById(id);if(panel)return panel;
-    const anchor=document.getElementById(afterId);if(!anchor)return null;
-    panel=document.createElement('div');panel.id=id;anchor.insertAdjacentElement('afterend',panel);return panel;
-  }
+  function ensurePanel(id,afterId){var p=document.getElementById(id);if(p)return p;var a=document.getElementById(afterId);if(!a)return null;p=document.createElement('div');p.id=id;a.insertAdjacentElement('afterend',p);return p;}
+  function stateClass(s){s=String(s||'DORMANT').toUpperCase();return allowed.indexOf(s)>=0?'wave-'+s:'wave-DORMANT';}
+  function label(s){s=String(s||'DORMANT').toUpperCase();return labels[s]||s;}
 
-  window.enableWaveNotifications=async function(){
-    if(!('Notification' in window)){alert('Browser notifications are not supported on this device/browser.');return;}
-    try{const p=await Notification.requestPermission();const b=document.getElementById('waveAlertButton');if(b)b.textContent=p==='granted'?'Alerts Enabled':'Enable Alerts';}catch(e){}
-  };
-
-  function maybeNotify(drawId,wave){
-    if(!wave?.alert||!('Notification' in window)||Notification.permission!=='granted') return;
-    const key=String(drawId||'')+':'+String(wave.state||'')+':'+String(wave.score||0);
-    if(localStorage.getItem('hotspot_wave_alert_key')===key)return;
-    localStorage.setItem('hotspot_wave_alert_key',key);
-    try{new Notification('Hot Spot Group Five — '+label(wave.state),{body:wave.messageAr||('Wave score '+Number(wave.score||0)+'/100')});}catch(e){}
+  function ingestAuto(coreData){
+    var saved=readSets(AUTO_KEY); var incoming=[];
+    if(coreData&&Array.isArray(coreData.activeCore3)) incoming=incoming.concat(coreData.activeCore3.map(function(x){return x.numbers;}));
+    if(coreData&&Array.isArray(coreData.historicalStrongCore3)) incoming=incoming.concat(coreData.historicalStrongCore3.map(function(x){return x.numbers;}));
+    var all=saved.concat(incoming); var seen={}; var out=[];
+    all.forEach(function(nums){if(!Array.isArray(nums))return;nums=Array.from(new Set(nums.map(Number))).filter(function(n){return Number.isInteger(n)&&n>=1&&n<=80;}).sort(function(a,b){return a-b;});if(nums.length!==3)return;var k=keyOf(nums);if(seen[k])return;seen[k]=1;out.push(nums);});
+    writeJson(AUTO_KEY,out); return out;
   }
 
   function statusFor(detail){
-    const c=detail?.current||{};
+    var c=detail&&detail.current?detail.current:{};
     if(c.appearedNow) return {text:'ظهر الآن ✅',hit:true};
-    const rem=Number(c.remainingToAverage);
+    var rem=Number(c.remainingToAverage);
     if(Number.isFinite(rem)){
-      if(rem>0) return {text:'باقي '+rem+' سحبة',hit:false};
-      if(rem===0) return {text:'الآن تقريبًا',hit:false};
+      if(rem>0)return {text:'باقي '+rem+' سحبة',hit:false};
+      if(rem===0)return {text:'الآن تقريبًا',hit:false};
       return {text:'تجاوز المتوسط بـ '+Math.abs(rem)+' سحبة',hit:false};
     }
     return {text:'لا يوجد تاريخ كافٍ',hit:false};
   }
 
-  function cardForTracker(t,kind){
-    const nums=Array.isArray(t?.numbers)?t.numbers:[];
-    const focus=nums.length===3?t?.fullSet:(t?.core3||t?.fullSet);
-    const full=t?.fullSet||{};
-    const c=focus?.current||{};
-    const a=focus?.analysis||{};
-    const fullNow=Boolean(full?.current?.appearedNow);
-    const st=fullNow?{text:'المجموعة كاملة ظهرت الآن ✅',hit:true}:statusFor(focus);
-    const stale=kind==='auto'&&Number(c.currentGap)>25;
-    const cls='trackerCard '+(st.hit?'hit ':(stale?'historical ':'active '));
-    let tag='';
-    if(kind==='auto') tag=stale?'قوي سابقًا':'قوي حالي';
-    else tag='يدوي';
-    const subCore=nums.length>3&&focus?.numbers?.length===3?'<div class="trackerMini">أقوى Core3 داخلها: <b>'+esc(focus.numbers.join(' - '))+'</b></div>':'';
-    const together=Number(a.together||0);
-    const avg=Number(a.meanGap);
-    const last=a.lastTogetherDrawId?('Draw '+a.lastTogetherDrawId+(a.lastTogetherTime?' · '+a.lastTogetherTime:'')):'لا يوجد ظهور كامل في الداتا الحالية';
-    return '<div class="'+cls+'">'
-      +'<div class="trackerRow"><div><div class="trackerNums">'+nums.map(n=>'<div class="trackerBall">'+esc(n)+'</div>').join('')+'</div></div>'
-      +'<div><span class="trackerTag">'+esc(tag)+'</span>'+(kind==='manual'?'<button class="manualRemove" onclick="removeManualSet(\''+esc(keyOf(nums))+'\')">حذف</button>':'')+'</div></div>'
-      +'<div class="trackerStatus '+(st.hit?'hitNow':'')+'">'+esc(st.text)+'</div>'
-      +subCore
-      +'<div class="trackerMini">ظهر معًا '+together+' مرات'+(Number.isFinite(avg)&&avg>0?' · متوسط الفاصل '+avg+' سحبة':'')+' · آخر ظهور: '+esc(last)+'</div>'
-      +'</div>';
+  function trackerCard(t,kind){
+    var nums=Array.isArray(t&&t.numbers)?t.numbers:[];
+    var focus=nums.length===3?(t.fullSet||{}):(t.core3||t.fullSet||{});
+    var full=t&&t.fullSet?t.fullSet:{};
+    var c=focus.current||{}; var a=focus.analysis||{};
+    var st=(full.current&&full.current.appearedNow)?{text:'المجموعة كاملة ظهرت الآن ✅',hit:true}:statusFor(focus);
+    var stale=kind==='auto'&&Number(c.currentGap)>25;
+    var tag=kind==='manual'?'يدوي':(stale?'قوي سابقًا':'قوي حالي');
+    var cls='coreItem '+(st.hit?'hit':(stale?'historical':'active'));
+    var avg=Number(a.meanGap); var together=Number(a.together||0);
+    var last=a.lastTogetherDrawId?('Draw '+a.lastTogetherDrawId+(a.lastTogetherTime?' · '+a.lastTogetherTime:'')):'لا يوجد ظهور كامل';
+    var coreLine='';
+    if(nums.length>3&&focus.numbers&&focus.numbers.length===3) coreLine='<div class="coreMini">أقوى Core3 داخلها: <b>'+esc(focus.numbers.join(' - '))+'</b></div>';
+    var remove=kind==='manual'?'<button class="removeManual" data-remove="'+esc(keyOf(nums))+'">حذف هذه المجموعة</button>':'';
+    return '<div class="'+cls+'"><div class="coreRow"><div class="coreNums">'+nums.map(function(n){return '<div class="coreBall">'+esc(n)+'</div>';}).join('')+'</div><span class="coreTag">'+esc(tag)+'</span></div><div class="coreStatus '+(st.hit?'hit':'')+'">'+esc(st.text)+'</div>'+coreLine+'<div class="coreMini">ظهر معًا '+together+' مرات'+(Number.isFinite(avg)&&avg>0?' · متوسط الفاصل '+avg+' سحبة':'')+' · آخر ظهور: '+esc(last)+'</div>'+remove+'</div>';
   }
 
-  function renderTrackerBox(){
-    const panel=document.getElementById('coreTrackerBox');if(!panel)return;
-    const active=autoDetails.filter(t=>Number((t?.fullSet||{}).current?.currentGap)<=25||Boolean((t?.fullSet||{}).current?.appearedNow));
-    const hist=autoDetails.filter(t=>Number((t?.fullSet||{}).current?.currentGap)>25);
-    panel.innerHTML=''
-      +'<div class="trackerHead"><div><div class="trackerTitle">CORE TRACKER — متابعة لحظية</div><div class="trackerRule">التلقائي لا يدخل إلا بعد 10 ظهورات مشتركة 3/3. القديم لا يُحذف؛ إذا تجاوز 25 سحبة ينتقل إلى قوي سابقًا.</div></div><div class="trackerUpdated">آخر Draw: '+esc(trackerLatest||'—')+'</div></div>'
-      +'<div class="trackerSection"><div class="trackerSectionTitle">ACTIVE STRONG</div>'+(active.length?active.map(t=>cardForTracker(t,'auto')).join(''):'<div class="trackerEmpty">لا يوجد Core3 وصل حاليًا إلى شرط 10 ظهورات مشتركة.</div>')+'</div>'
-      +(hist.length?'<div class="trackerSection"><div class="trackerSectionTitle">HISTORICAL STRONG</div>'+hist.map(t=>cardForTracker(t,'auto')).join('')+'</div>':'')
-      +'<div class="trackerSection"><div class="trackerSectionTitle">إدخال يدوي — 3 إلى 5 أرقام</div><div class="manualForm"><input id="manualCoreInput" class="manualInput" inputmode="numeric" placeholder="مثال: 1 2 3 4 5"><button class="manualBtn" onclick="addManualSet()">إضافة ومتابعة</button></div><div id="manualCoreError" class="manualError"></div>'
-      +(manualDetails.length?manualDetails.map(t=>cardForTracker(t,'manual')).join(''):'<div class="trackerEmpty">لا توجد أرقام يدوية محفوظة.</div>')+'</div>';
+  function renderTracker(){
+    var p=document.getElementById('coreTrackerBox'); if(!p)return;
+    var active=autoDetails.filter(function(t){var c=t&&t.fullSet&&t.fullSet.current?t.fullSet.current:{};return c.appearedNow||Number(c.currentGap)<=25;});
+    var hist=autoDetails.filter(function(t){var c=t&&t.fullSet&&t.fullSet.current?t.fullSet.current:{};return Number(c.currentGap)>25;});
+    p.innerHTML='<div class="coreTrackerTitle">STRONG / CORE3 TRACKER</div><div class="coreTrackerSub">متابعة مستقلة للثلاثيات القوية والعداد الحي. التلقائي لا يدخل إلا بعد 10 ظهورات مشتركة 3/3.</div>'+
+      '<div class="manualBlock"><div class="manualTitle">إدخال يدوي — 3 إلى 5 أرقام</div><div class="manualForm"><input id="manualCoreInput" class="manualInput" inputmode="numeric" placeholder="مثال: 1 2 3 4 5"><button id="manualCoreAdd" class="manualBtn">إضافة ومتابعة</button></div><div id="manualCoreError" class="manualError"></div></div>'+
+      '<div class="coreSection"><div class="coreSectionTitle">ACTIVE STRONG</div>'+(active.length?active.map(function(t){return trackerCard(t,'auto');}).join(''):'<div class="coreEmpty">لا يوجد Core3 مؤهل حاليًا بشرط 10 ظهورات مشتركة.</div>')+'</div>'+
+      (hist.length?'<div class="coreSection"><div class="coreSectionTitle">HISTORICAL STRONG</div>'+hist.map(function(t){return trackerCard(t,'auto');}).join('')+'</div>':'')+
+      '<div class="coreSection"><div class="coreSectionTitle">MANUAL TRACKING</div>'+(manualDetails.length?manualDetails.map(function(t){return trackerCard(t,'manual');}).join(''):'<div class="coreEmpty">لا توجد مجموعة يدوية محفوظة.</div>')+'</div>'+
+      '<div class="coreMini">آخر Draw: '+esc(trackerLatest||'—')+'</div>';
+
+    var add=document.getElementById('manualCoreAdd'); if(add)add.addEventListener('click',addManual);
+    Array.prototype.forEach.call(p.querySelectorAll('[data-remove]'),function(btn){btn.addEventListener('click',function(){removeManual(btn.getAttribute('data-remove'));});});
   }
 
-  window.addManualSet=function(){
-    const input=document.getElementById('manualCoreInput');const err=document.getElementById('manualCoreError');if(!input)return;
-    const nums=[...new Set(String(input.value||'').split(/[^0-9]+/).filter(Boolean).map(Number))].filter(n=>Number.isInteger(n)&&n>=1&&n<=80).sort((a,b)=>a-b);
+  function addManual(){
+    var input=document.getElementById('manualCoreInput');var err=document.getElementById('manualCoreError');if(!input)return;
+    var nums=Array.from(new Set(String(input.value||'').split(/[^0-9]+/).filter(Boolean).map(Number))).filter(function(n){return Number.isInteger(n)&&n>=1&&n<=80;}).sort(function(a,b){return a-b;});
     if(nums.length<3||nums.length>5){if(err)err.textContent='أدخل 3 أو 4 أو 5 أرقام مختلفة من 1 إلى 80.';return;}
-    const sets=readSets(MANUAL_KEY);const k=keyOf(nums);
-    if(!sets.some(x=>keyOf(x)===k))sets.push(nums);
-    saveSets(MANUAL_KEY,sets);input.value='';if(err)err.textContent='';refreshTrackerDetails();
-  };
-
-  window.removeManualSet=function(key){
-    const sets=readSets(MANUAL_KEY).filter(x=>keyOf(x)!==key);saveSets(MANUAL_KEY,sets);refreshTrackerDetails();
-  };
+    var sets=readSets(MANUAL_KEY);var k=keyOf(nums);if(!sets.some(function(x){return keyOf(x)===k;}))sets.push(nums);writeJson(MANUAL_KEY,sets);input.value='';if(err)err.textContent='';refreshTrackerDetails();
+  }
+  function removeManual(k){var sets=readSets(MANUAL_KEY).filter(function(x){return keyOf(x)!==k;});writeJson(MANUAL_KEY,sets);refreshTrackerDetails();}
 
   async function evaluateSets(sets){
     if(!sets.length)return [];
-    const q=sets.slice(0,24).map(x=>x.join('-')).join(';');
-    try{
-      const r=await fetch('/api/health?mode=tracker-evaluate&sets='+encodeURIComponent(q)+'&ts='+Date.now(),{cache:'no-store'});
-      if(!r.ok)return [];
-      const j=await r.json();trackerLatest=j.latestDrawId||trackerLatest;return Array.isArray(j.trackers)?j.trackers:[];
-    }catch(e){return [];}
+    var q=sets.slice(0,24).map(function(x){return x.join('-');}).join(';');
+    try{var r=await fetch('/api/health?mode=tracker-evaluate&sets='+encodeURIComponent(q)+'&ts='+Date.now(),{cache:'no-store'});if(!r.ok)return [];var j=await r.json();trackerLatest=j.latestDrawId||trackerLatest;return Array.isArray(j.trackers)?j.trackers:[];}catch(e){return [];}
   }
-
-  async function refreshTrackerDetails(){
-    const autoSets=readSets(AUTO_KEY);const manualSets=readSets(MANUAL_KEY);
-    const [a,m]=await Promise.all([evaluateSets(autoSets),evaluateSets(manualSets)]);
-    autoDetails=a;manualDetails=m;renderTrackerBox();
-  }
+  async function refreshTrackerDetails(){var aSets=readSets(AUTO_KEY),mSets=readSets(MANUAL_KEY);var values=await Promise.all([evaluateSets(aSets),evaluateSets(mSets)]);autoDetails=values[0];manualDetails=values[1];renderTracker();}
 
   function renderGroupWave(payload,coreData){
-    const wave=payload?.wave||null;
-    const panel=ensurePanel('wavePanel','learnerWavePanel')||ensurePanel('wavePanel','learnerContent');if(!panel)return;
-    const state=String(wave?.state||'DORMANT').toUpperCase();
-    const nums=Array.isArray(coreData?.groupFive?.numbers)?coreData.groupFive.numbers:(Array.isArray(payload?.numbers)?payload.numbers:[]);
+    var wave=payload&&payload.wave?payload.wave:null;
+    var panel=ensurePanel('wavePanel','learnerWavePanel')||ensurePanel('wavePanel','learnerContent');if(!panel)return;
+    var state=String(wave&&wave.state?wave.state:'DORMANT').toUpperCase();
+    var nums=coreData&&coreData.groupFive&&Array.isArray(coreData.groupFive.numbers)?coreData.groupFive.numbers:(payload&&Array.isArray(payload.numbers)?payload.numbers:[]);
     panel.className='wavePanel '+stateClass(state);
-    panel.innerHTML=''
-      +'<div class="waveTop"><div><div class="small mut">Group Five / Early Wave Detection</div><div class="waveState">'+esc(label(state))+'</div></div>'
-      +'<button class="waveAlertBtn" id="waveAlertButton" onclick="enableWaveNotifications()">'+(("Notification" in window)&&Notification.permission==='granted'?'Alerts Enabled':'Enable Alerts')+'</button></div>'
-      +(nums.length===5?'<div class="learnerGroupNums">'+nums.map(n=>'<div class="learnerBall">'+esc(n)+'</div>').join('')+'</div>':'')
-      +'<div class="waveMeta"><span class="waveBadge">Wave '+Number(wave?.score||0)+'/100</span><span class="waveBadge">'+esc(wave?.alertLevel||'NONE')+'</span></div>'
-      +'<div id="coreTrackerBox" class="trackerBox"></div>'
-      +(wave?'<div class="waveMessage">'+esc(wave.messageAr||wave.message||'No clear wave signal right now.')+'</div>':'');
-    renderTrackerBox();
+    panel.innerHTML='<div class="waveTop"><div><div class="small mut">Group Five / Early Wave Detection</div><div class="waveState">'+esc(label(state))+'</div></div></div>'+(nums.length===5?'<div class="learnerGroupNums">'+nums.map(function(n){return '<div class="learnerBall">'+esc(n)+'</div>';}).join('')+'</div>':'')+'<div class="waveMeta"><span class="waveBadge">Wave '+Number(wave&&wave.score||0)+'/100</span><span class="waveBadge">'+esc(wave&&wave.alertLevel||'NONE')+'</span></div><div id="coreTrackerBox" class="coreTracker"></div>'+(wave?'<div class="waveMessage">'+esc(wave.messageAr||wave.message||'')+'</div>':'');
+    renderTracker();
   }
 
-  function renderLearnerDetail(data){
-    const numbers=Array.isArray(data?.numbers)?data.numbers.map(Number).filter(Number.isFinite):[];if(!data?.active||numbers.length!==5)return;
-    const panel=ensurePanel('learnerWavePanel','learnerContent');if(!panel)return;
-    const wave=data?.wave||{};const state=String(wave.state||'DORMANT').toUpperCase();const l20=data?.comparison?.last20||{};
-    panel.className='wavePanel '+stateClass(state);
-    panel.innerHTML=''
-      +'<div class="waveTop"><div><div class="learnerWaveTitle">12H WAVE WATCH</div><div class="waveState">'+esc(label(state))+'</div></div><div class="waveMeta"><span class="waveBadge">Score '+Number(wave.score||0)+'/100</span><span class="waveBadge">'+esc(wave.alertLevel||'NONE')+'</span></div></div>'
-      +'<div class="learnerGroupNums">'+numbers.map(n=>'<div class="learnerBall">'+esc(n)+'</div>').join('')+'</div>'
-      +'<div class="learnerHits"><span class="learnerHit">آخر 20 سحبة</span><span class="learnerHit">3/5+ = '+Number(l20.threePlus||0)+'</span><span class="learnerHit">4/5+ = '+Number(l20.fourPlus||0)+'</span><span class="learnerHit">5/5 = '+Number(l20.exact5||0)+'</span></div>';
+  function renderLearner(data){
+    var nums=Array.isArray(data&&data.numbers)?data.numbers.map(Number).filter(Number.isFinite):[];if(!data||!data.active||nums.length!==5)return;
+    var panel=ensurePanel('learnerWavePanel','learnerContent');if(!panel)return;var wave=data.wave||{};var state=String(wave.state||'DORMANT').toUpperCase();var l20=data.comparison&&data.comparison.last20?data.comparison.last20:{};
+    panel.className='wavePanel '+stateClass(state);panel.innerHTML='<div class="waveTop"><div><div class="learnerWaveTitle">12H WAVE WATCH</div><div class="waveState">'+esc(label(state))+'</div></div><div class="waveMeta"><span class="waveBadge">Score '+Number(wave.score||0)+'/100</span><span class="waveBadge">'+esc(wave.alertLevel||'NONE')+'</span></div></div><div class="learnerGroupNums">'+nums.map(function(n){return '<div class="learnerBall">'+esc(n)+'</div>';}).join('')+'</div><div class="learnerHits"><span class="learnerHit">آخر 20 سحبة</span><span class="learnerHit">3/5+ = '+Number(l20.threePlus||0)+'</span><span class="learnerHit">4/5+ = '+Number(l20.fourPlus||0)+'</span><span class="learnerHit">5/5 = '+Number(l20.exact5||0)+'</span></div>';
   }
 
-  async function refreshLearnerWave(){
-    try{const r=await fetch('/api/health?mode=learner-wave-detail&ts='+Date.now(),{cache:'no-store'});if(r.ok)renderLearnerDetail(await r.json());}catch(e){}
-  }
-
-  async function refreshGroupWave(){
-    const stored=readWave();
+  async function refreshLearner(){try{var r=await fetch('/api/health?mode=learner-wave-detail&ts='+Date.now(),{cache:'no-store'});if(r.ok)renderLearner(await r.json());}catch(e){}}
+  async function refreshGroup(){
+    var stored=readJson(WAVE_KEY,null);
     try{
-      const [syncRes,coreRes]=await Promise.all([
-        fetch('/api/sync?ts='+Date.now(),{cache:'no-store'}),
-        fetch('/api/health?mode=group-five-core3&ts='+Date.now(),{cache:'no-store'})
-      ]);
-      const coreData=coreRes.ok?await coreRes.json():null;
-      if(coreData){trackerLatest=coreData.latestDrawId||trackerLatest;mergeAutoSets(coreData);}
-      let payload=stored||{drawId:coreData?.latestDrawId||null,numbers:coreData?.groupFive?.numbers||[],wave:null};
-      if(syncRes.ok){
-        const j=await syncRes.json();const groupFive=j?.worker?.groupFive||j?.groupFive||null;const wave=groupFive?.wave||stored?.wave||null;
-        payload={drawId:j?.officialDrawId||j?.storedDrawId||coreData?.latestDrawId||groupFive?.lastSeenDrawId||null,numbers:Array.isArray(groupFive?.numbers)?groupFive.numbers:(coreData?.groupFive?.numbers||[]),wave};
-        if(wave){storeWave(payload);maybeNotify(payload.drawId,wave);}
-      }
-      renderGroupWave(payload,coreData);
-      await refreshTrackerDetails();
-    }catch(e){
-      renderGroupWave(stored||{wave:null},null);await refreshTrackerDetails();
-    }
+      var values=await Promise.all([fetch('/api/sync?ts='+Date.now(),{cache:'no-store'}),fetch('/api/health?mode=group-five-core3&ts='+Date.now(),{cache:'no-store'})]);
+      var syncRes=values[0],coreRes=values[1];var coreData=coreRes.ok?await coreRes.json():null;if(coreData){trackerLatest=coreData.latestDrawId||trackerLatest;ingestAuto(coreData);}
+      var payload=stored||{numbers:coreData&&coreData.groupFive?coreData.groupFive.numbers:[],wave:null};
+      if(syncRes.ok){var j=await syncRes.json();var gf=j&&j.worker&&j.worker.groupFive?j.worker.groupFive:(j?j.groupFive:null);var wave=gf&&gf.wave?gf.wave:(stored?stored.wave:null);payload={numbers:gf&&Array.isArray(gf.numbers)?gf.numbers:(coreData&&coreData.groupFive?coreData.groupFive.numbers:[]),wave:wave};if(wave)writeJson(WAVE_KEY,payload);}
+      renderGroupWave(payload,coreData);await refreshTrackerDetails();
+    }catch(e){renderGroupWave(stored||{wave:null},null);await refreshTrackerDetails();}
   }
 
-  function refreshAll(){refreshLearnerWave();refreshGroupWave();}
-  setTimeout(refreshAll,1000);
-  setInterval(refreshAll,30000);
-  window.addEventListener('focus',refreshAll);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshAll();});
+  function refreshAll(){refreshLearner();refreshGroup();}
+  setTimeout(refreshAll,900);setInterval(refreshAll,30000);window.addEventListener('focus',refreshAll);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')refreshAll();});
 })();
 <\/script>`;
 
     if(html.includes('</style>')) html=html.replace('</style>',css+'\n</style>');
     if(html.includes('</body>')) html=html.replace('</body>',addon+'\n</body>');
-
-    document.open();
-    document.write(html);
-    document.close();
-  }catch(e){
-    document.getElementById('boot').textContent='Hot Spot failed to load: '+(e?.message||e);
-  }
+    document.open();document.write(html);document.close();
+  }catch(e){document.getElementById('boot').textContent='Hot Spot failed to load: '+(e&&e.message?e.message:e);}
 })();
 </script>
 </body>
