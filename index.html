@@ -12,6 +12,13 @@
 try{
   let src=await fetch('/index-core.html?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Unable to load UI core');return r.text();});
 
+  /* Align browser polling with the four-minute Hot Spot draw cycle. */
+  src=src.replace("setInterval(refreshAll,30000)","setInterval(refreshAll,240000)");
+  src=src.replace(
+    "let html=await fetch('/index-base.html?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Unable to load base UI');return r.text();});",
+    "let html=await fetch('/index-base.html?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Unable to load base UI');return r.text();});html=html.replace(/setInterval\\(\\s*loadAll,\\s*60000\\s*\\);/g,'setInterval(loadAll,240000);');"
+  );
+
   const precursorCss=`
 .precursorMeter{margin-top:10px;padding:10px;border-radius:10px;border:1px solid rgba(85,162,255,.36);background:rgba(18,44,70,.38)}.precursorTop{display:flex;justify-content:space-between;align-items:center;gap:8px}.precursorTitle{font-size:10px;font-weight:950;color:#a9bad0}.precursorValue{font-size:17px;font-weight:1000}.precursorBar{height:7px;margin-top:8px;border-radius:999px;background:rgba(159,176,199,.16);overflow:hidden}.precursorFill{height:100%;border-radius:999px;background:currentColor}.precursorLow{color:#9fb0c7}.precursorMedium{color:#f4d273}.precursorHigh{color:#43ea82}.precursorMeta{font-size:10px;color:#91a5bd;margin-top:6px}.precursorPending{color:#91a5bd}
 `;
