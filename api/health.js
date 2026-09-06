@@ -26,6 +26,10 @@ const WAVE_FIRST_ANALYSIS = 50;
 const WAVE_TRACK = 20;
 const WAVE_CYCLES_PER_WINDOW = 10;
 
+const GROUP_FIVE_NAME = 'AUTO Group Five';
+const CONTROL_PREFIX = 'AUTO_CONTROL_';
+const GROUP_FIVE_FIRST_ANALYSIS_DRAWS = 50;
+
 function norm(values) {
   return [...new Set((values || []).map(Number))]
     .filter(
@@ -68,6 +72,439 @@ function summarize(values) {
     average: Number(avg(values).toFixed(2)),
     min: Math.min(...values),
     max: Math.max(...values)
+  };
+}
+
+function combinations3(values) {
+  const a = norm(values);
+  const out = [];
+
+  for (let i = 0; i < a.length - 2; i++) {
+    for (let j = i + 1; j < a.length - 1; j++) {
+      for (let k = j + 1; k < a.length; k++) {
+        out.push([a[i], a[j], a[k]]);
+      }
+    }
+  }
+
+  return out;
+}
+
+function coreOccurrenceStats(draws, core) {
+  const occurrences = [];
+
+  draws.forEach((draw, index) => {
+    if (hitCount(draw, core) === 3) {
+      occurrences.push({
+        index,
+        drawId: Number(draw.draw_id),
+        time: draw.draw_time || '',
+        date: draw.draw_date || ''
+      });
+    }
+  });
+
+  const gaps = [];
+
+  for (let i = 1; i < occurrences.length; i++) {
+    gaps.push(
+      occurrences[i].index -
+      occurrences[i - 1].index
+    );
+  }
+
+  const meanGap =
+    gaps.length
+      ? avg(gaps)
+      : null;
+
+  const variance =
+    gaps.length > 1
+      ? avg(
+          gaps.map(
+            gap =>
+              (gap - meanGap) ** 2
+          )
+        )
+      : 0;
+
+  const deviation =
+    gaps.length
+      ? Math.sqrt(variance)
+      : null;
+
+  const cv =
+    meanGap && deviation != null
+      ? deviation / meanGap
+      : null;
+
+  return {
+    numbers: core,
+    count: occurrences.length,
+    occurrences,
+    gaps,
+    meanGap:
+      meanGap == null
+        ? null
+        : Number(meanGap.toFixed(2)),
+    consistency:
+      cv == null
+        ? null
+        : Number((1 / (1 + cv)).toFixed(3)),
+    last:
+      occurrences.at(-1) || null
+  };
+}
+
+function strongestCore3(draws, fiveNumbers) {
+  const cores =
+    combinations3(fiveNumbers)
+      .map(core => coreOccurrenceStats(draws, core))
+      .sort(
+        (a, b) =>
+          b.count - a.count ||
+          Number(b.last?.index ?? -1) -
+            Number(a.last?.index ?? -1) ||
+          Number(b.consistency || 0) -
+            Number(a.consistency || 0) ||
+          a.numbers.join(',').localeCompare(
+            b.numbers.join(',')
+          )
+      );
+
+  return {
+    leader: cores[0] || null,
+    ranked: cores
+  };
+}
+
+function trackedCoreStats(rows, core) {
+  const occurrences = [];
+  let twoOfThree = 0;
+
+  rows.forEach((row, index) => {
+    const hits = norm(row?.hit_numbers);
+    const count =
+      core.filter(n => hits.includes(n)).length;
+
+    if (count === 3) {
+      occurrences.push({
+        index,
+        drawId: Number(row.draw_id),
+        time: row.time || '',
+        date: row.date || ''
+      });
+    } else if (count === 2) {
+      twoOfThree++;
+    }
+  });
+
+  return {
+    trackedDraws: rows.length,
+    together3: occurrences.length,
+    partial2: twoOfThree,
+    occurrences,
+    last:
+      occurrences.at(-1) || null
+  };
+}
+
+function currentCoreStatus(
+  analysisStats,
+  trackedStats,
+  analysisDrawCount
+) {
+  if (!analysisStats || analysisStats.count < 2) {
+    return {
+      state: 'INSUFFICIENT',
+      currentGap: null,
+      expectedGap: analysisStats?.meanGap ?? null,
+      messageAr:
+        'لا توجد اجتماعات كافية لهذا الثلاثي للحكم على دورة تكراره.'
+    };
+  }
+
+  const lastAnalysisIndex =
+    analysisStats.last?.index ?? -1;
+
+  const lastTrackedIndex =
+    trackedStats.last?.index ?? -1;
+
+  const currentIndex =
+    analysisDrawCount +
+    trackedStats.trackedDraws - 1;
+
+  const lastTogetherIndex =
+    lastTrackedIndex >= 0
+      ? analysisDrawCount + lastTrackedIndex
+      : lastAnalysisIndex;
+
+  const currentGap =
+    Math.max(
+      0,
+      currentIndex - lastTogetherIndex
+    );
+
+  const expectedGap =
+    Number(analysisStats.meanGap || 0);
+
+  let state = 'ACTIVE';
+  let messageAr =
+    'الثلاثي ما زال ضمن نمط الفاصل التاريخي تقريبًا.';
+
+  if (
+    expectedGap > 0 &&
+    currentGap > expectedGap * 1.75
+  ) {
+    state = 'COOLING';
+    messageAr =
+      'مر وقت أطول بوضوح من متوسط فاصل ظهور الثلاثي؛ التجمع يبرد حاليًا.';
+  } else if (
+    expectedGap > 0 &&
+    currentGap > expectedGap * 1.25
+  ) {
+    state = 'WATCH';
+    messageAr =
+      'الثلاثي تجاوز متوسط فاصل ظهوره قليلًا ويحتاج مراقبة السحبات القادمة.';
+  }
+
+  return {
+    state,
+    currentGap,
+    expectedGap:
+      expectedGap || null,
+    messageAr
+  };
+}
+
+async function groupFiveCore3Detail() {
+  const groups =
+    (
+      await db(
+        `tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&active=eq.true&name=eq.${encodeURIComponent(
+          GROUP_FIVE_NAME
+        )}&order=id.desc&limit=1`
+      )
+    ) || [];
+
+  const group = groups[0] || null;
+  const numbers = norm(group?.numbers);
+
+  if (!group || numbers.length !== 5) {
+    return {
+      ok: true,
+      active: false,
+      numbers,
+      message:
+        'Group Five is not active.'
+    };
+  }
+
+  const controls =
+    (
+      await db(
+        `tracker_groups?select=id,name,start_draw_id&name=like.${encodeURIComponent(
+          CONTROL_PREFIX + '*'
+        )}&order=id.desc&limit=20`
+      )
+    ) || [];
+
+  const control =
+    controls.find(
+      r =>
+        /^AUTO_CONTROL_\d{4}-\d{2}-\d{2}$/.test(
+          String(r.name || '')
+        )
+    ) || null;
+
+  const groupStart =
+    Number(group.start_draw_id || 0);
+
+  const controlStart =
+    Number(control?.start_draw_id || 0);
+
+  const analysisWindow =
+    controlStart && groupStart >= controlStart
+      ? Math.max(
+          GROUP_FIVE_FIRST_ANALYSIS_DRAWS,
+          groupStart - controlStart + 1
+        )
+      : GROUP_FIVE_FIRST_ANALYSIS_DRAWS;
+
+  const analysisRows =
+    (
+      await db(
+        `hotspot_draws?select=draw_id,draw_date,draw_time,numbers&draw_id=lte.${groupStart}&order=draw_id.desc&limit=${analysisWindow}`
+      )
+    ) || [];
+
+  const analysisDraws =
+    analysisRows
+      .filter(
+        d =>
+          Number.isFinite(Number(d?.draw_id)) &&
+          norm(d?.numbers).length === 20
+      )
+      .sort(
+        (a, b) =>
+          Number(a.draw_id) -
+          Number(b.draw_id)
+      );
+
+  const coreResult =
+    strongestCore3(
+      analysisDraws,
+      numbers
+    );
+
+  const leader =
+    coreResult.leader;
+
+  if (!leader || leader.numbers.length !== 3) {
+    return {
+      ok: true,
+      active: true,
+      numbers,
+      analysisWindow,
+      core3: null,
+      message:
+        'No valid Core3 found.'
+    };
+  }
+
+  let trackingRows =
+    (
+      await db(
+        `tracker_results?select=draw_id,hit_count,hit_numbers,created_at&group_id=eq.${Number(
+          group.id
+        )}&order=draw_id.asc&limit=200`
+      )
+    ) || [];
+
+  const ids =
+    trackingRows.map(r => Number(r.draw_id))
+      .filter(Number.isFinite);
+
+  let meta = {};
+
+  if (ids.length) {
+    const drawMeta =
+      (
+        await db(
+          `hotspot_draws?select=draw_id,draw_date,draw_time&draw_id=in.(${ids.join(
+            ','
+          )})`
+        )
+      ) || [];
+
+    meta =
+      Object.fromEntries(
+        drawMeta.map(
+          d => [
+            Number(d.draw_id),
+            d
+          ]
+        )
+      );
+  }
+
+  trackingRows =
+    trackingRows.map(
+      row => ({
+        ...row,
+        date:
+          meta[Number(row.draw_id)]
+            ?.draw_date || '',
+        time:
+          meta[Number(row.draw_id)]
+            ?.draw_time || ''
+      })
+    );
+
+  const tracked =
+    trackedCoreStats(
+      trackingRows,
+      leader.numbers
+    );
+
+  const current =
+    currentCoreStatus(
+      leader,
+      tracked,
+      analysisDraws.length
+    );
+
+  return {
+    ok: true,
+    active: true,
+    groupFive: {
+      numbers,
+      startDrawId: groupStart,
+      analysisWindow:
+        analysisDraws.length,
+      trackedDraws:
+        trackingRows.length
+    },
+    core3: {
+      numbers:
+        leader.numbers,
+      analysis: {
+        together:
+          leader.count,
+        gaps:
+          leader.gaps,
+        meanGap:
+          leader.meanGap,
+        consistency:
+          leader.consistency,
+        lastTogetherDrawId:
+          leader.last?.drawId || null,
+        lastTogetherTime:
+          leader.last?.time || '',
+        occurrences:
+          leader.occurrences.map(
+            x => ({
+              drawId: x.drawId,
+              time: x.time,
+              date: x.date
+            })
+          )
+      },
+      sinceSelection: {
+        together:
+          tracked.together3,
+        partial2:
+          tracked.partial2,
+        lastTogetherDrawId:
+          tracked.last?.drawId || null,
+        lastTogetherTime:
+          tracked.last?.time || '',
+        occurrences:
+          tracked.occurrences.map(
+            x => ({
+              drawId: x.drawId,
+              time: x.time,
+              date: x.date
+            })
+          )
+      },
+      current
+    },
+    selectionRule:
+      'Among the 10 possible Core3 combinations inside Group Five, choose the triplet with the most joint appearances during the analysis window; ties prefer the most recent, then the most consistent.',
+    topCore3:
+      coreResult.ranked
+        .slice(0, 3)
+        .map(
+          x => ({
+            numbers: x.numbers,
+            together: x.count,
+            meanGap: x.meanGap,
+            consistency: x.consistency,
+            lastTogetherDrawId:
+              x.last?.drawId || null
+          })
+        )
   };
 }
 
@@ -514,6 +951,18 @@ module.exports = async (req, res) => {
 
       return res
         .status(200)
+        .json(detail);
+    }
+
+    if (
+      mode ===
+      'group-five-core3'
+    ) {
+      const detail =
+        await groupFiveCore3Detail();
+
+      return res
+        .status(detail.ok ? 200 : 400)
         .json(detail);
     }
 
