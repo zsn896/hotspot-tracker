@@ -12,11 +12,16 @@
 try{
   let src=await fetch('/index-core.html?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Unable to load UI core');return r.text();});
 
-  /* Align browser polling with the four-minute Hot Spot draw cycle. */
+  /* Keep the old four-minute fallback, but drive live updates from actual Draw ID changes. */
   src=src.replace("setInterval(refreshAll,30000)","setInterval(refreshAll,240000)");
   src=src.replace(
     "let html=await fetch('/index-base.html?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Unable to load base UI');return r.text();});",
     "let html=await fetch('/index-base.html?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Unable to load base UI');return r.text();});html=html.replace(/setInterval\\(\\s*loadAll,\\s*60000\\s*\\);/g,'setInterval(loadAll,240000);');"
+  );
+
+  src=src.replace(
+    "function refreshAll(){refreshLearner();refreshGroup()}setTimeout(refreshAll,900);setInterval(refreshAll,240000);window.addEventListener('focus',refreshAll);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')refreshAll()});",
+    "var drawWatchId=null,drawWatchBusy=false;async function checkLatestDraw(){if(drawWatchBusy||document.visibilityState==='hidden')return;drawWatchBusy=true;try{var r=await fetch('/api/state?ts='+Date.now(),{cache:'no-store'});if(!r.ok)return;var j=await r.json(),id=Number(j&&j.latest&&j.latest.draw_id||0);if(!id)return;if(drawWatchId===null){drawWatchId=Number(trackerLatest||id);if(id>drawWatchId){drawWatchId=id;refreshAll()}return}if(id!==drawWatchId){drawWatchId=id;refreshAll()}}catch(e){}finally{drawWatchBusy=false}}function refreshAll(){try{if(typeof loadAll==='function')loadAll()}catch(e){}refreshLearner();refreshGroup()}setTimeout(function(){refreshAll();setTimeout(checkLatestDraw,2500)},900);setInterval(checkLatestDraw,15000);window.addEventListener('focus',function(){refreshAll();setTimeout(checkLatestDraw,1200)});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){refreshAll();setTimeout(checkLatestDraw,1200)}});"
   );
 
   const precursorCss=`
