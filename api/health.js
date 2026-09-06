@@ -28,7 +28,8 @@ const WAVE_CYCLES_PER_WINDOW = 10;
 
 const GROUP_FIVE_NAME = 'AUTO Group Five';
 const CONTROL_PREFIX = 'AUTO_CONTROL_';
-const GROUP_FIVE_FIRST_ANALYSIS_DRAWS = 50;
+const CORE3_MAX_ACTIVE = 3;
+const CORE3_MIN_OCCURRENCES = 3;
 
 function norm(values) {
   return [...new Set((values || []).map(Number))]
@@ -42,8 +43,7 @@ function norm(values) {
 }
 
 function drawHas(draw, number) {
-  return norm(draw?.numbers)
-    .includes(Number(number));
+  return norm(draw?.numbers).includes(Number(number));
 }
 
 function hitCount(draw, numbers) {
@@ -75,35 +75,7 @@ function summarize(values) {
   };
 }
 
-function combinations3(values) {
-  const a = norm(values);
-  const out = [];
-
-  for (let i = 0; i < a.length - 2; i++) {
-    for (let j = i + 1; j < a.length - 1; j++) {
-      for (let k = j + 1; k < a.length; k++) {
-        out.push([a[i], a[j], a[k]]);
-      }
-    }
-  }
-
-  return out;
-}
-
-function coreOccurrenceStats(draws, core) {
-  const occurrences = [];
-
-  draws.forEach((draw, index) => {
-    if (hitCount(draw, core) === 3) {
-      occurrences.push({
-        index,
-        drawId: Number(draw.draw_id),
-        time: draw.draw_time || '',
-        date: draw.draw_date || ''
-      });
-    }
-  });
-
+function coreStatsFromOccurrences(numbers, occurrences, drawCount) {
   const gaps = [];
 
   for (let i = 1; i < occurrences.length; i++) {
@@ -113,10 +85,7 @@ function coreOccurrenceStats(draws, core) {
     );
   }
 
-  const meanGap =
-    gaps.length
-      ? avg(gaps)
-      : null;
+  const meanGap = gaps.length ? avg(gaps) : null;
 
   const variance =
     gaps.length > 1
@@ -138,9 +107,13 @@ function coreOccurrenceStats(draws, core) {
       ? deviation / meanGap
       : null;
 
+  const recentStart = Math.max(0, drawCount - 20);
+
   return {
-    numbers: core,
+    numbers,
     count: occurrences.length,
+    recent20:
+      occurrences.filter(x => x.index >= recentStart).length,
     occurrences,
     gaps,
     meanGap:
@@ -151,155 +124,177 @@ function coreOccurrenceStats(draws, core) {
       cv == null
         ? null
         : Number((1 / (1 + cv)).toFixed(3)),
-    last:
-      occurrences.at(-1) || null
+    last: occurrences.at(-1) || null
   };
 }
 
-function strongestCore3(draws, fiveNumbers) {
-  const cores =
-    combinations3(fiveNumbers)
-      .map(core => coreOccurrenceStats(draws, core))
-      .sort(
-        (a, b) =>
-          b.count - a.count ||
-          Number(b.last?.index ?? -1) -
-            Number(a.last?.index ?? -1) ||
-          Number(b.consistency || 0) -
-            Number(a.consistency || 0) ||
-          a.numbers.join(',').localeCompare(
-            b.numbers.join(',')
-          )
-      );
+function discoverDynamicCore3(draws) {
+  const map = new Map();
 
-  return {
-    leader: cores[0] || null,
-    ranked: cores
-  };
-}
+  draws.forEach((draw, index) => {
+    const numbers = norm(draw?.numbers);
 
-function trackedCoreStats(rows, core) {
-  const occurrences = [];
-  let twoOfThree = 0;
+    if (numbers.length !== 20) return;
 
-  rows.forEach((row, index) => {
-    const hits = norm(row?.hit_numbers);
-    const count =
-      core.filter(n => hits.includes(n)).length;
+    for (let i = 0; i < numbers.length - 2; i++) {
+      for (let j = i + 1; j < numbers.length - 1; j++) {
+        for (let k = j + 1; k < numbers.length; k++) {
+          const core = [numbers[i], numbers[j], numbers[k]];
+          const key = core.join('-');
+          let item = map.get(key);
 
-    if (count === 3) {
-      occurrences.push({
-        index,
-        drawId: Number(row.draw_id),
-        time: row.time || '',
-        date: row.date || ''
-      });
-    } else if (count === 2) {
-      twoOfThree++;
+          if (!item) {
+            item = {
+              numbers: core,
+              occurrences: []
+            };
+            map.set(key, item);
+          }
+
+          item.occurrences.push({
+            index,
+            drawId: Number(draw.draw_id),
+            time: draw.draw_time || '',
+            date: draw.draw_date || ''
+          });
+        }
+      }
     }
   });
 
-  return {
-    trackedDraws: rows.length,
-    together3: occurrences.length,
-    partial2: twoOfThree,
-    occurrences,
-    last:
-      occurrences.at(-1) || null
-  };
+  return [...map.values()]
+    .filter(x => x.occurrences.length >= CORE3_MIN_OCCURRENCES)
+    .map(
+      x =>
+        coreStatsFromOccurrences(
+          x.numbers,
+          x.occurrences,
+          draws.length
+        )
+    )
+    .sort(
+      (a, b) =>
+        b.count - a.count ||
+        b.recent20 - a.recent20 ||
+        Number(b.last?.index ?? -1) -
+          Number(a.last?.index ?? -1) ||
+        Number(b.consistency || 0) -
+          Number(a.consistency || 0) ||
+        a.numbers.join(',').localeCompare(
+          b.numbers.join(',')
+        )
+    );
 }
 
-function currentCoreStatus(
-  analysisStats,
-  trackedStats,
-  analysisDrawCount
+function coreSource(core, groupFiveNumbers, learnerNumbers) {
+  const sources = [];
+  const inSet = (set, values) =>
+    values.length && core.every(n => set.includes(n));
+
+  if (inSet(groupFiveNumbers, core)) {
+    sources.push('GROUP_FIVE');
+  }
+
+  if (inSet(learnerNumbers, core)) {
+    sources.push('12H_LEARNER');
+  }
+
+  if (!sources.length) {
+    sources.push('LIVE_DATA');
+  }
+
+  return sources;
+}
+
+function coreLiveDetail(
+  stat,
+  draws,
+  groupStartDrawId,
+  groupFiveNumbers,
+  learnerNumbers
 ) {
-  if (!analysisStats || analysisStats.count < 2) {
-    return {
-      state: 'INSUFFICIENT',
-      currentGap: null,
-      expectedGap: analysisStats?.meanGap ?? null,
-      messageAr:
-        'لا توجد اجتماعات كافية لهذا الثلاثي للحكم على دورة تكراره.'
-    };
-  }
-
-  const lastAnalysisIndex =
-    analysisStats.last?.index ?? -1;
-
-  const lastTrackedIndex =
-    trackedStats.last?.index ?? -1;
-
-  const currentIndex =
-    analysisDrawCount +
-    trackedStats.trackedDraws - 1;
-
-  const lastTogetherIndex =
-    lastTrackedIndex >= 0
-      ? analysisDrawCount + lastTrackedIndex
-      : lastAnalysisIndex;
-
+  const latestIndex = draws.length - 1;
+  const lastIndex = Number(stat.last?.index ?? -1);
   const currentGap =
-    Math.max(
-      0,
-      currentIndex - lastTogetherIndex
-    );
+    lastIndex >= 0
+      ? Math.max(0, latestIndex - lastIndex)
+      : null;
 
-  const expectedGap =
-    Number(analysisStats.meanGap || 0);
+  const meanStep =
+    stat.meanGap == null
+      ? null
+      : Math.max(1, Math.round(stat.meanGap));
 
-  let state = 'ACTIVE';
-  let messageAr =
-    'الثلاثي ما زال ضمن نمط الفاصل التاريخي تقريبًا.';
+  const expectedDrawId =
+    stat.last?.drawId && meanStep
+      ? Number(stat.last.drawId) + meanStep
+      : null;
 
-  if (
-    expectedGap > 0 &&
-    currentGap > expectedGap * 1.75
-  ) {
-    state = 'COOLING';
-    messageAr =
-      'مر وقت أطول بوضوح من متوسط فاصل ظهور الثلاثي؛ التجمع يبرد حاليًا.';
-  } else if (
-    expectedGap > 0 &&
-    currentGap > expectedGap * 1.25
-  ) {
-    state = 'WATCH';
-    messageAr =
-      'الثلاثي تجاوز متوسط فاصل ظهوره قليلًا ويحتاج مراقبة السحبات القادمة.';
-  }
+  const remainingToAverage =
+    currentGap != null && meanStep
+      ? meanStep - currentGap
+      : null;
+
+  const sinceSelectionOccurrences =
+    groupStartDrawId
+      ? stat.occurrences.filter(
+          x => Number(x.drawId) > Number(groupStartDrawId)
+        )
+      : [];
 
   return {
-    state,
-    currentGap,
-    expectedGap:
-      expectedGap || null,
-    messageAr
+    numbers: stat.numbers,
+    sources:
+      coreSource(
+        stat.numbers,
+        groupFiveNumbers,
+        learnerNumbers
+      ),
+    strength: {
+      together: stat.count,
+      recent20: stat.recent20,
+      consistency: stat.consistency
+    },
+    analysis: {
+      together: stat.count,
+      recent20: stat.recent20,
+      gaps: stat.gaps,
+      meanGap: stat.meanGap,
+      consistency: stat.consistency,
+      lastTogetherDrawId:
+        stat.last?.drawId || null,
+      lastTogetherTime:
+        stat.last?.time || '',
+      occurrences:
+        stat.occurrences.map(
+          x => ({
+            drawId: x.drawId,
+            time: x.time,
+            date: x.date
+          })
+        )
+    },
+    sinceSelection: {
+      together:
+        sinceSelectionOccurrences.length,
+      lastTogetherDrawId:
+        sinceSelectionOccurrences.at(-1)?.drawId || null,
+      lastTogetherTime:
+        sinceSelectionOccurrences.at(-1)?.time || ''
+    },
+    current: {
+      currentGap,
+      expectedGap: stat.meanGap,
+      meanStep,
+      expectedDrawId,
+      remainingToAverage,
+      latestDrawId:
+        Number(draws.at(-1)?.draw_id || 0) || null
+    }
   };
 }
 
 async function groupFiveCore3Detail() {
-  const groups =
-    (
-      await db(
-        `tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&active=eq.true&name=eq.${encodeURIComponent(
-          GROUP_FIVE_NAME
-        )}&order=id.desc&limit=1`
-      )
-    ) || [];
-
-  const group = groups[0] || null;
-  const numbers = norm(group?.numbers);
-
-  if (!group || numbers.length !== 5) {
-    return {
-      ok: true,
-      active: false,
-      numbers,
-      message:
-        'Group Five is not active.'
-    };
-  }
-
   const controls =
     (
       await db(
@@ -317,194 +312,120 @@ async function groupFiveCore3Detail() {
         )
     ) || null;
 
-  const groupStart =
-    Number(group.start_draw_id || 0);
-
-  const controlStart =
-    Number(control?.start_draw_id || 0);
-
-  const analysisWindow =
-    controlStart && groupStart >= controlStart
-      ? Math.max(
-          GROUP_FIVE_FIRST_ANALYSIS_DRAWS,
-          groupStart - controlStart + 1
-        )
-      : GROUP_FIVE_FIRST_ANALYSIS_DRAWS;
-
-  const analysisRows =
+  const groupRows =
     (
       await db(
-        `hotspot_draws?select=draw_id,draw_date,draw_time,numbers&draw_id=lte.${groupStart}&order=draw_id.desc&limit=${analysisWindow}`
+        `tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&active=eq.true&name=eq.${encodeURIComponent(
+          GROUP_FIVE_NAME
+        )}&order=id.desc&limit=1`
       )
     ) || [];
 
-  const analysisDraws =
-    analysisRows
-      .filter(
-        d =>
-          Number.isFinite(Number(d?.draw_id)) &&
-          norm(d?.numbers).length === 20
-      )
-      .sort(
-        (a, b) =>
-          Number(a.draw_id) -
-          Number(b.draw_id)
-      );
+  const group = groupRows[0] || null;
+  const groupFiveNumbers = norm(group?.numbers);
+  const groupStartDrawId = Number(group?.start_draw_id || 0);
 
-  const coreResult =
-    strongestCore3(
-      analysisDraws,
-      numbers
+  let learner = null;
+
+  try {
+    learner = await runDailyPatternLearner();
+  } catch (e) {
+    learner = null;
+  }
+
+  const learnerNumbers =
+    norm(learner?.suggestion?.numbers || []);
+
+  let rawDraws = [];
+
+  if (Number(control?.start_draw_id || 0)) {
+    rawDraws =
+      (
+        await db(
+          `hotspot_draws?select=draw_id,draw_date,draw_time,numbers&draw_id=gte.${Number(
+            control.start_draw_id
+          )}&order=draw_id.asc&limit=220`
+        )
+      ) || [];
+  } else {
+    rawDraws =
+      (
+        await db(
+          'hotspot_draws?select=draw_id,draw_date,draw_time,numbers&order=draw_id.desc&limit=180'
+        )
+      ) || [];
+  }
+
+  const draws = rawDraws
+    .filter(
+      d =>
+        Number.isFinite(Number(d?.draw_id)) &&
+        norm(d?.numbers).length === 20
+    )
+    .sort(
+      (a, b) =>
+        Number(a.draw_id) - Number(b.draw_id)
     );
 
-  const leader =
-    coreResult.leader;
-
-  if (!leader || leader.numbers.length !== 3) {
+  if (draws.length < 20) {
     return {
       ok: true,
-      active: true,
-      numbers,
-      analysisWindow,
+      active: false,
+      groupFive: {
+        numbers: groupFiveNumbers,
+        startDrawId: groupStartDrawId || null
+      },
+      learner: {
+        numbers: learnerNumbers
+      },
+      have: draws.length,
+      need: 20,
       core3: null,
+      activeCore3: [],
       message:
-        'No valid Core3 found.'
+        'Not enough live draws for dynamic Core3 discovery.'
     };
   }
 
-  let trackingRows =
-    (
-      await db(
-        `tracker_results?select=draw_id,hit_count,hit_numbers,created_at&group_id=eq.${Number(
-          group.id
-        )}&order=draw_id.asc&limit=200`
-      )
-    ) || [];
+  const ranked = discoverDynamicCore3(draws);
 
-  const ids =
-    trackingRows.map(r => Number(r.draw_id))
-      .filter(Number.isFinite);
-
-  let meta = {};
-
-  if (ids.length) {
-    const drawMeta =
-      (
-        await db(
-          `hotspot_draws?select=draw_id,draw_date,draw_time&draw_id=in.(${ids.join(
-            ','
-          )})`
-        )
-      ) || [];
-
-    meta =
-      Object.fromEntries(
-        drawMeta.map(
-          d => [
-            Number(d.draw_id),
-            d
-          ]
-        )
+  const activeCore3 =
+    ranked
+      .slice(0, CORE3_MAX_ACTIVE)
+      .map(
+        stat =>
+          coreLiveDetail(
+            stat,
+            draws,
+            groupStartDrawId,
+            groupFiveNumbers,
+            learnerNumbers
+          )
       );
-  }
 
-  trackingRows =
-    trackingRows.map(
-      row => ({
-        ...row,
-        date:
-          meta[Number(row.draw_id)]
-            ?.draw_date || '',
-        time:
-          meta[Number(row.draw_id)]
-            ?.draw_time || ''
-      })
-    );
-
-  const tracked =
-    trackedCoreStats(
-      trackingRows,
-      leader.numbers
-    );
-
-  const current =
-    currentCoreStatus(
-      leader,
-      tracked,
-      analysisDraws.length
-    );
+  const leader = activeCore3[0] || null;
 
   return {
     ok: true,
-    active: true,
+    active: Boolean(leader),
+    dynamic: true,
+    analysisWindow: draws.length,
+    latestDrawId:
+      Number(draws.at(-1)?.draw_id || 0) || null,
     groupFive: {
-      numbers,
-      startDrawId: groupStart,
-      analysisWindow:
-        analysisDraws.length,
-      trackedDraws:
-        trackingRows.length
+      numbers: groupFiveNumbers,
+      startDrawId: groupStartDrawId || null,
+      active: Boolean(group)
     },
-    core3: {
-      numbers:
-        leader.numbers,
-      analysis: {
-        together:
-          leader.count,
-        gaps:
-          leader.gaps,
-        meanGap:
-          leader.meanGap,
-        consistency:
-          leader.consistency,
-        lastTogetherDrawId:
-          leader.last?.drawId || null,
-        lastTogetherTime:
-          leader.last?.time || '',
-        occurrences:
-          leader.occurrences.map(
-            x => ({
-              drawId: x.drawId,
-              time: x.time,
-              date: x.date
-            })
-          )
-      },
-      sinceSelection: {
-        together:
-          tracked.together3,
-        partial2:
-          tracked.partial2,
-        lastTogetherDrawId:
-          tracked.last?.drawId || null,
-        lastTogetherTime:
-          tracked.last?.time || '',
-        occurrences:
-          tracked.occurrences.map(
-            x => ({
-              drawId: x.drawId,
-              time: x.time,
-              date: x.date
-            })
-          )
-      },
-      current
+    learner: {
+      numbers: learnerNumbers,
+      active: Boolean(learner?.active)
     },
+    core3: leader,
+    activeCore3,
     selectionRule:
-      'Among the 10 possible Core3 combinations inside Group Five, choose the triplet with the most joint appearances during the analysis window; ties prefer the most recent, then the most consistent.',
-    topCore3:
-      coreResult.ranked
-        .slice(0, 3)
-        .map(
-          x => ({
-            numbers: x.numbers,
-            together: x.count,
-            meanGap: x.meanGap,
-            consistency: x.consistency,
-            lastTogetherDrawId:
-              x.last?.drawId || null
-          })
-        )
+      'Re-scan all currently collected live draws on every refresh. Rank every observed Core3 by total joint appearances first, then last-20 activity, recency and consistency. Keep the top three dynamic Core3 groups. They are not fixed to Group Five.',
+    candidatesEvaluated: ranked.length
   };
 }
 
@@ -757,30 +678,24 @@ async function waveCycleBacktest() {
 }
 
 async function learnerWaveDetail() {
-  const learner =
-    await runDailyPatternLearner();
+  const learner = await runDailyPatternLearner();
 
-  const numbers =
-    norm(
-      learner?.suggestion?.numbers || []
-    );
+  const numbers = norm(
+    learner?.suggestion?.numbers || []
+  );
 
   if (
     !learner?.ok ||
     !learner?.active ||
     numbers.length !== 5 ||
-    !Number(
-      learner?.controlStartDrawId
-    )
+    !Number(learner?.controlStartDrawId)
   ) {
     return {
       ok: true,
       active: false,
       numbers,
-      have:
-        Number(learner?.have || 0),
-      state:
-        learner?.wave?.state || null,
+      have: Number(learner?.have || 0),
+      state: learner?.wave?.state || null,
       message:
         'Learner wave details are not ready yet.'
     };
@@ -798,38 +713,23 @@ async function learnerWaveDetail() {
   const draws = rows
     .filter(
       d =>
-        Number.isFinite(
-          Number(d?.draw_id)
-        ) &&
+        Number.isFinite(Number(d?.draw_id)) &&
         norm(d?.numbers).length === 20
     )
-    .slice(
-      0,
-      Number(learner.have || 0)
-    );
+    .slice(0, Number(learner.have || 0));
 
-  const latest =
-    draws.at(-1) || null;
-
-  const recent40 =
-    draws.slice(-40);
+  const latest = draws.at(-1) || null;
+  const recent40 = draws.slice(-40);
 
   const numberStats =
     numbers.map(number => {
       const appearances =
-        draws.filter(
-          d =>
-            drawHas(d, number)
-        );
+        draws.filter(d => drawHas(d, number));
 
       const recentAppearances =
-        recent40.filter(
-          d =>
-            drawHas(d, number)
-        );
+        recent40.filter(d => drawHas(d, number));
 
-      const last =
-        appearances.at(-1) || null;
+      const last = appearances.at(-1) || null;
 
       const lastIndex =
         last
@@ -842,86 +742,53 @@ async function learnerWaveDetail() {
 
       return {
         number,
-        count:
-          appearances.length,
-        recent40:
-          recentAppearances.length,
+        count: appearances.length,
+        recent40: recentAppearances.length,
         lastDrawId:
-          last
-            ? Number(last.draw_id)
-            : null,
-        lastTime:
-          last?.draw_time || '',
-        lastDate:
-          last?.draw_date || '',
+          last ? Number(last.draw_id) : null,
+        lastTime: last?.draw_time || '',
+        lastDate: last?.draw_date || '',
         drawsSinceLast:
           lastIndex >= 0
             ? Math.max(
                 0,
-                draws.length -
-                1 -
-                lastIndex
+                draws.length - 1 - lastIndex
               )
             : null
       };
     });
 
-  const last20 =
-    learner?.wave?.metrics?.last20 || {};
-
-  const last10 =
-    learner?.wave?.metrics?.last10 || {};
+  const last20 = learner?.wave?.metrics?.last20 || {};
+  const last10 = learner?.wave?.metrics?.last10 || {};
 
   return {
     ok: true,
     active: true,
-    have:
-      Number(
-        learner.have ||
-        draws.length
-      ),
+    have: Number(learner.have || draws.length),
     latestDrawId:
-      latest
-        ? Number(latest.draw_id)
-        : null,
-    latestTime:
-      latest?.draw_time || '',
+      latest ? Number(latest.draw_id) : null,
+    latestTime: latest?.draw_time || '',
     numbers,
     wave: {
-      state:
-        learner?.wave?.state ||
-        'DORMANT',
-      stateAr:
-        learner?.wave?.stateAr || '',
-      score:
-        Number(
-          learner?.wave?.score || 0
-        ),
+      state: learner?.wave?.state || 'DORMANT',
+      stateAr: learner?.wave?.stateAr || '',
+      score: Number(learner?.wave?.score || 0),
       alertLevel:
-        learner?.wave?.alertLevel ||
-        'NONE'
+        learner?.wave?.alertLevel || 'NONE'
     },
     numberStats,
     comparison: {
       last10: {
-        draws:
-          Number(last10.draws || 0),
-        threePlus:
-          Number(last10.threePlus || 0),
-        fourPlus:
-          Number(last10.fourPlus || 0),
-        exact5:
-          Number(last10.exact5 || 0)
+        draws: Number(last10.draws || 0),
+        threePlus: Number(last10.threePlus || 0),
+        fourPlus: Number(last10.fourPlus || 0),
+        exact5: Number(last10.exact5 || 0)
       },
       last20: {
-        draws:
-          Number(last20.draws || 0),
-        threePlus:
-          Number(last20.threePlus || 0),
-        fourPlus:
-          Number(last20.fourPlus || 0),
-        exact5:
-          Number(last20.exact5 || 0)
+        draws: Number(last20.draws || 0),
+        threePlus: Number(last20.threePlus || 0),
+        fourPlus: Number(last20.fourPlus || 0),
+        exact5: Number(last20.exact5 || 0)
       }
     },
     compact: true
@@ -936,103 +803,57 @@ module.exports = async (req, res) => {
 
   try {
     const mode =
-      String(
-        req.query?.mode || ''
-      )
+      String(req.query?.mode || '')
         .trim()
         .toLowerCase();
 
-    if (
-      mode ===
-      'learner-wave-detail'
-    ) {
-      const detail =
-        await learnerWaveDetail();
-
-      return res
-        .status(200)
-        .json(detail);
+    if (mode === 'learner-wave-detail') {
+      const detail = await learnerWaveDetail();
+      return res.status(200).json(detail);
     }
 
-    if (
-      mode ===
-      'group-five-core3'
-    ) {
-      const detail =
-        await groupFiveCore3Detail();
-
+    if (mode === 'group-five-core3') {
+      const detail = await groupFiveCore3Detail();
       return res
         .status(detail.ok ? 200 : 400)
         .json(detail);
     }
 
-    if (
-      mode ===
-      'wave-cycle-backtest'
-    ) {
-      const result =
-        await waveCycleBacktest();
-
+    if (mode === 'wave-cycle-backtest') {
+      const result = await waveCycleBacktest();
       return res
         .status(result.ok ? 200 : 400)
         .json(result);
     }
 
-    const now =
-      californiaNowParts();
+    const now = californiaNowParts();
 
     return res.status(200).json({
       ok: true,
-
       version:
-        require('../package.json')
-          .version,
-
+        require('../package.json').version,
       californiaTime:
         `${String(now.hour).padStart(2, '0')}:` +
         `${String(now.minute).padStart(2, '0')}`,
-
-      cycle:
-        cycleDateKey(now),
-
-      mode:
-        scheduleMode(
-          now.minutes
-        ),
-
+      cycle: cycleDateKey(now),
+      mode: scheduleMode(now.minutes),
       configured: {
         supabaseUrl:
-          Boolean(
-            process.env.SUPABASE_URL
-          ),
-
+          Boolean(process.env.SUPABASE_URL),
         supabaseKey:
           Boolean(
-            process.env
-              .SUPABASE_SERVICE_ROLE_KEY
+            process.env.SUPABASE_SERVICE_ROLE_KEY
           ),
-
         workerSecret:
-          Boolean(
-            process.env.WORKER_SECRET
-          )
+          Boolean(process.env.WORKER_SECRET)
       },
-
       collectionDraws: 180,
-
-      source:
-        'California Lottery official'
+      source: 'California Lottery official'
     });
-
   } catch (e) {
-
-    return res
-      .status(500)
-      .json({
-        ok: false,
-        error:
-          e.message ||
-          String(e)
-      });
+    return res.status(500).json({
+      ok: false,
+      error: e.message || String(e)
+    });
   }
 };
