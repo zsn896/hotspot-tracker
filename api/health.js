@@ -69,6 +69,64 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function quantile(values, q) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const pos = (sorted.length - 1) * clamp(q, 0, 1);
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  if (lo === hi) return sorted[lo];
+  const part = pos - lo;
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * part;
+}
+
+function adaptiveResidualForecast(gaps, currentGap) {
+  if (!Number.isFinite(currentGap) || currentGap < 0) return null;
+
+  const survivors = gaps
+    .map((gap, index) => ({ gap, index }))
+    .filter(item => item.gap > currentGap);
+
+  if (!survivors.length) return null;
+
+  let weightedResidual = 0;
+  let weightTotal = 0;
+  const residuals = [];
+
+  survivors.forEach(item => {
+    const residual = item.gap - currentGap;
+    const recencyWeight = item.index + 1;
+    residuals.push(residual);
+    weightedResidual += residual * recencyWeight;
+    weightTotal += recencyWeight;
+  });
+
+  const weightedMeanResidual = weightTotal ? weightedResidual / weightTotal : avg(residuals);
+  const medianResidual = median(residuals);
+  const centerResidual = Math.max(
+    1,
+    Math.round((weightedMeanResidual * 0.60) + (medianResidual * 0.40))
+  );
+  const startResidual = Math.max(1, Math.round(quantile(residuals, 0.25)));
+  const endResidual = Math.max(startResidual, Math.round(quantile(residuals, 0.75)));
+
+  return {
+    samples: survivors.length,
+    survivorGaps: survivors.map(x => x.gap),
+    residuals,
+    weightedMeanResidual: Number(weightedMeanResidual.toFixed(2)),
+    medianResidual: Number(medianResidual.toFixed(2)),
+    centerResidual,
+    startResidual,
+    endResidual,
+    evidence: survivors.length >= 6
+      ? 'GOOD'
+      : survivors.length >= 3
+        ? 'MODERATE'
+        : 'LIMITED'
+  };
+}
+
 function predictionFromStats(stat, currentGap, drawCount) {
   const gaps = (stat.gaps || []).map(Number).filter(n => Number.isFinite(n) && n > 0);
   if (!stat.last?.drawId || !gaps.length) return null;
@@ -87,9 +145,8 @@ function predictionFromStats(stat, currentGap, drawCount) {
   const activityRatio = historicalRate > 0 ? recentRate / historicalRate : 1;
   const activityFactor = clamp(1 - ((activityRatio - 1) * 0.08), 0.85, 1.15);
 
-  const predictedGap = Math.max(1, Math.round(baseGap * activityFactor));
-  const expectedDrawId = Number(stat.last.drawId) + predictedGap;
-  const remaining = currentGap == null ? null : predictedGap - currentGap;
+  const primaryPredictedGap = Math.max(1, Math.round(baseGap * activityFactor));
+  const primaryExpectedDrawId = Number(stat.last.drawId) + primaryPredictedGap;
 
   const evidenceScore = clamp(gaps.length / 8, 0, 1);
   const consistencyScore = clamp(Number(stat.consistency || 0), 0, 1);
@@ -111,55 +168,80 @@ function predictionFromStats(stat, currentGap, drawCount) {
 
   const sortedGaps = [...gaps].sort((a, b) => a - b);
   const maxHistoricalGap = sortedGaps.at(-1) || null;
+
+  let predictedGap = primaryPredictedGap;
+  let expectedDrawId = primaryExpectedDrawId;
+  let remaining = currentGap == null ? null : predictedGap - currentGap;
+  let method = 'EVIDENCE_WEIGHTED_CYCLE';
   let followUp = {
     status: 'NOT_NEEDED',
     reason: 'Primary expected draw has not been missed yet.'
   };
+  let adaptive = null;
 
-  if (currentGap != null && currentGap >= predictedGap) {
-    const longerGaps = sortedGaps.filter(gap => gap > currentGap);
-    if (longerGaps.length) {
-      const startGap = longerGaps[0];
-      const upperIndex = Math.min(
-        longerGaps.length - 1,
-        Math.max(0, Math.floor((longerGaps.length - 1) * 0.65))
-      );
-      const endGap = Math.max(startGap, longerGaps[upperIndex]);
-      const sampleCount = longerGaps.length;
+  if (currentGap != null && currentGap >= primaryPredictedGap) {
+    adaptive = adaptiveResidualForecast(gaps, currentGap);
+
+    if (adaptive) {
+      predictedGap = currentGap + adaptive.centerResidual;
+      expectedDrawId = Number(stat.last.drawId) + predictedGap;
+      remaining = adaptive.centerResidual;
+      method = 'ADAPTIVE_CONDITIONAL_REFORECAST';
+
       followUp = {
         status: 'NEXT_ZONE',
-        basedOn: 'HISTORICAL_LONGER_GAPS',
+        basedOn: 'CONDITIONAL_SURVIVAL_REFORECAST',
         currentGap,
-        startGap,
-        endGap,
-        startDrawId: Number(stat.last.drawId) + startGap,
-        endDrawId: Number(stat.last.drawId) + endGap,
-        samples: sampleCount,
+        primaryPredictedGap,
+        primaryExpectedDrawId,
+        startGap: currentGap + adaptive.startResidual,
+        endGap: currentGap + adaptive.endResidual,
+        centerGap: predictedGap,
+        startDrawId: Number(stat.last.drawId) + currentGap + adaptive.startResidual,
+        endDrawId: Number(stat.last.drawId) + currentGap + adaptive.endResidual,
+        centerDrawId: expectedDrawId,
+        remainingFromNow: adaptive.centerResidual,
+        samples: adaptive.samples,
+        evidence: adaptive.evidence,
+        confidence: adaptive.evidence,
         maxHistoricalGap,
-        confidence: sampleCount >= 4 ? 'MEDIUM' : sampleCount >= 2 ? 'LOW' : 'VERY_LOW',
-        reason: 'Primary prediction was missed; next watch zone is derived only from historical cycle gaps longer than the current gap.'
+        survivorGaps: adaptive.survivorGaps,
+        residuals: adaptive.residuals,
+        reason: 'The first forecast was missed. The forecast is rebuilt from historical cycles that also survived beyond the current gap, with more recent cycles weighted more heavily. It is recalculated after every new draw.'
       };
     } else {
+      method = 'ADAPTIVE_RECALIBRATION';
+      predictedGap = null;
+      expectedDrawId = null;
+      remaining = null;
       followUp = {
-        status: 'OUTSIDE_HISTORY',
-        basedOn: 'HISTORICAL_GAP_LIMIT',
+        status: 'RECALIBRATING',
+        basedOn: 'NO_CONDITIONAL_ANALOGS',
         currentGap,
-        maxHistoricalGap,
+        primaryPredictedGap,
+        primaryExpectedDrawId,
         samples: 0,
-        confidence: 'NONE',
-        reason: 'Current gap is at or beyond every historical gap in the analyzed data, so no reliable next draw zone is available.'
+        evidence: 'WAITING_FOR_ANALOGS',
+        confidence: 'RECALIBRATING',
+        maxHistoricalGap,
+        reason: 'No completed historical cycle survived beyond the current gap. The system will not invent a new draw number; it keeps recalculating as new draws arrive.'
       };
     }
   }
 
   return {
-    method: 'EVIDENCE_WEIGHTED_CYCLE',
+    method,
     predictedGap,
     expectedDrawId,
     remaining,
     confidence,
     confidenceScore,
     followUp,
+    adaptive,
+    primary: {
+      predictedGap: primaryPredictedGap,
+      expectedDrawId: primaryExpectedDrawId
+    },
     components: {
       occurrences: stat.count,
       gapsCount: gaps.length,
@@ -533,7 +615,7 @@ function evaluateTrackedSet(draws, numbers) {
     type: numbers.length === 3 ? 'CORE3' : 'MANUAL_GROUP_3_PLUS',
     trackingMode: 'ANY_3_PLUS',
     hitRule: 'Any draw containing 3, 4, or 5 numbers from the tracked set counts as a cycle hit.',
-    predictionRule: 'Expected draw is evidence-weighted from recent gaps, median gap, overall mean gap, occurrence count, recent-20 activity, consistency and current gap. If the primary expected draw is missed, the next watch zone is derived only from longer historical gaps; if none remain, the cycle is marked outside historical range. No random value is used.',
+    predictionRule: 'The first forecast uses recent weighted gaps, median, mean, occurrence count, recent activity and consistency. If it is missed, every new draw triggers an adaptive conditional reforecast based only on historical cycles that survived beyond the current gap, with newer cycles weighted more heavily. No random value is used and no new draw is invented when comparable cycles do not exist.',
     fullSet: full,
     threePlus,
     core3: threePlus,
