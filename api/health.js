@@ -43,6 +43,96 @@ function avg(values) {
   return values.length ? values.reduce((s, n) => s + n, 0) / values.length : 0;
 }
 
+function median(values) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[mid]
+    : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function weightedRecentAverage(values, limit = 6) {
+  const recent = values.slice(-Math.max(1, limit));
+  if (!recent.length) return null;
+  let weighted = 0;
+  let weights = 0;
+  recent.forEach((value, index) => {
+    const weight = index + 1;
+    weighted += value * weight;
+    weights += weight;
+  });
+  return weights ? weighted / weights : null;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function predictionFromStats(stat, currentGap, drawCount) {
+  const gaps = (stat.gaps || []).map(Number).filter(n => Number.isFinite(n) && n > 0);
+  if (!stat.last?.drawId || !gaps.length) return null;
+
+  const meanGap = avg(gaps);
+  const medianGap = median(gaps);
+  const recentWeightedGap = weightedRecentAverage(gaps, 6);
+
+  const baseGap =
+    (recentWeightedGap * 0.45) +
+    (medianGap * 0.30) +
+    (meanGap * 0.25);
+
+  const historicalRate = drawCount > 0 ? stat.count / drawCount : 0;
+  const recentRate = stat.recent20 / Math.max(1, Math.min(20, drawCount));
+  const activityRatio = historicalRate > 0 ? recentRate / historicalRate : 1;
+  const activityFactor = clamp(1 - ((activityRatio - 1) * 0.08), 0.85, 1.15);
+
+  const predictedGap = Math.max(1, Math.round(baseGap * activityFactor));
+  const expectedDrawId = Number(stat.last.drawId) + predictedGap;
+  const remaining = currentGap == null ? null : predictedGap - currentGap;
+
+  const evidenceScore = clamp(gaps.length / 8, 0, 1);
+  const consistencyScore = clamp(Number(stat.consistency || 0), 0, 1);
+  const recentScore = clamp(stat.recent20 / 3, 0, 1);
+  const windowScore = clamp(drawCount / 100, 0, 1);
+  const confidenceScore = Math.round(100 * (
+    evidenceScore * 0.35 +
+    consistencyScore * 0.30 +
+    recentScore * 0.15 +
+    windowScore * 0.20
+  ));
+  const confidence = confidenceScore >= 75
+    ? 'HIGH'
+    : confidenceScore >= 55
+      ? 'MEDIUM'
+      : confidenceScore >= 35
+        ? 'LOW'
+        : 'EARLY';
+
+  return {
+    method: 'EVIDENCE_WEIGHTED_CYCLE',
+    predictedGap,
+    expectedDrawId,
+    remaining,
+    confidence,
+    confidenceScore,
+    components: {
+      occurrences: stat.count,
+      gapsCount: gaps.length,
+      meanGap: Number(meanGap.toFixed(2)),
+      medianGap: Number(medianGap.toFixed(2)),
+      recentWeightedGap: Number(recentWeightedGap.toFixed(2)),
+      recent20: stat.recent20,
+      consistency: stat.consistency,
+      historicalRate: Number(historicalRate.toFixed(4)),
+      recentRate: Number(recentRate.toFixed(4)),
+      activityRatio: Number(activityRatio.toFixed(3)),
+      activityFactor: Number(activityFactor.toFixed(3)),
+      currentGap
+    }
+  };
+}
+
 function summarize(values) {
   if (!values.length) return { count: 0, average: null, min: null, max: null };
   return {
@@ -177,13 +267,10 @@ function liveDetailFromStats(stat, draws, sources = ['LIVE_DATA']) {
   const latestIndex = draws.length - 1;
   const lastIndex = Number(stat.last?.index ?? -1);
   const currentGap = lastIndex >= 0 ? Math.max(0, latestIndex - lastIndex) : null;
-  const meanStep = stat.meanGap == null ? null : Math.max(1, Math.round(stat.meanGap));
-  const expectedDrawId = stat.last?.drawId && meanStep
-    ? Number(stat.last.drawId) + meanStep
-    : null;
-  const remainingToAverage = currentGap != null && meanStep
-    ? meanStep - currentGap
-    : null;
+  const prediction = predictionFromStats(stat, currentGap, draws.length);
+  const meanStep = prediction?.predictedGap || null;
+  const expectedDrawId = prediction?.expectedDrawId || null;
+  const remainingToAverage = prediction?.remaining ?? null;
   const latestDrawId = Number(draws.at(-1)?.draw_id || 0) || null;
   const appearedNow = Boolean(stat.last?.drawId && latestDrawId && Number(stat.last.drawId) === latestDrawId);
 
@@ -201,6 +288,7 @@ function liveDetailFromStats(stat, draws, sources = ['LIVE_DATA']) {
       gaps: stat.gaps,
       meanGap: stat.meanGap,
       consistency: stat.consistency,
+      prediction,
       lastTogetherDrawId: stat.last?.drawId || null,
       lastTogetherTime: stat.last?.time || '',
       lastHitCount: Number(stat.last?.hits || 0) || null,
@@ -217,10 +305,12 @@ function liveDetailFromStats(stat, draws, sources = ['LIVE_DATA']) {
       appearedNow,
       status: appearedNow ? 'HIT_NOW' : 'WAITING',
       currentGap,
-      expectedGap: stat.meanGap,
+      expectedGap: prediction?.predictedGap || null,
       meanStep,
       expectedDrawId,
       remainingToAverage,
+      predictionConfidence: prediction?.confidence || 'NONE',
+      predictionConfidenceScore: prediction?.confidenceScore || 0,
       latestDrawId,
       lastHitCount: Number(stat.last?.hits || 0) || null,
       lastMatchedNumbers: norm(stat.last?.matchedNumbers || [])
@@ -397,6 +487,7 @@ function evaluateTrackedSet(draws, numbers) {
     type: numbers.length === 3 ? 'CORE3' : 'MANUAL_GROUP_3_PLUS',
     trackingMode: 'ANY_3_PLUS',
     hitRule: 'Any draw containing 3, 4, or 5 numbers from the tracked set counts as a cycle hit.',
+    predictionRule: 'Expected draw is evidence-weighted from recent gaps, median gap, overall mean gap, occurrence count, recent-20 activity, consistency and current gap. No random value is used.',
     fullSet: full,
     threePlus,
     core3: threePlus,
@@ -404,7 +495,9 @@ function evaluateTrackedSet(draws, numbers) {
     rating: {
       together: threePlus.strength.together,
       recent20: threePlus.strength.recent20,
-      consistency: threePlus.strength.consistency
+      consistency: threePlus.strength.consistency,
+      predictionConfidence: threePlus.current.predictionConfidence,
+      predictionConfidenceScore: threePlus.current.predictionConfidenceScore
     }
   };
 }
