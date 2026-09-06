@@ -23,7 +23,6 @@
 .waveBadge{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;border:1px solid currentColor;font-size:11px;font-weight:900}
 .waveMessage{margin-top:10px;line-height:1.45;font-size:13px}
 .waveAlertBtn{border:1px solid #4b5f78;background:#203249;color:white;border-radius:9px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer}
-.waveSource{margin-top:8px;font-size:11px;color:#9fb0c7}
 .wave-DORMANT{color:#9fb0c7;border-color:#3a4b60}
 .wave-EARLY_SIGNAL{color:#f6c453;border-color:rgba(246,196,83,.55);background:rgba(246,196,83,.06)}
 .wave-RISING{color:#55a2ff;border-color:rgba(85,162,255,.55);background:rgba(47,128,255,.08)}
@@ -35,15 +34,15 @@
 .learnerBall{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;font-size:16px;font-weight:950;color:#fff;border:1px solid #6d8fb8;background:linear-gradient(180deg,#24486e,#173653)}
 .learnerHits{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
 .learnerHit{font-size:12px;font-weight:900;padding:7px 9px;border-radius:8px;background:rgba(7,17,31,.35);border:1px solid rgba(159,176,199,.24);color:#d9e5f3}
-.groupExplain{margin-top:11px;padding:10px;border-radius:10px;border:1px solid rgba(159,176,199,.24);background:rgba(7,17,31,.32)}
-.groupExplainMain{font-size:13px;font-weight:950;color:#fff}
-.groupExplainSub{margin-top:5px;font-size:11px;line-height:1.45;color:#b8c7d8}
-.liveNumberGrid{display:flex;gap:7px;margin-top:10px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
-.liveNumberCard{flex:0 0 112px;padding:8px;border-radius:9px;border:1px solid rgba(159,176,199,.24);background:rgba(7,17,31,.30)}
-.liveNumberTop{display:flex;align-items:center;justify-content:space-between;gap:6px}
-.liveNumberValue{font-size:18px;font-weight:950;color:#fff}
-.liveNumberState{font-size:9px;font-weight:950;padding:3px 5px;border-radius:999px;border:1px solid currentColor}
-.liveNumberMeta{margin-top:5px;font-size:10px;line-height:1.35;color:#b8c7d8;white-space:nowrap}
+.coreCard{margin-top:12px;padding:12px;border-radius:12px;border:1px solid rgba(67,234,130,.35);background:rgba(7,17,31,.38)}
+.coreTitle{font-size:12px;font-weight:950;color:#a9bad0}
+.coreNums{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
+.coreBall{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;font-size:18px;font-weight:950;color:#fff;border:2px solid rgba(67,234,130,.65);background:linear-gradient(180deg,#23543c,#153928)}
+.coreStats{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.coreStat{font-size:11px;font-weight:900;padding:7px 9px;border-radius:8px;border:1px solid rgba(159,176,199,.24);background:rgba(7,17,31,.35);color:#d9e5f3}
+.coreLine{margin-top:8px;font-size:12px;line-height:1.5;color:#c7d5e5}
+.coreState{display:inline-flex;margin-top:10px;padding:6px 10px;border-radius:999px;border:1px solid currentColor;font-size:12px;font-weight:950}
+.core-ACTIVE{color:#43ea82}.core-WATCH{color:#f6c453}.core-COOLING{color:#9fb0c7}.core-INSUFFICIENT{color:#9fb0c7}
 `;
 
     const addon=`<script>
@@ -67,8 +66,15 @@
   function storeWave(payload){
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(payload));}catch(e){}
   }
-  function dormantPayload(j){
-    return {drawId:j?.officialDrawId||j?.storedDrawId||null,numbers:[],wave:{state:'DORMANT',stateAr:'جمود / انتظار تكوين Group Five',score:0,alert:false,alertLevel:'NONE',messageAr:'Group Five غير نشطة بعد. النظام ينتظر اكتمال بيانات الدورة المطلوبة ثم يبدأ مراقبة الموجة تلقائيًا.'}};
+  function ensurePanel(id,afterId){
+    let panel=document.getElementById(id);
+    if(panel) return panel;
+    const anchor=document.getElementById(afterId);
+    if(!anchor) return null;
+    panel=document.createElement('div');
+    panel.id=id;
+    anchor.insertAdjacentElement('afterend',panel);
+    return panel;
   }
 
   window.enableWaveNotifications=async function(){
@@ -88,84 +94,41 @@
     try{new Notification('Hot Spot Group Five — '+label(wave.state),{body:wave.messageAr||('Wave score '+Number(wave.score||0)+'/100')});}catch(e){}
   }
 
-  function ensurePanel(id,afterId){
-    let panel=document.getElementById(id);
-    if(panel) return panel;
-    const anchor=document.getElementById(afterId);
-    if(!anchor) return null;
-    panel=document.createElement('div');
-    panel.id=id;
-    anchor.insertAdjacentElement('afterend',panel);
-    return panel;
+  function coreStateClass(state){
+    const s=String(state||'INSUFFICIENT').toUpperCase();
+    return 'core-'+(['ACTIVE','WATCH','COOLING','INSUFFICIENT'].includes(s)?s:'INSUFFICIENT');
   }
 
-  function trackingSummary(stateJson){
-    const g=Array.isArray(stateJson?.groups)?stateJson.groups.find(x=>x?.name==='AUTO Group Five'):null;
-    const rows=Array.isArray(g?.results)?g.results:[];
-    const numbers=Array.isArray(g?.numbers)?g.numbers.map(Number).filter(Number.isFinite):[];
-    const tracked=Math.min(20,rows.length);
-    const threePlus=rows.filter(r=>Number(r?.hit_count||0)>=3).length;
-    const fourPlus=rows.filter(r=>Number(r?.hit_count||0)>=4).length;
-    const exact5=rows.filter(r=>Number(r?.hit_count||0)===5).length;
-    const lastStrongIndex=[...rows].map((r,i)=>({r,i})).reverse().find(x=>Number(x.r?.hit_count||0)>=3)?.i ?? -1;
-    const lastStrong=lastStrongIndex>=0?rows[lastStrongIndex]:null;
-    const sinceStrong=lastStrongIndex>=0?rows.length-1-lastStrongIndex:null;
-
-    let groupTrend='غير مؤكد';
-    if(tracked<3) groupTrend='بداية المتابعة';
-    else if(rows.slice(-3).some(r=>Number(r?.hit_count||0)>=3)) groupTrend='تجمع 3/5+ ما زال حاضرًا';
-    else if(sinceStrong!=null&&sinceStrong<=3) groupTrend='تجمع 3/5+ تحت المراقبة';
-    else if(sinceStrong!=null&&sinceStrong<=6) groupTrend='تجمع 3/5+ يضعف';
-    else groupTrend='لا يوجد تجمع 3/5+ حديث';
-
-    const numberLive=n=>{
-      const indexes=[];
-      rows.forEach((r,i)=>{
-        const hits=Array.isArray(r?.hit_numbers)?r.hit_numbers.map(Number):[];
-        if(hits.includes(Number(n))) indexes.push(i);
-      });
-      const lastIndex=indexes.length?indexes[indexes.length-1]:-1;
-      const last=lastIndex>=0?rows[lastIndex]:null;
-      const since=lastIndex>=0?rows.length-1-lastIndex:null;
-      const recent3=lastIndex>=Math.max(0,rows.length-3);
-      let status='هادئ';
-      if(recent3) status='حاضر';
-      else if(since!=null&&since<=5) status='متوسط';
-      else if(lastIndex<0) status='لم يظهر';
-      return {
-        number:Number(n),
-        count:indexes.length,
-        lastDrawId:last?.draw_id||null,
-        lastTime:last?.time||'',
-        since,
-        status
-      };
-    };
-
-    const liveNumbers=numbers.map(numberLive);
-    const activeNow=liveNumbers.filter(x=>x.status==='حاضر').length;
-
-    return {tracked,threePlus,fourPlus,exact5,lastStrong,sinceStrong,groupTrend,liveNumbers,activeNow};
-  }
-
-  function liveNumberCard(x){
-    const since=x?.since==null?'—':x.since;
-    return '<div class="liveNumberCard">'
-      +'<div class="liveNumberTop"><span class="liveNumberValue">'+esc(x?.number)+'</span><span class="liveNumberState">'+esc(x?.status||'—')+'</span></div>'
-      +'<div class="liveNumberMeta">ظهر '+Number(x?.count||0)+' مرة منذ الاختيار</div>'
-      +'<div class="liveNumberMeta">آخر: Draw '+esc(x?.lastDrawId||'—')+'</div>'
-      +'<div class="liveNumberMeta">'+esc(x?.lastTime||'—')+' · منذ '+esc(since)+' سحبة</div>'
+  function renderCore3(coreData){
+    const core=coreData?.core3||null;
+    if(!core||!Array.isArray(core.numbers)||core.numbers.length!==3) return '';
+    const a=core.analysis||{};
+    const s=core.sinceSelection||{};
+    const c=core.current||{};
+    const gaps=Array.isArray(a.gaps)&&a.gaps.length?a.gaps.join(' → '):'—';
+    return '<div class="coreCard">'
+      +'<div class="coreTitle">CORE3 الأقوى — الثلاثي الذي ظهر معًا فعليًا</div>'
+      +'<div class="coreNums">'+core.numbers.map(n=>'<div class="coreBall">'+esc(n)+'</div>').join('')+'</div>'
+      +'<div class="coreStats">'
+      +'<span class="coreStat">اجتمع أثناء التحليل: '+Number(a.together||0)+' مرات</span>'
+      +'<span class="coreStat">متوسط الفاصل: '+(a.meanGap==null?'—':esc(a.meanGap))+' سحبة</span>'
+      +'<span class="coreStat">الفاصل الحالي: '+(c.currentGap==null?'—':esc(c.currentGap))+' سحبة</span>'
+      +'</div>'
+      +'<div class="coreLine">الفواصل السابقة: '+esc(gaps)+'</div>'
+      +'<div class="coreLine">آخر اجتماع: Draw '+esc(a.lastTogetherDrawId||'—')+' · '+esc(a.lastTogetherTime||'—')+'</div>'
+      +'<div class="coreLine">منذ اختيار Group Five: 3/3 = '+Number(s.together||0)+' · 2/3 = '+Number(s.partial2||0)+' · تتبع '+Number(coreData?.groupFive?.trackedDraws||0)+' سحبة</div>'
+      +'<div class="coreState '+coreStateClass(c.state)+'">'+esc(c.state||'INSUFFICIENT')+'</div>'
+      +'<div class="coreLine">'+esc(c.messageAr||'')+'</div>'
       +'</div>';
   }
 
-  function renderGroupWave(payload){
+  function renderGroupWave(payload,coreData){
     const wave=payload?.wave||null;
     if(!wave) return;
     const panel=ensurePanel('wavePanel','learnerWavePanel')||ensurePanel('wavePanel','learnerContent');
     if(!panel) return;
     const state=String(wave.state||'DORMANT').toUpperCase();
-    const nums=Array.isArray(payload?.numbers)?payload.numbers.map(Number).filter(Number.isFinite):[];
-    const t=payload?.tracking||null;
+    const nums=Array.isArray(coreData?.groupFive?.numbers)?coreData.groupFive.numbers:(Array.isArray(payload?.numbers)?payload.numbers:[]);
     panel.className='wavePanel '+stateClass(state);
     panel.innerHTML=''
       +'<div class="waveTop">'
@@ -176,22 +139,9 @@
       +'<div class="waveMeta">'
       +'<span class="waveBadge">Wave '+Number(wave.score||0)+'/100</span>'
       +'<span class="waveBadge">'+esc(wave.alertLevel||'NONE')+'</span>'
-      +(t?'<span class="waveBadge">Tracked '+t.tracked+'/20</span>':'')
-      +(t?'<span class="waveBadge">حاضر الآن '+t.activeNow+'/5</span>':'')
+      +(coreData?.groupFive?'<span class="waveBadge">Tracked '+Number(coreData.groupFive.trackedDraws||0)+'/20</span>':'')
       +'</div>'
-      +(t?'<div class="learnerHits">'
-        +'<span class="learnerHit">3/5+ = '+t.threePlus+'</span>'
-        +'<span class="learnerHit">4/5+ = '+t.fourPlus+'</span>'
-        +'<span class="learnerHit">5/5 = '+t.exact5+'</span>'
-        +'</div>':'')
-      +(t&&Array.isArray(t.liveNumbers)&&t.liveNumbers.length?'<div class="liveNumberGrid">'+t.liveNumbers.map(liveNumberCard).join('')+'</div>':'')
-      +(t?'<div class="groupExplain">'
-        +'<div class="groupExplainMain">حالة تجمع المجموعة: '+esc(t.groupTrend)+'</div>'
-        +'<div class="groupExplainSub">'
-        +(t.lastStrong
-          ? 'آخر تجمع قوي: '+Number(t.lastStrong.hit_count||0)+'/5 · Draw '+esc(t.lastStrong.draw_id||'—')+' · '+esc(t.lastStrong.time||'')+' · منذ '+esc(t.sinceStrong)+' سحبات. هذا الحكم يخص اجتماع 3 أرقام أو أكثر، وليس ضعف الأرقام الخمسة كلها.'
-          : 'لا يوجد 3/5+ بعد اختيار المجموعة حتى الآن. نشاط كل رقم ظاهر أعلاه بشكل مستقل.')
-        +'</div></div>':'')
+      +renderCore3(coreData)
       +'<div class="waveMessage">'+esc(wave.messageAr||wave.message||'No clear wave signal right now.')+'</div>';
   }
 
@@ -220,33 +170,34 @@
     try{
       const r=await fetch('/api/health?mode=learner-wave-detail&ts='+Date.now(),{cache:'no-store'});
       if(!r.ok) return;
-      const j=await r.json();
-      renderLearnerDetail(j);
+      renderLearnerDetail(await r.json());
     }catch(e){}
   }
 
   async function refreshGroupWave(){
     const stored=readStored();
-    if(stored?.wave) renderGroupWave(stored);
     try{
-      const [syncRes,stateRes]=await Promise.all([
+      const [syncRes,coreRes]=await Promise.all([
         fetch('/api/sync?ts='+Date.now(),{cache:'no-store'}),
-        fetch('/api/state?ts='+Date.now(),{cache:'no-store'})
+        fetch('/api/health?mode=group-five-core3&ts='+Date.now(),{cache:'no-store'})
       ]);
       if(!syncRes.ok) return;
       const j=await syncRes.json();
-      const s=stateRes.ok?await stateRes.json():null;
+      const coreData=coreRes.ok?await coreRes.json():null;
       const groupFive=j?.worker?.groupFive||j?.groupFive||null;
-      const wave=groupFive?.wave||null;
-      const stateGroup=s?.groupFive||null;
-      const nums=Array.isArray(groupFive?.numbers)?groupFive.numbers:(Array.isArray(stateGroup?.numbers)?stateGroup.numbers:[]);
-      const tracking=trackingSummary(s);
-      if(wave){
-        const payload={drawId:j?.officialDrawId||j?.storedDrawId||groupFive?.lastSeenDrawId||null,numbers:nums,wave,tracking};
-        storeWave(payload);renderGroupWave(payload);maybeNotify(payload.drawId,wave);return;
-      }
-      if(groupFive?.active===false) renderGroupWave(dormantPayload(j));
-    }catch(e){}
+      const wave=groupFive?.wave||stored?.wave||null;
+      if(!wave) return;
+      const payload={
+        drawId:j?.officialDrawId||j?.storedDrawId||groupFive?.lastSeenDrawId||null,
+        numbers:Array.isArray(groupFive?.numbers)?groupFive.numbers:(coreData?.groupFive?.numbers||[]),
+        wave
+      };
+      storeWave(payload);
+      renderGroupWave(payload,coreData);
+      maybeNotify(payload.drawId,wave);
+    }catch(e){
+      if(stored?.wave) renderGroupWave(stored,null);
+    }
   }
 
   function refreshAll(){refreshLearnerWave();refreshGroupWave();}
