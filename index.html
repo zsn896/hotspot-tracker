@@ -31,6 +31,7 @@
 .waveCoreRow{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:12px}
 .waveCoreNums{font-weight:900;color:#dce8f7}
 .waveCoreCount{color:#9fb0c7}
+.waveSource{margin-top:8px;font-size:11px;color:#9fb0c7}
 .wave-DORMANT{color:#9fb0c7;border-color:#3a4b60}
 .wave-EARLY_SIGNAL{color:#f6c453;border-color:rgba(246,196,83,.55);background:rgba(246,196,83,.06)}
 .wave-RISING{color:#55a2ff;border-color:rgba(85,162,255,.55);background:rgba(47,128,255,.08)}
@@ -42,6 +43,7 @@
 
     const addon=`<script>
 (function(){
+  const STORAGE_KEY='hotspot_group_five_wave';
   const allowed=['DORMANT','EARLY_SIGNAL','RISING','STRONG','COOLING','REBOUND_WATCH'];
   const labels={DORMANT:'DORMANT',EARLY_SIGNAL:'EARLY SIGNAL',RISING:'RISING',STRONG:'STRONG',COOLING:'COOLING',REBOUND_WATCH:'REBOUND WATCH'};
   const escWave=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
@@ -72,6 +74,21 @@
     ).join('');
   }
 
+  function readStored(){
+    try{
+      const raw=localStorage.getItem(STORAGE_KEY);
+      return raw?JSON.parse(raw):null;
+    }catch(e){
+      return null;
+    }
+  }
+
+  function storeWave(payload){
+    try{
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(payload));
+    }catch(e){}
+  }
+
   window.enableWaveNotifications=async function(){
     if(!('Notification' in window)){
       alert('Browser notifications are not supported on this device/browser.');
@@ -84,69 +101,87 @@
     }catch(e){}
   };
 
-  function maybeNotify(j,wave){
+  function maybeNotify(drawId,wave){
     if(!wave?.alert||!('Notification' in window)||Notification.permission!=='granted') return;
     const lead=wave?.leadership?.currentLeaderCore3;
-    const key=(j?.latestDrawId||'')+':'+(wave.state||'')+':'+(wave.score||0)+':'+coreText(lead);
+    const key=String(drawId||'')+':'+String(wave.state||'')+':'+String(wave.score||0)+':'+coreText(lead);
     if(localStorage.getItem('hotspot_wave_alert_key')===key) return;
     localStorage.setItem('hotspot_wave_alert_key',key);
     try{
-      new Notification('Hot Spot — '+label(wave.state),{
+      new Notification('Hot Spot Group Five — '+label(wave.state),{
         body:(wave.messageAr||('Wave score '+Number(wave.score||0)+'/100'))+' | Core3 '+coreText(lead)
       });
     }catch(e){}
   }
 
+  function renderWave(payload){
+    const wave=payload?.wave||null;
+    if(!wave) return;
+
+    const learner=document.getElementById('learnerContent');
+    if(!learner) return;
+
+    let panel=document.getElementById('wavePanel');
+    if(!panel){
+      panel=document.createElement('div');
+      panel.id='wavePanel';
+      learner.insertAdjacentElement('afterend',panel);
+    }
+
+    const state=String(wave.state||'DORMANT').toUpperCase();
+    const score=Number(wave.score||0);
+    const level=String(wave.alertLevel||'NONE');
+    const leadership=wave?.leadership||{};
+    const current=leadership?.currentLeaderCore3||null;
+    const previous=leadership?.previousLeaderCore3||null;
+    const rotated=Boolean(leadership?.leaderChanged);
+    const rotationScore=Number(leadership?.score||0);
+    const breadth=Number(leadership?.rotationBreadth||0);
+    const activeCores=Array.isArray(wave?.activeCores)?wave.activeCores:(Array.isArray(leadership?.activeCores)?leadership.activeCores:[]);
+
+    panel.className='wavePanel '+stateClass(state);
+    panel.innerHTML=''
+      +'<div class="waveTop">'
+      +'<div><div class="small mut">Group Five / Early Wave Detection</div><div class="waveState">'+escWave(label(state))+'</div></div>'
+      +'<button class="waveAlertBtn" id="waveAlertButton" onclick="enableWaveNotifications()">'+(("Notification" in window)&&Notification.permission==='granted'?'Alerts Enabled':'Enable Alerts')+'</button>'
+      +'</div>'
+      +'<div class="waveMeta">'
+      +'<span class="waveBadge">Wave Score '+score+'/100</span>'
+      +'<span class="waveBadge">Alert '+escWave(level)+'</span>'
+      +'<span class="waveBadge">Rotation '+rotationScore+'/100</span>'
+      +'<span class="waveBadge">Core3 Breadth '+breadth+'/10</span>'
+      +'<span class="waveBadge">'+(rotated?'LEADERSHIP CHANGED':'LEADER STABLE')+'</span>'
+      +'</div>'
+      +'<div class="waveLeadership">'
+      +'<div class="waveLeadCard"><div class="waveLeadLabel">Current leading Core3</div><div class="waveLeadValue">'+escWave(coreText(current))+'</div></div>'
+      +'<div class="waveLeadCard"><div class="waveLeadLabel">Previous leading Core3</div><div class="waveLeadValue">'+escWave(coreText(previous))+'</div></div>'
+      +'</div>'
+      +'<div class="waveCores"><div class="waveLeadLabel">Active Core3 rotation inside Group Five</div>'+activeCoreRows(activeCores)+'</div>'
+      +'<div class="waveMessage">'+escWave(wave.messageAr||wave.message||'No clear wave signal right now.')+'</div>'
+      +'<div class="waveSource">Group Five · draw '+escWave(payload?.drawId||'—')+'</div>';
+  }
+
   async function refreshWave(){
+    const stored=readStored();
+    if(stored?.wave) renderWave(stored);
+
     try{
-      const r=await fetch('/api/group-six?mode=learner&ts='+Date.now(),{cache:'no-store'});
+      const r=await fetch('/api/sync?ts='+Date.now(),{cache:'no-store'});
       if(!r.ok) return;
       const j=await r.json();
-      const wave=j?.wave||j?.suggestion?.wave||null;
+      const groupFive=j?.worker?.groupFive||null;
+      const wave=groupFive?.wave||null;
       if(!wave) return;
 
-      const learner=document.getElementById('learnerContent');
-      if(!learner) return;
+      const payload={
+        drawId:j?.officialDrawId||j?.storedDrawId||groupFive?.lastSeenDrawId||null,
+        numbers:Array.isArray(groupFive?.numbers)?groupFive.numbers:[],
+        wave
+      };
 
-      let panel=document.getElementById('wavePanel');
-      if(!panel){
-        panel=document.createElement('div');
-        panel.id='wavePanel';
-        learner.insertAdjacentElement('afterend',panel);
-      }
-
-      const state=String(wave.state||'DORMANT').toUpperCase();
-      const score=Number(wave.score||0);
-      const level=String(wave.alertLevel||'NONE');
-      const leadership=wave?.leadership||{};
-      const current=leadership?.currentLeaderCore3||null;
-      const previous=leadership?.previousLeaderCore3||null;
-      const rotated=Boolean(leadership?.leaderChanged);
-      const rotationScore=Number(leadership?.score||0);
-      const breadth=Number(leadership?.rotationBreadth||0);
-      const activeCores=Array.isArray(wave?.activeCores)?wave.activeCores:(Array.isArray(leadership?.activeCores)?leadership.activeCores:[]);
-
-      panel.className='wavePanel '+stateClass(state);
-      panel.innerHTML=''
-        +'<div class="waveTop">'
-        +'<div><div class="small mut">Group Cycle / Early Wave Detection</div><div class="waveState">'+escWave(label(state))+'</div></div>'
-        +'<button class="waveAlertBtn" id="waveAlertButton" onclick="enableWaveNotifications()">'+(("Notification" in window)&&Notification.permission==='granted'?'Alerts Enabled':'Enable Alerts')+'</button>'
-        +'</div>'
-        +'<div class="waveMeta">'
-        +'<span class="waveBadge">Wave Score '+score+'/100</span>'
-        +'<span class="waveBadge">Alert '+escWave(level)+'</span>'
-        +'<span class="waveBadge">Rotation '+rotationScore+'/100</span>'
-        +'<span class="waveBadge">Core3 Breadth '+breadth+'/10</span>'
-        +'<span class="waveBadge">'+(rotated?'LEADERSHIP CHANGED':'LEADER STABLE')+'</span>'
-        +'</div>'
-        +'<div class="waveLeadership">'
-        +'<div class="waveLeadCard"><div class="waveLeadLabel">Current leading Core3</div><div class="waveLeadValue">'+escWave(coreText(current))+'</div></div>'
-        +'<div class="waveLeadCard"><div class="waveLeadLabel">Previous leading Core3</div><div class="waveLeadValue">'+escWave(coreText(previous))+'</div></div>'
-        +'</div>'
-        +'<div class="waveCores"><div class="waveLeadLabel">Active Core3 rotation inside the same five</div>'+activeCoreRows(activeCores)+'</div>'
-        +'<div class="waveMessage">'+escWave(wave.messageAr||wave.message||'No clear wave signal right now.')+'</div>';
-
-      maybeNotify(j,wave);
+      storeWave(payload);
+      renderWave(payload);
+      maybeNotify(payload.drawId,wave);
     }catch(e){}
   }
 
