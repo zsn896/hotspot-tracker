@@ -214,14 +214,25 @@ module.exports = async (req, res) => {
       );
     }
 
-    const groups =
+    const allGroups =
       (
         await db(
           `tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&active=eq.true&name=like.${encodeURIComponent(
             AUTO_PREFIX + '*'
-          )}&order=id.asc`
+          )}&order=id.desc`
         )
       ) || [];
+
+    const latestGroupFive =
+      allGroups.find(
+        g => g.name === GROUP_FIVE_NAME
+      ) || null;
+
+    const groups = allGroups.filter(
+      g =>
+        g.name !== GROUP_FIVE_NAME ||
+        Number(g.id) === Number(latestGroupFive?.id)
+    );
 
     const groupFiveArchives =
       (
@@ -279,13 +290,6 @@ module.exports = async (req, res) => {
             )
           : null;
 
-      /*
-        Last Seen for UI means:
-        latest result with 3/5 or better.
-
-        The real tracking cursor is preserved separately
-        as tracking_last_seen_draw_id.
-      */
       const lastStrong =
         [...rows]
           .reverse()
@@ -402,9 +406,6 @@ module.exports = async (req, res) => {
           numbers: g.numbers,
           startDrawId: Number(g.start_draw_id),
 
-          /*
-            Group Five tracking cursor remains untouched.
-          */
           lastSeenDrawId:
             Number(
               g.tracking_last_seen_draw_id
