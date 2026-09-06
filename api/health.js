@@ -34,6 +34,11 @@ function hitCount(draw, numbers) {
   return norm(numbers).filter(n => set.has(n)).length;
 }
 
+function matchedNumbers(draw, numbers) {
+  const set = new Set(norm(draw?.numbers));
+  return norm(numbers).filter(n => set.has(n));
+}
+
 function avg(values) {
   return values.length ? values.reduce((s, n) => s + n, 0) / values.length : 0;
 }
@@ -82,7 +87,28 @@ function occurrenceStatsForSet(draws, setNumbers) {
         index,
         drawId: Number(draw.draw_id),
         time: draw.draw_time || '',
-        date: draw.draw_date || ''
+        date: draw.draw_date || '',
+        hits: numbers.length,
+        matchedNumbers: numbers
+      });
+    }
+  });
+  return coreStatsFromOccurrences(numbers, occurrences, draws.length);
+}
+
+function occurrenceStatsForThreePlus(draws, setNumbers) {
+  const numbers = norm(setNumbers);
+  const occurrences = [];
+  draws.forEach((draw, index) => {
+    const matched = matchedNumbers(draw, numbers);
+    if (matched.length >= 3) {
+      occurrences.push({
+        index,
+        drawId: Number(draw.draw_id),
+        time: draw.draw_time || '',
+        date: draw.draw_date || '',
+        hits: matched.length,
+        matchedNumbers: matched
       });
     }
   });
@@ -177,7 +203,15 @@ function liveDetailFromStats(stat, draws, sources = ['LIVE_DATA']) {
       consistency: stat.consistency,
       lastTogetherDrawId: stat.last?.drawId || null,
       lastTogetherTime: stat.last?.time || '',
-      occurrences: stat.occurrences.map(x => ({ drawId: x.drawId, time: x.time, date: x.date }))
+      lastHitCount: Number(stat.last?.hits || 0) || null,
+      lastMatchedNumbers: norm(stat.last?.matchedNumbers || []),
+      occurrences: stat.occurrences.map(x => ({
+        drawId: x.drawId,
+        time: x.time,
+        date: x.date,
+        hits: Number(x.hits || 0) || null,
+        matchedNumbers: norm(x.matchedNumbers || [])
+      }))
     },
     current: {
       appearedNow,
@@ -187,7 +221,9 @@ function liveDetailFromStats(stat, draws, sources = ['LIVE_DATA']) {
       meanStep,
       expectedDrawId,
       remainingToAverage,
-      latestDrawId
+      latestDrawId,
+      lastHitCount: Number(stat.last?.hits || 0) || null,
+      lastMatchedNumbers: norm(stat.last?.matchedNumbers || [])
     }
   };
 }
@@ -334,9 +370,14 @@ function parseTrackerSets(raw) {
 
 function evaluateTrackedSet(draws, numbers) {
   const fullStats = occurrenceStatsForSet(draws, numbers);
-  const full = liveDetailFromStats(fullStats, draws, ['MANUAL_OR_SAVED']);
+  const full = liveDetailFromStats(fullStats, draws, ['MANUAL_FULL_SET']);
 
-  let core3 = null;
+  const threePlusStats = numbers.length === 3
+    ? fullStats
+    : occurrenceStatsForThreePlus(draws, numbers);
+  const threePlus = liveDetailFromStats(threePlusStats, draws, ['MANUAL_ANY_3_PLUS']);
+
+  let strongestCore3 = null;
   if (numbers.length >= 3) {
     const rankedCore3 = combinations3(numbers)
       .map(core => occurrenceStatsForSet(draws, core))
@@ -346,20 +387,24 @@ function evaluateTrackedSet(draws, numbers) {
         Number(b.last?.index ?? -1) - Number(a.last?.index ?? -1) ||
         Number(b.consistency || 0) - Number(a.consistency || 0)
       );
-    core3 = rankedCore3[0]
-      ? liveDetailFromStats(rankedCore3[0], draws, ['INTERNAL_CORE3'])
+    strongestCore3 = rankedCore3[0]
+      ? liveDetailFromStats(rankedCore3[0], draws, ['STRONGEST_INTERNAL_CORE3'])
       : null;
   }
 
   return {
     numbers,
-    type: numbers.length === 3 ? 'CORE3' : 'MANUAL_GROUP',
+    type: numbers.length === 3 ? 'CORE3' : 'MANUAL_GROUP_3_PLUS',
+    trackingMode: 'ANY_3_PLUS',
+    hitRule: 'Any draw containing 3, 4, or 5 numbers from the tracked set counts as a cycle hit.',
     fullSet: full,
-    core3,
+    threePlus,
+    core3: threePlus,
+    strongestCore3,
     rating: {
-      together: full.strength.together,
-      recent20: full.strength.recent20,
-      consistency: full.strength.consistency
+      together: threePlus.strength.together,
+      recent20: threePlus.strength.recent20,
+      consistency: threePlus.strength.consistency
     }
   };
 }
