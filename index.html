@@ -29,10 +29,14 @@
 .learnerHits{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}.learnerHit{font-size:12px;font-weight:900;padding:7px 9px;border-radius:8px;background:rgba(7,17,31,.35);border:1px solid rgba(159,176,199,.24);color:#d9e5f3}
 .coreTracker{margin-top:14px;padding:13px;border-radius:13px;border:1px solid rgba(67,234,130,.42);background:rgba(5,16,29,.58)}
 .coreTrackerTitle{font-size:15px;font-weight:1000;color:#fff}.coreTrackerSub{font-size:11px;color:#91a5bd;margin-top:4px;line-height:1.45}
-.manualBlock{margin-top:12px;padding:11px;border-radius:11px;border:1px solid rgba(85,162,255,.38);background:rgba(47,128,255,.06)}
-.manualTitle{font-size:12px;font-weight:950;color:#c7dcff}.manualForm{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
-.manualInput{flex:1;min-width:185px;background:#07111f;color:#fff;border:1px solid #536c88;border-radius:9px;padding:10px 11px;font-size:14px}
-.manualBtn{border:1px solid #3e8b60;background:#1d5838;color:#fff;border-radius:9px;padding:9px 12px;font-weight:950;cursor:pointer}.manualError{font-size:11px;color:#ff9b9b;margin-top:6px;min-height:14px}
+.manualBlock{margin-top:12px;padding:12px;border-radius:12px;border:1px solid rgba(85,162,255,.42);background:rgba(47,128,255,.07)}
+.manualTitle{font-size:12px;font-weight:950;color:#c7dcff}.manualHint{font-size:10px;color:#8fa8c5;margin-top:4px;line-height:1.4}
+.manualBoxes{display:flex;gap:7px;flex-wrap:nowrap;margin-top:10px;direction:ltr}
+.manualNumBox{width:48px;height:48px;box-sizing:border-box;text-align:center;background:#07111f;color:#fff;border:1px solid #5b7795;border-radius:10px;font-size:19px;font-weight:950;outline:none;-webkit-appearance:none}
+.manualNumBox:focus{border-color:#55a2ff;box-shadow:0 0 0 2px rgba(85,162,255,.18)}
+.manualNumBox.valid{border-color:#43ea82}.manualNumBox.bad{border-color:#ff7b7b}
+.manualActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.manualBtn{border:1px solid #3e8b60;background:#1d5838;color:#fff;border-radius:9px;padding:10px 13px;font-weight:950;cursor:pointer}.manualClear{border:1px solid #53667b;background:#182739;color:#d9e5f3;border-radius:9px;padding:10px 13px;font-weight:900;cursor:pointer}
+.manualError{font-size:11px;color:#ff9b9b;margin-top:7px;min-height:14px}
 .coreSection{margin-top:13px}.coreSectionTitle{font-size:11px;font-weight:950;color:#a9bad0;margin-bottom:7px}
 .coreEmpty{font-size:12px;color:#869ab2;padding:9px;border:1px dashed #3d4d61;border-radius:10px}.coreItem{padding:11px;margin-top:8px;border-radius:11px;border:1px solid #3c5067;background:rgba(10,25,42,.72)}
 .coreItem.active{border-color:rgba(67,234,130,.50)}.coreItem.historical{border-color:rgba(159,176,199,.32)}.coreItem.hit{border-color:#43ea82;box-shadow:0 0 0 1px rgba(67,234,130,.18)}
@@ -40,6 +44,7 @@
 .coreBall{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;font-size:15px;font-weight:950;background:#173653;border:1px solid #5d7f9f;color:#fff}
 .coreTag{font-size:10px;font-weight:900;border:1px solid #50637a;border-radius:999px;padding:4px 7px;color:#c9d5e3}.coreStatus{font-size:19px;font-weight:1000;color:#f4d273;margin-top:8px}.coreStatus.hit{color:#43ea82}
 .coreMini{font-size:11px;color:#a9bad0;margin-top:6px;line-height:1.45}.removeManual{margin-top:7px;border:0;background:transparent;color:#ff9b9b;font-size:11px;font-weight:900;cursor:pointer;padding:0}
+@media(max-width:390px){.manualNumBox{width:44px;height:46px;font-size:18px}.manualBoxes{gap:5px}}
 `;
 
     const addon=`<script>
@@ -49,125 +54,47 @@
   var MANUAL_KEY='hotspot_core_manual_saved_v4';
   var allowed=['DORMANT','EARLY_SIGNAL','RISING','STRONG','COOLING','REBOUND_WATCH'];
   var labels={DORMANT:'DORMANT',EARLY_SIGNAL:'EARLY SIGNAL',RISING:'RISING',STRONG:'STRONG',COOLING:'COOLING',REBOUND_WATCH:'REBOUND WATCH'};
-  var trackerLatest=null;
-  var autoDetails=[];
-  var manualDetails=[];
+  var trackerLatest=null,autoDetails=[],manualDetails=[],advanceTimers={};
 
   function esc(v){return String(v==null?'':v).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];});}
   function keyOf(nums){return (nums||[]).map(Number).filter(Number.isFinite).sort(function(a,b){return a-b;}).join('-');}
   function readJson(key,fallback){try{var v=JSON.parse(localStorage.getItem(key));return v==null?fallback:v;}catch(e){return fallback;}}
   function writeJson(key,v){try{localStorage.setItem(key,JSON.stringify(v));}catch(e){}}
-  function readSets(key){
-    var raw=readJson(key,[]); if(!Array.isArray(raw)) return [];
-    var seen={}; var out=[];
-    raw.forEach(function(x){
-      if(!Array.isArray(x)) return;
-      var nums=Array.from(new Set(x.map(Number))).filter(function(n){return Number.isInteger(n)&&n>=1&&n<=80;}).sort(function(a,b){return a-b;});
-      if(nums.length<3||nums.length>5) return;
-      var k=keyOf(nums); if(seen[k]) return; seen[k]=1; out.push(nums);
-    });
-    return out;
-  }
+  function readSets(key){var raw=readJson(key,[]);if(!Array.isArray(raw))return[];var seen={},out=[];raw.forEach(function(x){if(!Array.isArray(x))return;var nums=Array.from(new Set(x.map(Number))).filter(function(n){return Number.isInteger(n)&&n>=1&&n<=80;}).sort(function(a,b){return a-b;});if(nums.length<3||nums.length>5)return;var k=keyOf(nums);if(seen[k])return;seen[k]=1;out.push(nums);});return out;}
   function ensurePanel(id,afterId){var p=document.getElementById(id);if(p)return p;var a=document.getElementById(afterId);if(!a)return null;p=document.createElement('div');p.id=id;a.insertAdjacentElement('afterend',p);return p;}
   function stateClass(s){s=String(s||'DORMANT').toUpperCase();return allowed.indexOf(s)>=0?'wave-'+s:'wave-DORMANT';}
   function label(s){s=String(s||'DORMANT').toUpperCase();return labels[s]||s;}
 
-  function ingestAuto(coreData){
-    var saved=readSets(AUTO_KEY); var incoming=[];
-    if(coreData&&Array.isArray(coreData.activeCore3)) incoming=incoming.concat(coreData.activeCore3.map(function(x){return x.numbers;}));
-    if(coreData&&Array.isArray(coreData.historicalStrongCore3)) incoming=incoming.concat(coreData.historicalStrongCore3.map(function(x){return x.numbers;}));
-    var all=saved.concat(incoming); var seen={}; var out=[];
-    all.forEach(function(nums){if(!Array.isArray(nums))return;nums=Array.from(new Set(nums.map(Number))).filter(function(n){return Number.isInteger(n)&&n>=1&&n<=80;}).sort(function(a,b){return a-b;});if(nums.length!==3)return;var k=keyOf(nums);if(seen[k])return;seen[k]=1;out.push(nums);});
-    writeJson(AUTO_KEY,out); return out;
-  }
+  function ingestAuto(coreData){var saved=readSets(AUTO_KEY),incoming=[];if(coreData&&Array.isArray(coreData.activeCore3))incoming=incoming.concat(coreData.activeCore3.map(function(x){return x.numbers;}));if(coreData&&Array.isArray(coreData.historicalStrongCore3))incoming=incoming.concat(coreData.historicalStrongCore3.map(function(x){return x.numbers;}));var all=saved.concat(incoming),seen={},out=[];all.forEach(function(nums){if(!Array.isArray(nums))return;nums=Array.from(new Set(nums.map(Number))).filter(function(n){return Number.isInteger(n)&&n>=1&&n<=80;}).sort(function(a,b){return a-b;});if(nums.length!==3)return;var k=keyOf(nums);if(seen[k])return;seen[k]=1;out.push(nums);});writeJson(AUTO_KEY,out);return out;}
 
-  function statusFor(detail){
-    var c=detail&&detail.current?detail.current:{};
-    if(c.appearedNow) return {text:'ظهر الآن ✅',hit:true};
-    var rem=Number(c.remainingToAverage);
-    if(Number.isFinite(rem)){
-      if(rem>0)return {text:'باقي '+rem+' سحبة',hit:false};
-      if(rem===0)return {text:'الآن تقريبًا',hit:false};
-      return {text:'تجاوز المتوسط بـ '+Math.abs(rem)+' سحبة',hit:false};
-    }
-    return {text:'لا يوجد تاريخ كافٍ',hit:false};
-  }
+  function statusFor(detail){var c=detail&&detail.current?detail.current:{};if(c.appearedNow)return{text:'ظهر الآن ✅',hit:true};var rem=Number(c.remainingToAverage);if(Number.isFinite(rem)){if(rem>0)return{text:'باقي '+rem+' سحبة',hit:false};if(rem===0)return{text:'الآن تقريبًا',hit:false};return{text:'تجاوز المتوسط بـ '+Math.abs(rem)+' سحبة',hit:false};}return{text:'لا يوجد تاريخ كافٍ',hit:false};}
 
-  function trackerCard(t,kind){
-    var nums=Array.isArray(t&&t.numbers)?t.numbers:[];
-    var focus=nums.length===3?(t.fullSet||{}):(t.core3||t.fullSet||{});
-    var full=t&&t.fullSet?t.fullSet:{};
-    var c=focus.current||{}; var a=focus.analysis||{};
-    var st=(full.current&&full.current.appearedNow)?{text:'المجموعة كاملة ظهرت الآن ✅',hit:true}:statusFor(focus);
-    var stale=kind==='auto'&&Number(c.currentGap)>25;
-    var tag=kind==='manual'?'يدوي':(stale?'قوي سابقًا':'قوي حالي');
-    var cls='coreItem '+(st.hit?'hit':(stale?'historical':'active'));
-    var avg=Number(a.meanGap); var together=Number(a.together||0);
-    var last=a.lastTogetherDrawId?('Draw '+a.lastTogetherDrawId+(a.lastTogetherTime?' · '+a.lastTogetherTime:'')):'لا يوجد ظهور كامل';
-    var coreLine='';
-    if(nums.length>3&&focus.numbers&&focus.numbers.length===3) coreLine='<div class="coreMini">أقوى Core3 داخلها: <b>'+esc(focus.numbers.join(' - '))+'</b></div>';
-    var remove=kind==='manual'?'<button class="removeManual" data-remove="'+esc(keyOf(nums))+'">حذف هذه المجموعة</button>':'';
-    return '<div class="'+cls+'"><div class="coreRow"><div class="coreNums">'+nums.map(function(n){return '<div class="coreBall">'+esc(n)+'</div>';}).join('')+'</div><span class="coreTag">'+esc(tag)+'</span></div><div class="coreStatus '+(st.hit?'hit':'')+'">'+esc(st.text)+'</div>'+coreLine+'<div class="coreMini">ظهر معًا '+together+' مرات'+(Number.isFinite(avg)&&avg>0?' · متوسط الفاصل '+avg+' سحبة':'')+' · آخر ظهور: '+esc(last)+'</div>'+remove+'</div>';
-  }
+  function trackerCard(t,kind){var nums=Array.isArray(t&&t.numbers)?t.numbers:[];var focus=nums.length===3?(t.fullSet||{}):(t.core3||t.fullSet||{});var full=t&&t.fullSet?t.fullSet:{};var c=focus.current||{},a=focus.analysis||{};var st=(full.current&&full.current.appearedNow)?{text:'المجموعة كاملة ظهرت الآن ✅',hit:true}:statusFor(focus);var stale=kind==='auto'&&Number(c.currentGap)>25;var tag=kind==='manual'?'يدوي':(stale?'قوي سابقًا':'قوي حالي');var cls='coreItem '+(st.hit?'hit':(stale?'historical':'active'));var avg=Number(a.meanGap),together=Number(a.together||0);var last=a.lastTogetherDrawId?('Draw '+a.lastTogetherDrawId+(a.lastTogetherTime?' · '+a.lastTogetherTime:'')):'لا يوجد ظهور كامل';var coreLine='';if(nums.length>3&&focus.numbers&&focus.numbers.length===3)coreLine='<div class="coreMini">أقوى Core3 داخلها: <b>'+esc(focus.numbers.join(' - '))+'</b></div>';var remove=kind==='manual'?'<button class="removeManual" data-remove="'+esc(keyOf(nums))+'">حذف هذه المجموعة</button>':'';return '<div class="'+cls+'"><div class="coreRow"><div class="coreNums">'+nums.map(function(n){return '<div class="coreBall">'+esc(n)+'</div>';}).join('')+'</div><span class="coreTag">'+esc(tag)+'</span></div><div class="coreStatus '+(st.hit?'hit':'')+'">'+esc(st.text)+'</div>'+coreLine+'<div class="coreMini">ظهر معًا '+together+' مرات'+(Number.isFinite(avg)&&avg>0?' · متوسط الفاصل '+avg+' سحبة':'')+' · آخر ظهور: '+esc(last)+'</div>'+remove+'</div>';}
 
-  function renderTracker(){
-    var p=document.getElementById('coreTrackerBox'); if(!p)return;
-    var active=autoDetails.filter(function(t){var c=t&&t.fullSet&&t.fullSet.current?t.fullSet.current:{};return c.appearedNow||Number(c.currentGap)<=25;});
-    var hist=autoDetails.filter(function(t){var c=t&&t.fullSet&&t.fullSet.current?t.fullSet.current:{};return Number(c.currentGap)>25;});
-    p.innerHTML='<div class="coreTrackerTitle">STRONG / CORE3 TRACKER</div><div class="coreTrackerSub">متابعة مستقلة للثلاثيات القوية والعداد الحي. التلقائي لا يدخل إلا بعد 10 ظهورات مشتركة 3/3.</div>'+
-      '<div class="manualBlock"><div class="manualTitle">إدخال يدوي — 3 إلى 5 أرقام</div><div class="manualForm"><input id="manualCoreInput" class="manualInput" inputmode="numeric" placeholder="مثال: 1 2 3 4 5"><button id="manualCoreAdd" class="manualBtn">إضافة ومتابعة</button></div><div id="manualCoreError" class="manualError"></div></div>'+
-      '<div class="coreSection"><div class="coreSectionTitle">ACTIVE STRONG</div>'+(active.length?active.map(function(t){return trackerCard(t,'auto');}).join(''):'<div class="coreEmpty">لا يوجد Core3 مؤهل حاليًا بشرط 10 ظهورات مشتركة.</div>')+'</div>'+
-      (hist.length?'<div class="coreSection"><div class="coreSectionTitle">HISTORICAL STRONG</div>'+hist.map(function(t){return trackerCard(t,'auto');}).join('')+'</div>':'')+
-      '<div class="coreSection"><div class="coreSectionTitle">MANUAL TRACKING</div>'+(manualDetails.length?manualDetails.map(function(t){return trackerCard(t,'manual');}).join(''):'<div class="coreEmpty">لا توجد مجموعة يدوية محفوظة.</div>')+'</div>'+
-      '<div class="coreMini">آخر Draw: '+esc(trackerLatest||'—')+'</div>';
+  function manualBoxesHtml(){var s='<div class="manualBoxes">';for(var i=0;i<5;i++)s+='<input class="manualNumBox" data-manual-box="'+i+'" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="'+(i+1)+'">';return s+'</div>';}
 
-    var add=document.getElementById('manualCoreAdd'); if(add)add.addEventListener('click',addManual);
-    Array.prototype.forEach.call(p.querySelectorAll('[data-remove]'),function(btn){btn.addEventListener('click',function(){removeManual(btn.getAttribute('data-remove'));});});
-  }
+  function renderTracker(){var p=document.getElementById('coreTrackerBox');if(!p)return;var active=autoDetails.filter(function(t){var c=t&&t.fullSet&&t.fullSet.current?t.fullSet.current:{};return c.appearedNow||Number(c.currentGap)<=25;});var hist=autoDetails.filter(function(t){var c=t&&t.fullSet&&t.fullSet.current?t.fullSet.current:{};return Number(c.currentGap)>25;});p.innerHTML='<div class="coreTrackerTitle">STRONG / CORE3 TRACKER</div><div class="coreTrackerSub">متابعة مستقلة للثلاثيات القوية والعداد الحي. التلقائي لا يدخل إلا بعد 10 ظهورات مشتركة 3/3.</div>'+
+    '<div class="manualBlock"><div class="manualTitle">إدخال يدوي — 3 إلى 5 أرقام</div><div class="manualHint">كل رقم في مربع مستقل. الرقم المكوّن من رقمين ينقلك تلقائيًا للمربع التالي، والرقم المفرد ينتقل بعد لحظة قصيرة.</div>'+manualBoxesHtml()+'<div class="manualActions"><button id="manualCoreAdd" class="manualBtn">إضافة ومتابعة</button><button id="manualCoreClear" class="manualClear">مسح</button></div><div id="manualCoreError" class="manualError"></div></div>'+
+    '<div class="coreSection"><div class="coreSectionTitle">ACTIVE STRONG</div>'+(active.length?active.map(function(t){return trackerCard(t,'auto');}).join(''):'<div class="coreEmpty">لا يوجد Core3 مؤهل حاليًا بشرط 10 ظهورات مشتركة.</div>')+'</div>'+
+    (hist.length?'<div class="coreSection"><div class="coreSectionTitle">HISTORICAL STRONG</div>'+hist.map(function(t){return trackerCard(t,'auto');}).join('')+'</div>':'')+
+    '<div class="coreSection"><div class="coreSectionTitle">MANUAL TRACKING</div>'+(manualDetails.length?manualDetails.map(function(t){return trackerCard(t,'manual');}).join(''):'<div class="coreEmpty">لا توجد مجموعة يدوية محفوظة.</div>')+'</div><div class="coreMini">آخر Draw: '+esc(trackerLatest||'—')+'</div>';
+    setupManualBoxes();var add=document.getElementById('manualCoreAdd');if(add)add.addEventListener('click',addManual);var clear=document.getElementById('manualCoreClear');if(clear)clear.addEventListener('click',clearManualBoxes);Array.prototype.forEach.call(p.querySelectorAll('[data-remove]'),function(btn){btn.addEventListener('click',function(){removeManual(btn.getAttribute('data-remove'));});});}
 
-  function addManual(){
-    var input=document.getElementById('manualCoreInput');var err=document.getElementById('manualCoreError');if(!input)return;
-    var nums=Array.from(new Set(String(input.value||'').split(/[^0-9]+/).filter(Boolean).map(Number))).filter(function(n){return Number.isInteger(n)&&n>=1&&n<=80;}).sort(function(a,b){return a-b;});
-    if(nums.length<3||nums.length>5){if(err)err.textContent='أدخل 3 أو 4 أو 5 أرقام مختلفة من 1 إلى 80.';return;}
-    var sets=readSets(MANUAL_KEY);var k=keyOf(nums);if(!sets.some(function(x){return keyOf(x)===k;}))sets.push(nums);writeJson(MANUAL_KEY,sets);input.value='';if(err)err.textContent='';refreshTrackerDetails();
-  }
+  function getManualBoxes(){return Array.prototype.slice.call(document.querySelectorAll('[data-manual-box]'));}
+  function focusNext(box){var boxes=getManualBoxes(),idx=boxes.indexOf(box);if(idx>=0&&idx<boxes.length-1)boxes[idx+1].focus();}
+  function setupManualBoxes(){getManualBoxes().forEach(function(box){box.addEventListener('input',function(){var idx=box.getAttribute('data-manual-box');if(advanceTimers[idx])clearTimeout(advanceTimers[idx]);box.value=String(box.value||'').replace(/\D/g,'').slice(0,2);var n=Number(box.value);box.classList.remove('valid','bad');if(!box.value)return;if(!Number.isInteger(n)||n<1||n>80){box.classList.add('bad');return;}box.classList.add('valid');if(box.value.length===2){focusNext(box);}else{advanceTimers[idx]=setTimeout(function(){if(document.activeElement===box&&box.value.length===1)focusNext(box);},650);}});box.addEventListener('keydown',function(e){if(e.key==='Backspace'&&!box.value){var boxes=getManualBoxes(),idx=boxes.indexOf(box);if(idx>0){boxes[idx-1].focus();boxes[idx-1].select();}}});});}
+  function clearManualBoxes(){getManualBoxes().forEach(function(b){b.value='';b.classList.remove('valid','bad');});var e=document.getElementById('manualCoreError');if(e)e.textContent='';var first=getManualBoxes()[0];if(first)first.focus();}
+  function readManualNumbers(){return getManualBoxes().map(function(b){return Number(b.value);}).filter(function(n){return Number.isInteger(n)&&n>=1&&n<=80;});}
+  function addManual(){var err=document.getElementById('manualCoreError');var boxes=getManualBoxes();var invalid=boxes.some(function(b){return b.value&&(!Number.isInteger(Number(b.value))||Number(b.value)<1||Number(b.value)>80);});if(invalid){if(err)err.textContent='كل رقم يجب أن يكون من 1 إلى 80.';return;}var nums=readManualNumbers();var unique=Array.from(new Set(nums));if(unique.length<3||unique.length>5){if(err)err.textContent='أدخل 3 أو 4 أو 5 أرقام مختلفة.';return;}if(unique.length!==nums.length){if(err)err.textContent='لا تكرر نفس الرقم مرتين.';return;}unique.sort(function(a,b){return a-b;});var sets=readSets(MANUAL_KEY),k=keyOf(unique);if(!sets.some(function(x){return keyOf(x)===k;}))sets.push(unique);writeJson(MANUAL_KEY,sets);clearManualBoxes();refreshTrackerDetails();}
   function removeManual(k){var sets=readSets(MANUAL_KEY).filter(function(x){return keyOf(x)!==k;});writeJson(MANUAL_KEY,sets);refreshTrackerDetails();}
 
-  async function evaluateSets(sets){
-    if(!sets.length)return [];
-    var q=sets.slice(0,24).map(function(x){return x.join('-');}).join(';');
-    try{var r=await fetch('/api/health?mode=tracker-evaluate&sets='+encodeURIComponent(q)+'&ts='+Date.now(),{cache:'no-store'});if(!r.ok)return [];var j=await r.json();trackerLatest=j.latestDrawId||trackerLatest;return Array.isArray(j.trackers)?j.trackers:[];}catch(e){return [];}
-  }
-  async function refreshTrackerDetails(){var aSets=readSets(AUTO_KEY),mSets=readSets(MANUAL_KEY);var values=await Promise.all([evaluateSets(aSets),evaluateSets(mSets)]);autoDetails=values[0];manualDetails=values[1];renderTracker();}
+  async function evaluateSets(sets){if(!sets.length)return[];var q=sets.slice(0,24).map(function(x){return x.join('-');}).join(';');try{var r=await fetch('/api/health?mode=tracker-evaluate&sets='+encodeURIComponent(q)+'&ts='+Date.now(),{cache:'no-store'});if(!r.ok)return[];var j=await r.json();trackerLatest=j.latestDrawId||trackerLatest;return Array.isArray(j.trackers)?j.trackers:[];}catch(e){return[];}}
+  async function refreshTrackerDetails(){var values=await Promise.all([evaluateSets(readSets(AUTO_KEY)),evaluateSets(readSets(MANUAL_KEY))]);autoDetails=values[0];manualDetails=values[1];renderTracker();}
 
-  function renderGroupWave(payload,coreData){
-    var wave=payload&&payload.wave?payload.wave:null;
-    var panel=ensurePanel('wavePanel','learnerWavePanel')||ensurePanel('wavePanel','learnerContent');if(!panel)return;
-    var state=String(wave&&wave.state?wave.state:'DORMANT').toUpperCase();
-    var nums=coreData&&coreData.groupFive&&Array.isArray(coreData.groupFive.numbers)?coreData.groupFive.numbers:(payload&&Array.isArray(payload.numbers)?payload.numbers:[]);
-    panel.className='wavePanel '+stateClass(state);
-    panel.innerHTML='<div class="waveTop"><div><div class="small mut">Group Five / Early Wave Detection</div><div class="waveState">'+esc(label(state))+'</div></div></div>'+(nums.length===5?'<div class="learnerGroupNums">'+nums.map(function(n){return '<div class="learnerBall">'+esc(n)+'</div>';}).join('')+'</div>':'')+'<div class="waveMeta"><span class="waveBadge">Wave '+Number(wave&&wave.score||0)+'/100</span><span class="waveBadge">'+esc(wave&&wave.alertLevel||'NONE')+'</span></div><div id="coreTrackerBox" class="coreTracker"></div>'+(wave?'<div class="waveMessage">'+esc(wave.messageAr||wave.message||'')+'</div>':'');
-    renderTracker();
-  }
-
-  function renderLearner(data){
-    var nums=Array.isArray(data&&data.numbers)?data.numbers.map(Number).filter(Number.isFinite):[];if(!data||!data.active||nums.length!==5)return;
-    var panel=ensurePanel('learnerWavePanel','learnerContent');if(!panel)return;var wave=data.wave||{};var state=String(wave.state||'DORMANT').toUpperCase();var l20=data.comparison&&data.comparison.last20?data.comparison.last20:{};
-    panel.className='wavePanel '+stateClass(state);panel.innerHTML='<div class="waveTop"><div><div class="learnerWaveTitle">12H WAVE WATCH</div><div class="waveState">'+esc(label(state))+'</div></div><div class="waveMeta"><span class="waveBadge">Score '+Number(wave.score||0)+'/100</span><span class="waveBadge">'+esc(wave.alertLevel||'NONE')+'</span></div></div><div class="learnerGroupNums">'+nums.map(function(n){return '<div class="learnerBall">'+esc(n)+'</div>';}).join('')+'</div><div class="learnerHits"><span class="learnerHit">آخر 20 سحبة</span><span class="learnerHit">3/5+ = '+Number(l20.threePlus||0)+'</span><span class="learnerHit">4/5+ = '+Number(l20.fourPlus||0)+'</span><span class="learnerHit">5/5 = '+Number(l20.exact5||0)+'</span></div>';
-  }
-
+  function renderGroupWave(payload,coreData){var wave=payload&&payload.wave?payload.wave:null;var panel=ensurePanel('wavePanel','learnerWavePanel')||ensurePanel('wavePanel','learnerContent');if(!panel)return;var state=String(wave&&wave.state?wave.state:'DORMANT').toUpperCase();var nums=coreData&&coreData.groupFive&&Array.isArray(coreData.groupFive.numbers)?coreData.groupFive.numbers:(payload&&Array.isArray(payload.numbers)?payload.numbers:[]);panel.className='wavePanel '+stateClass(state);panel.innerHTML='<div class="waveTop"><div><div class="small mut">Group Five / Early Wave Detection</div><div class="waveState">'+esc(label(state))+'</div></div></div>'+(nums.length===5?'<div class="learnerGroupNums">'+nums.map(function(n){return '<div class="learnerBall">'+esc(n)+'</div>';}).join('')+'</div>':'')+'<div class="waveMeta"><span class="waveBadge">Wave '+Number(wave&&wave.score||0)+'/100</span><span class="waveBadge">'+esc(wave&&wave.alertLevel||'NONE')+'</span></div><div id="coreTrackerBox" class="coreTracker"></div>'+(wave?'<div class="waveMessage">'+esc(wave.messageAr||wave.message||'')+'</div>':'');renderTracker();}
+  function renderLearner(data){var nums=Array.isArray(data&&data.numbers)?data.numbers.map(Number).filter(Number.isFinite):[];if(!data||!data.active||nums.length!==5)return;var panel=ensurePanel('learnerWavePanel','learnerContent');if(!panel)return;var wave=data.wave||{},state=String(wave.state||'DORMANT').toUpperCase(),l20=data.comparison&&data.comparison.last20?data.comparison.last20:{};panel.className='wavePanel '+stateClass(state);panel.innerHTML='<div class="waveTop"><div><div class="learnerWaveTitle">12H WAVE WATCH</div><div class="waveState">'+esc(label(state))+'</div></div><div class="waveMeta"><span class="waveBadge">Score '+Number(wave.score||0)+'/100</span><span class="waveBadge">'+esc(wave.alertLevel||'NONE')+'</span></div></div><div class="learnerGroupNums">'+nums.map(function(n){return '<div class="learnerBall">'+esc(n)+'</div>';}).join('')+'</div><div class="learnerHits"><span class="learnerHit">آخر 20 سحبة</span><span class="learnerHit">3/5+ = '+Number(l20.threePlus||0)+'</span><span class="learnerHit">4/5+ = '+Number(l20.fourPlus||0)+'</span><span class="learnerHit">5/5 = '+Number(l20.exact5||0)+'</span></div>';}
   async function refreshLearner(){try{var r=await fetch('/api/health?mode=learner-wave-detail&ts='+Date.now(),{cache:'no-store'});if(r.ok)renderLearner(await r.json());}catch(e){}}
-  async function refreshGroup(){
-    var stored=readJson(WAVE_KEY,null);
-    try{
-      var values=await Promise.all([fetch('/api/sync?ts='+Date.now(),{cache:'no-store'}),fetch('/api/health?mode=group-five-core3&ts='+Date.now(),{cache:'no-store'})]);
-      var syncRes=values[0],coreRes=values[1];var coreData=coreRes.ok?await coreRes.json():null;if(coreData){trackerLatest=coreData.latestDrawId||trackerLatest;ingestAuto(coreData);}
-      var payload=stored||{numbers:coreData&&coreData.groupFive?coreData.groupFive.numbers:[],wave:null};
-      if(syncRes.ok){var j=await syncRes.json();var gf=j&&j.worker&&j.worker.groupFive?j.worker.groupFive:(j?j.groupFive:null);var wave=gf&&gf.wave?gf.wave:(stored?stored.wave:null);payload={numbers:gf&&Array.isArray(gf.numbers)?gf.numbers:(coreData&&coreData.groupFive?coreData.groupFive.numbers:[]),wave:wave};if(wave)writeJson(WAVE_KEY,payload);}
-      renderGroupWave(payload,coreData);await refreshTrackerDetails();
-    }catch(e){renderGroupWave(stored||{wave:null},null);await refreshTrackerDetails();}
-  }
-
+  async function refreshGroup(){var stored=readJson(WAVE_KEY,null);try{var values=await Promise.all([fetch('/api/sync?ts='+Date.now(),{cache:'no-store'}),fetch('/api/health?mode=group-five-core3&ts='+Date.now(),{cache:'no-store'})]);var syncRes=values[0],coreRes=values[1],coreData=coreRes.ok?await coreRes.json():null;if(coreData){trackerLatest=coreData.latestDrawId||trackerLatest;ingestAuto(coreData);}var payload=stored||{numbers:coreData&&coreData.groupFive?coreData.groupFive.numbers:[],wave:null};if(syncRes.ok){var j=await syncRes.json(),gf=j&&j.worker&&j.worker.groupFive?j.worker.groupFive:(j?j.groupFive:null),wave=gf&&gf.wave?gf.wave:(stored?stored.wave:null);payload={numbers:gf&&Array.isArray(gf.numbers)?gf.numbers:(coreData&&coreData.groupFive?coreData.groupFive.numbers:[]),wave:wave};if(wave)writeJson(WAVE_KEY,payload);}renderGroupWave(payload,coreData);await refreshTrackerDetails();}catch(e){renderGroupWave(stored||{wave:null},null);await refreshTrackerDetails();}}
   function refreshAll(){refreshLearner();refreshGroup();}
   setTimeout(refreshAll,900);setInterval(refreshAll,30000);window.addEventListener('focus',refreshAll);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')refreshAll();});
 })();
