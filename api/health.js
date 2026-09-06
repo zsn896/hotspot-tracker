@@ -15,7 +15,8 @@ const WAVE_CYCLES_PER_WINDOW = 10;
 const GROUP_FIVE_NAME = 'AUTO Group Five';
 const CONTROL_PREFIX = 'AUTO_CONTROL_';
 const CORE3_MAX_ACTIVE = 3;
-const CORE3_MIN_OCCURRENCES = 3;
+const CORE3_MIN_OCCURRENCES = 10;
+const CORE3_MAX_STALE_DRAWS = 25;
 const TRACKER_MAX_SETS = 24;
 
 function norm(values) {
@@ -191,6 +192,13 @@ function liveDetailFromStats(stat, draws, sources = ['LIVE_DATA']) {
   };
 }
 
+function automaticCoreState(detail) {
+  if (detail?.current?.appearedNow) return 'HIT_NOW';
+  if (detail?.current?.currentGap == null) return 'NO_HISTORY';
+  if (detail.current.currentGap > CORE3_MAX_STALE_DRAWS) return 'HISTORICAL_STRONG';
+  return 'ACTIVE_STRONG';
+}
+
 async function liveDrawContext() {
   const controls = (
     await db(
@@ -245,25 +253,49 @@ async function groupFiveCore3Detail() {
       have: draws.length,
       need: 20,
       core3: null,
-      activeCore3: []
+      activeCore3: [],
+      historicalStrongCore3: []
     };
   }
 
   const ranked = discoverDynamicCore3(draws);
-  const activeCore3 = ranked.slice(0, CORE3_MAX_ACTIVE).map(stat =>
-    liveDetailFromStats(
+  const qualified = ranked.map(stat => {
+    const detail = liveDetailFromStats(
       stat,
       draws,
       coreSource(stat.numbers, groupFiveNumbers, learnerNumbers)
-    )
-  );
+    );
+    return {
+      ...detail,
+      autoState: automaticCoreState(detail),
+      qualifies: true,
+      qualification: {
+        minimumTogether: CORE3_MIN_OCCURRENCES,
+        actualTogether: stat.count,
+        maxActiveGap: CORE3_MAX_STALE_DRAWS
+      }
+    };
+  });
+
+  const activeStrongCore3 = qualified
+    .filter(x => x.autoState === 'ACTIVE_STRONG' || x.autoState === 'HIT_NOW')
+    .slice(0, CORE3_MAX_ACTIVE);
+
+  const historicalStrongCore3 = qualified
+    .filter(x => x.autoState === 'HISTORICAL_STRONG')
+    .slice(0, TRACKER_MAX_SETS);
 
   return {
     ok: true,
-    active: Boolean(activeCore3[0]),
+    active: Boolean(activeStrongCore3[0]),
     dynamic: true,
     analysisWindow: draws.length,
     latestDrawId: Number(draws.at(-1)?.draw_id || 0) || null,
+    rules: {
+      minimumJointAppearances: CORE3_MIN_OCCURRENCES,
+      maxGapForActiveStrong: CORE3_MAX_STALE_DRAWS,
+      noRandomSelection: true
+    },
     groupFive: {
       numbers: groupFiveNumbers,
       startDrawId: groupStartDrawId || null,
@@ -273,11 +305,13 @@ async function groupFiveCore3Detail() {
       numbers: learnerNumbers,
       active: Boolean(learner?.active)
     },
-    core3: activeCore3[0] || null,
-    activeCore3,
+    core3: activeStrongCore3[0] || null,
+    activeCore3: activeStrongCore3,
+    historicalStrongCore3,
+    qualifiedStrongCount: qualified.length,
     selectionRule:
-      'Re-scan all currently collected live draws on every refresh. Rank every observed Core3 by total joint appearances first, then last-20 activity, recency and consistency. Keep the top three dynamic Core3 groups. They are not fixed to Group Five.',
-    candidatesEvaluated: ranked.length
+      'Automatic Core3 candidates must have appeared together at least 10 times in collected data. Candidates with more than 25 draws since the last 3/3 appearance leave Active Strong and remain in Historical Strong. No low-count candidate is promoted as strong.',
+    candidatesEvaluated: qualified.length
   };
 }
 
