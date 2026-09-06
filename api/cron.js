@@ -27,11 +27,38 @@ const {
 } =
   require('../lib/group-five');
 
+const {
+  analyzeGroupWave
+} =
+  require('../lib/wave-engine');
+
 const AUTO_PREFIX = 'AUTO Group ';
 const MANUAL_PREFIX = 'MANUAL Group';
+const CONTROL_PREFIX = 'AUTO_CONTROL_';
 
 const CLOSE_START_MINUTES = 120;
 const MAX_CLOSE_BACKFILL = 80;
+
+
+function normalizeFive(values) {
+
+  return [
+    ...new Set(
+      (values || [])
+        .map(Number)
+        .filter(
+          n =>
+            Number.isInteger(n) &&
+            n >= 1 &&
+            n <= 80
+        )
+    )
+  ]
+    .sort(
+      (a, b) =>
+        a - b
+    );
+}
 
 
 function createCollector() {
@@ -82,6 +109,131 @@ function createCollector() {
 
       return value;
     }
+  };
+}
+
+
+/* =========================================================
+   GROUP FIVE WAVE / 12H LEARNER
+========================================================= */
+
+async function buildGroupFiveWave(groupFive) {
+
+  const group =
+    normalizeFive(
+      groupFive?.numbers
+    );
+
+  if (
+    !groupFive?.active ||
+    group.length !== 5
+  ) {
+
+    return null;
+  }
+
+
+  const controls =
+    (
+      await db(
+        `tracker_groups?select=id,name,start_draw_id,last_seen_draw_id&name=like.${encodeURIComponent(
+          CONTROL_PREFIX + '*'
+        )}&order=id.desc&limit=20`
+      )
+    ) || [];
+
+
+  const control =
+    controls.find(
+      row =>
+        /^AUTO_CONTROL_\d{4}-\d{2}-\d{2}$/.test(
+          String(
+            row?.name || ''
+          )
+        )
+    ) || null;
+
+
+  if (!control?.start_draw_id) {
+
+    return analyzeGroupWave(
+      [],
+      group
+    );
+  }
+
+
+  const draws =
+    (
+      await db(
+        `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gte.${Number(
+          control.start_draw_id
+        )}&order=draw_id.asc&limit=500`
+      )
+    ) || [];
+
+
+  return analyzeGroupWave(
+    draws,
+    group
+  );
+}
+
+
+function attachWaveToGroupFive(
+  groupFive,
+  wave
+) {
+
+  if (!groupFive) {
+    return groupFive;
+  }
+
+  if (!wave) {
+    return {
+      ...groupFive,
+      wave: null,
+      waveState: null,
+      waveStateAr: null,
+      waveScore: null,
+      waveAlert: false,
+      waveAlertLevel: 'NONE',
+      waveMessageAr: null
+    };
+  }
+
+  return {
+    ...groupFive,
+
+    wave,
+
+    waveState:
+      wave.state ||
+      null,
+
+    waveStateAr:
+      wave.stateAr ||
+      null,
+
+    waveScore:
+      Number.isFinite(
+        Number(wave.score)
+      )
+        ? Number(wave.score)
+        : null,
+
+    waveAlert:
+      Boolean(
+        wave.alert
+      ),
+
+    waveAlertLevel:
+      wave.alertLevel ||
+      'NONE',
+
+    waveMessageAr:
+      wave.messageAr ||
+      null
   };
 }
 
@@ -787,7 +939,7 @@ async (
 
 
   /* =======================================================
-     GROUP FIVE
+     GROUP FIVE + WAVE ENGINE
   ======================================================= */
 
   if (
@@ -811,6 +963,63 @@ async (
 
       groupFive =
         await runGroupFive();
+
+
+      if (
+        groupFive?.ok !== false &&
+        groupFive?.active
+      ) {
+
+        try {
+
+          const wave =
+            await buildGroupFiveWave(
+              groupFive
+            );
+
+          groupFive =
+            attachWaveToGroupFive(
+              groupFive,
+              wave
+            );
+
+        } catch (
+          waveError
+        ) {
+
+          groupFive = {
+            ...groupFive,
+
+            wave: {
+              ok:
+                false,
+
+              error:
+                waveError.message
+                ||
+                String(waveError)
+            },
+
+            waveState:
+              null,
+
+            waveStateAr:
+              null,
+
+            waveScore:
+              null,
+
+            waveAlert:
+              false,
+
+            waveAlertLevel:
+              'NONE',
+
+            waveMessageAr:
+              null
+          };
+        }
+      }
 
     } catch (
       e
