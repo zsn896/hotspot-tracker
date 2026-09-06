@@ -38,6 +38,12 @@
 .groupExplain{margin-top:11px;padding:10px;border-radius:10px;border:1px solid rgba(159,176,199,.24);background:rgba(7,17,31,.32)}
 .groupExplainMain{font-size:13px;font-weight:950;color:#fff}
 .groupExplainSub{margin-top:5px;font-size:11px;line-height:1.45;color:#b8c7d8}
+.liveNumberGrid{display:flex;gap:7px;margin-top:10px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.liveNumberCard{flex:0 0 112px;padding:8px;border-radius:9px;border:1px solid rgba(159,176,199,.24);background:rgba(7,17,31,.30)}
+.liveNumberTop{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.liveNumberValue{font-size:18px;font-weight:950;color:#fff}
+.liveNumberState{font-size:9px;font-weight:950;padding:3px 5px;border-radius:999px;border:1px solid currentColor}
+.liveNumberMeta{margin-top:5px;font-size:10px;line-height:1.35;color:#b8c7d8;white-space:nowrap}
 `;
 
     const addon=`<script>
@@ -96,6 +102,7 @@
   function trackingSummary(stateJson){
     const g=Array.isArray(stateJson?.groups)?stateJson.groups.find(x=>x?.name==='AUTO Group Five'):null;
     const rows=Array.isArray(g?.results)?g.results:[];
+    const numbers=Array.isArray(g?.numbers)?g.numbers.map(Number).filter(Number.isFinite):[];
     const tracked=Math.min(20,rows.length);
     const threePlus=rows.filter(r=>Number(r?.hit_count||0)>=3).length;
     const fourPlus=rows.filter(r=>Number(r?.hit_count||0)>=4).length;
@@ -103,13 +110,52 @@
     const lastStrongIndex=[...rows].map((r,i)=>({r,i})).reverse().find(x=>Number(x.r?.hit_count||0)>=3)?.i ?? -1;
     const lastStrong=lastStrongIndex>=0?rows[lastStrongIndex]:null;
     const sinceStrong=lastStrongIndex>=0?rows.length-1-lastStrongIndex:null;
-    let continuation='غير مؤكد';
-    if(tracked<3) continuation='بداية المتابعة';
-    else if(rows.slice(-3).some(r=>Number(r?.hit_count||0)>=3)) continuation='مستمر';
-    else if(sinceStrong!=null&&sinceStrong<=3) continuation='غير مؤكد';
-    else if(sinceStrong!=null&&sinceStrong<=6) continuation='يضعف';
-    else continuation='هادئ';
-    return {tracked,threePlus,fourPlus,exact5,lastStrong,sinceStrong,continuation};
+
+    let groupTrend='غير مؤكد';
+    if(tracked<3) groupTrend='بداية المتابعة';
+    else if(rows.slice(-3).some(r=>Number(r?.hit_count||0)>=3)) groupTrend='تجمع 3/5+ ما زال حاضرًا';
+    else if(sinceStrong!=null&&sinceStrong<=3) groupTrend='تجمع 3/5+ تحت المراقبة';
+    else if(sinceStrong!=null&&sinceStrong<=6) groupTrend='تجمع 3/5+ يضعف';
+    else groupTrend='لا يوجد تجمع 3/5+ حديث';
+
+    const numberLive=n=>{
+      const indexes=[];
+      rows.forEach((r,i)=>{
+        const hits=Array.isArray(r?.hit_numbers)?r.hit_numbers.map(Number):[];
+        if(hits.includes(Number(n))) indexes.push(i);
+      });
+      const lastIndex=indexes.length?indexes[indexes.length-1]:-1;
+      const last=lastIndex>=0?rows[lastIndex]:null;
+      const since=lastIndex>=0?rows.length-1-lastIndex:null;
+      const recent3=lastIndex>=Math.max(0,rows.length-3);
+      let status='هادئ';
+      if(recent3) status='حاضر';
+      else if(since!=null&&since<=5) status='متوسط';
+      else if(lastIndex<0) status='لم يظهر';
+      return {
+        number:Number(n),
+        count:indexes.length,
+        lastDrawId:last?.draw_id||null,
+        lastTime:last?.time||'',
+        since,
+        status
+      };
+    };
+
+    const liveNumbers=numbers.map(numberLive);
+    const activeNow=liveNumbers.filter(x=>x.status==='حاضر').length;
+
+    return {tracked,threePlus,fourPlus,exact5,lastStrong,sinceStrong,groupTrend,liveNumbers,activeNow};
+  }
+
+  function liveNumberCard(x){
+    const since=x?.since==null?'—':x.since;
+    return '<div class="liveNumberCard">'
+      +'<div class="liveNumberTop"><span class="liveNumberValue">'+esc(x?.number)+'</span><span class="liveNumberState">'+esc(x?.status||'—')+'</span></div>'
+      +'<div class="liveNumberMeta">ظهر '+Number(x?.count||0)+' مرة منذ الاختيار</div>'
+      +'<div class="liveNumberMeta">آخر: Draw '+esc(x?.lastDrawId||'—')+'</div>'
+      +'<div class="liveNumberMeta">'+esc(x?.lastTime||'—')+' · منذ '+esc(since)+' سحبة</div>'
+      +'</div>';
   }
 
   function renderGroupWave(payload){
@@ -131,18 +177,20 @@
       +'<span class="waveBadge">Wave '+Number(wave.score||0)+'/100</span>'
       +'<span class="waveBadge">'+esc(wave.alertLevel||'NONE')+'</span>'
       +(t?'<span class="waveBadge">Tracked '+t.tracked+'/20</span>':'')
+      +(t?'<span class="waveBadge">حاضر الآن '+t.activeNow+'/5</span>':'')
       +'</div>'
       +(t?'<div class="learnerHits">'
         +'<span class="learnerHit">3/5+ = '+t.threePlus+'</span>'
         +'<span class="learnerHit">4/5+ = '+t.fourPlus+'</span>'
         +'<span class="learnerHit">5/5 = '+t.exact5+'</span>'
         +'</div>':'')
+      +(t&&Array.isArray(t.liveNumbers)&&t.liveNumbers.length?'<div class="liveNumberGrid">'+t.liveNumbers.map(liveNumberCard).join('')+'</div>':'')
       +(t?'<div class="groupExplain">'
-        +'<div class="groupExplainMain">الاستمرار الآن: '+esc(t.continuation)+'</div>'
+        +'<div class="groupExplainMain">حالة تجمع المجموعة: '+esc(t.groupTrend)+'</div>'
         +'<div class="groupExplainSub">'
         +(t.lastStrong
-          ? 'آخر ظهور قوي: '+Number(t.lastStrong.hit_count||0)+'/5 · Draw '+esc(t.lastStrong.draw_id||'—')+' · '+esc(t.lastStrong.time||'')+' · منذ '+esc(t.sinceStrong)+' سحبات'
-          : 'لا يوجد 3/5+ بعد اختيار المجموعة حتى الآن.')
+          ? 'آخر تجمع قوي: '+Number(t.lastStrong.hit_count||0)+'/5 · Draw '+esc(t.lastStrong.draw_id||'—')+' · '+esc(t.lastStrong.time||'')+' · منذ '+esc(t.sinceStrong)+' سحبات. هذا الحكم يخص اجتماع 3 أرقام أو أكثر، وليس ضعف الأرقام الخمسة كلها.'
+          : 'لا يوجد 3/5+ بعد اختيار المجموعة حتى الآن. نشاط كل رقم ظاهر أعلاه بشكل مستقل.')
         +'</div></div>':'')
       +'<div class="waveMessage">'+esc(wave.messageAr||wave.message||'No clear wave signal right now.')+'</div>';
   }
