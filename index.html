@@ -89,6 +89,30 @@
     }catch(e){}
   }
 
+  function dormantPayload(j){
+    return {
+      drawId:j?.officialDrawId||j?.storedDrawId||null,
+      numbers:[],
+      wave:{
+        state:'DORMANT',
+        stateAr:'جمود / انتظار تكوين Group Five',
+        score:0,
+        alert:false,
+        alertLevel:'NONE',
+        leadership:{
+          currentLeaderCore3:null,
+          previousLeaderCore3:null,
+          leaderChanged:false,
+          rotationBreadth:0,
+          score:0,
+          activeCores:[]
+        },
+        activeCores:[],
+        messageAr:'Group Five غير نشطة بعد. النظام ينتظر اكتمال بيانات الدورة المطلوبة ثم يبدأ مراقبة الموجة تلقائيًا.'
+      }
+    };
+  }
+
   window.enableWaveNotifications=async function(){
     if(!('Notification' in window)){
       alert('Browser notifications are not supported on this device/browser.');
@@ -169,19 +193,25 @@
       const r=await fetch('/api/sync?ts='+Date.now(),{cache:'no-store'});
       if(!r.ok) return;
       const j=await r.json();
-      const groupFive=j?.worker?.groupFive||null;
+      const groupFive=j?.worker?.groupFive||j?.groupFive||null;
       const wave=groupFive?.wave||null;
-      if(!wave) return;
 
-      const payload={
-        drawId:j?.officialDrawId||j?.storedDrawId||groupFive?.lastSeenDrawId||null,
-        numbers:Array.isArray(groupFive?.numbers)?groupFive.numbers:[],
-        wave
-      };
+      if(wave){
+        const payload={
+          drawId:j?.officialDrawId||j?.storedDrawId||groupFive?.lastSeenDrawId||null,
+          numbers:Array.isArray(groupFive?.numbers)?groupFive.numbers:[],
+          wave
+        };
+        storeWave(payload);
+        renderWave(payload);
+        maybeNotify(payload.drawId,wave);
+        return;
+      }
 
-      storeWave(payload);
-      renderWave(payload);
-      maybeNotify(payload.drawId,wave);
+      if(groupFive?.active===false){
+        const payload=dormantPayload(j);
+        renderWave(payload);
+      }
     }catch(e){}
   }
 
