@@ -127,6 +127,74 @@ function adaptiveResidualForecast(gaps, currentGap) {
   };
 }
 
+function cycleRegimes(gaps) {
+  const values = gaps.map(Number).filter(n => Number.isFinite(n) && n > 0);
+  if (values.length < 6) return null;
+
+  let lowCenter = Math.min(...values);
+  let highCenter = Math.max(...values);
+  if (lowCenter === highCenter) return null;
+
+  let low = [];
+  let high = [];
+
+  for (let iteration = 0; iteration < 10; iteration++) {
+    low = [];
+    high = [];
+
+    values.forEach(value => {
+      const lowDistance = Math.abs(value - lowCenter);
+      const highDistance = Math.abs(value - highCenter);
+      if (lowDistance <= highDistance) low.push(value);
+      else high.push(value);
+    });
+
+    if (!low.length || !high.length) return null;
+
+    const nextLow = avg(low);
+    const nextHigh = avg(high);
+    if (Math.abs(nextLow - lowCenter) < 0.001 && Math.abs(nextHigh - highCenter) < 0.001) break;
+    lowCenter = nextLow;
+    highCenter = nextHigh;
+  }
+
+  if (lowCenter > highCenter) {
+    [low, high] = [high, low];
+    [lowCenter, highCenter] = [highCenter, lowCenter];
+  }
+
+  if (low.length < 2 || high.length < 2) return null;
+
+  const separation = highCenter - lowCenter;
+  const withinLow = Math.max(1, Math.max(...low) - Math.min(...low));
+  const withinHigh = Math.max(1, Math.max(...high) - Math.min(...high));
+  if (separation < Math.max(3, Math.min(withinLow, withinHigh) * 0.75)) return null;
+
+  const make = (name, list, center) => ({
+    name,
+    samples: list.length,
+    minGap: Math.min(...list),
+    maxGap: Math.max(...list),
+    centerGap: Math.max(1, Math.round(center)),
+    meanGap: Number(avg(list).toFixed(2)),
+    medianGap: Number(median(list).toFixed(2)),
+    share: Number((list.length / values.length).toFixed(3)),
+    gaps: [...list]
+  });
+
+  const short = make('SHORT', low, lowCenter);
+  const long = make('LONG', high, highCenter);
+  const boundary = Math.round((short.maxGap + long.minGap) / 2);
+
+  return {
+    model: 'TWO_REGIME_1D_KMEANS',
+    qualified: true,
+    boundaryGap: boundary,
+    short,
+    long
+  };
+}
+
 function predictionFromStats(stat, currentGap, drawCount) {
   const gaps = (stat.gaps || []).map(Number).filter(n => Number.isFinite(n) && n > 0);
   if (!stat.last?.drawId || !gaps.length) return null;
@@ -134,19 +202,10 @@ function predictionFromStats(stat, currentGap, drawCount) {
   const meanGap = avg(gaps);
   const medianGap = median(gaps);
   const recentWeightedGap = weightedRecentAverage(gaps, 6);
-
-  const baseGap =
-    (recentWeightedGap * 0.45) +
-    (medianGap * 0.30) +
-    (meanGap * 0.25);
-
   const historicalRate = drawCount > 0 ? stat.count / drawCount : 0;
   const recentRate = stat.recent20 / Math.max(1, Math.min(20, drawCount));
   const activityRatio = historicalRate > 0 ? recentRate / historicalRate : 1;
   const activityFactor = clamp(1 - ((activityRatio - 1) * 0.08), 0.85, 1.15);
-
-  const primaryPredictedGap = Math.max(1, Math.round(baseGap * activityFactor));
-  const primaryExpectedDrawId = Number(stat.last.drawId) + primaryPredictedGap;
 
   const evidenceScore = clamp(gaps.length / 8, 0, 1);
   const consistencyScore = clamp(Number(stat.consistency || 0), 0, 1);
@@ -168,64 +227,169 @@ function predictionFromStats(stat, currentGap, drawCount) {
 
   const sortedGaps = [...gaps].sort((a, b) => a - b);
   const maxHistoricalGap = sortedGaps.at(-1) || null;
+  const regimes = cycleRegimes(gaps);
+  const lastDrawId = Number(stat.last.drawId);
 
-  let predictedGap = primaryPredictedGap;
-  let expectedDrawId = primaryExpectedDrawId;
-  let remaining = currentGap == null ? null : predictedGap - currentGap;
-  let method = 'EVIDENCE_WEIGHTED_CYCLE';
-  let followUp = {
-    status: 'NOT_NEEDED',
-    reason: 'Primary expected draw has not been missed yet.'
-  };
+  let primaryPredictedGap;
+  let primaryExpectedDrawId;
+  let predictedGap;
+  let expectedDrawId;
+  let remaining;
+  let method;
+  let followUp = { status: 'NOT_NEEDED', reason: 'Current cycle is still inside the active regime.' };
   let adaptive = null;
+  let activeRegime = null;
 
-  if (currentGap != null && currentGap >= primaryPredictedGap) {
-    adaptive = adaptiveResidualForecast(gaps, currentGap);
+  if (regimes) {
+    const short = regimes.short;
+    const long = regimes.long;
+    const gapNow = currentGap == null ? 0 : currentGap;
 
-    if (adaptive) {
-      predictedGap = currentGap + adaptive.centerResidual;
-      expectedDrawId = Number(stat.last.drawId) + predictedGap;
-      remaining = adaptive.centerResidual;
-      method = 'ADAPTIVE_CONDITIONAL_REFORECAST';
-
+    if (gapNow <= short.maxGap) {
+      activeRegime = 'SHORT';
+      predictedGap = Math.max(gapNow + 1, short.centerGap);
+      expectedDrawId = lastDrawId + predictedGap;
+      remaining = Math.max(0, predictedGap - gapNow);
+      method = 'TWO_REGIME_SHORT_WINDOW';
+      primaryPredictedGap = short.centerGap;
+      primaryExpectedDrawId = lastDrawId + short.centerGap;
+      followUp = {
+        status: 'REGIME_WINDOW',
+        basedOn: 'TWO_REGIME_MODEL',
+        regime: 'SHORT',
+        currentGap: gapNow,
+        startGap: Math.max(gapNow + 1, short.minGap),
+        endGap: short.maxGap,
+        centerGap: short.centerGap,
+        startDrawId: lastDrawId + Math.max(gapNow + 1, short.minGap),
+        endDrawId: lastDrawId + short.maxGap,
+        centerDrawId: lastDrawId + short.centerGap,
+        remainingFromNow: remaining,
+        samples: short.samples,
+        evidence: short.samples >= 4 ? 'GOOD' : 'MODERATE',
+        fallbackRegime: {
+          regime: 'LONG',
+          startGap: long.minGap,
+          endGap: long.maxGap,
+          centerGap: long.centerGap,
+          startDrawId: lastDrawId + long.minGap,
+          endDrawId: lastDrawId + long.maxGap,
+          centerDrawId: lastDrawId + long.centerGap,
+          samples: long.samples
+        },
+        reason: 'Historical gaps separate into short and long cycles. The current cycle is still inside the short-cycle zone; if it survives past that zone, the model switches to the long-cycle regime instead of treating the short forecast as a failure.'
+      };
+    } else if (gapNow <= long.maxGap) {
+      activeRegime = 'LONG';
+      adaptive = adaptiveResidualForecast(long.gaps, gapNow);
+      if (adaptive) {
+        predictedGap = gapNow + adaptive.centerResidual;
+        expectedDrawId = lastDrawId + predictedGap;
+        remaining = adaptive.centerResidual;
+      } else {
+        predictedGap = Math.max(gapNow + 1, long.centerGap);
+        expectedDrawId = lastDrawId + predictedGap;
+        remaining = Math.max(1, predictedGap - gapNow);
+      }
+      method = 'TWO_REGIME_LONG_WINDOW';
+      primaryPredictedGap = long.centerGap;
+      primaryExpectedDrawId = lastDrawId + long.centerGap;
       followUp = {
         status: 'NEXT_ZONE',
-        basedOn: 'CONDITIONAL_SURVIVAL_REFORECAST',
-        currentGap,
-        primaryPredictedGap,
-        primaryExpectedDrawId,
-        startGap: currentGap + adaptive.startResidual,
-        endGap: currentGap + adaptive.endResidual,
+        basedOn: 'TWO_REGIME_LONG_CYCLE',
+        regime: 'LONG',
+        currentGap: gapNow,
+        startGap: Math.max(gapNow + 1, long.minGap),
+        endGap: long.maxGap,
         centerGap: predictedGap,
-        startDrawId: Number(stat.last.drawId) + currentGap + adaptive.startResidual,
-        endDrawId: Number(stat.last.drawId) + currentGap + adaptive.endResidual,
+        startDrawId: lastDrawId + Math.max(gapNow + 1, long.minGap),
+        endDrawId: lastDrawId + long.maxGap,
         centerDrawId: expectedDrawId,
-        remainingFromNow: adaptive.centerResidual,
-        samples: adaptive.samples,
-        evidence: adaptive.evidence,
-        confidence: adaptive.evidence,
+        remainingFromNow: remaining,
+        samples: long.samples,
+        evidence: long.samples >= 4 ? 'GOOD' : 'MODERATE',
+        confidence: long.samples >= 4 ? 'GOOD' : 'MODERATE',
         maxHistoricalGap,
-        survivorGaps: adaptive.survivorGaps,
-        residuals: adaptive.residuals,
-        reason: 'The first forecast was missed. The forecast is rebuilt from historical cycles that also survived beyond the current gap, with more recent cycles weighted more heavily. It is recalculated after every new draw.'
+        reason: 'The short-cycle zone passed without a 3+ hit, so the model has switched to the historically observed long-cycle regime and recalculates inside that regime after every draw.'
       };
     } else {
-      method = 'ADAPTIVE_RECALIBRATION';
+      activeRegime = 'OUTSIDE_HISTORY';
       predictedGap = null;
       expectedDrawId = null;
       remaining = null;
+      primaryPredictedGap = long.centerGap;
+      primaryExpectedDrawId = lastDrawId + long.centerGap;
+      method = 'TWO_REGIME_RECALIBRATION';
       followUp = {
         status: 'RECALIBRATING',
-        basedOn: 'NO_CONDITIONAL_ANALOGS',
-        currentGap,
-        primaryPredictedGap,
-        primaryExpectedDrawId,
+        basedOn: 'BEYOND_LONG_REGIME',
+        regime: 'OUTSIDE_HISTORY',
+        currentGap: gapNow,
         samples: 0,
-        evidence: 'WAITING_FOR_ANALOGS',
+        evidence: 'WAITING_FOR_NEW_HISTORY',
         confidence: 'RECALIBRATING',
         maxHistoricalGap,
-        reason: 'No completed historical cycle survived beyond the current gap. The system will not invent a new draw number; it keeps recalculating as new draws arrive.'
+        reason: 'The current gap is beyond both historical regimes. No new draw number is invented; the model waits for new evidence and rebuilds its regimes after the next completed cycle.'
       };
+    }
+  } else {
+    const baseGap =
+      (recentWeightedGap * 0.45) +
+      (medianGap * 0.30) +
+      (meanGap * 0.25);
+    primaryPredictedGap = Math.max(1, Math.round(baseGap * activityFactor));
+    primaryExpectedDrawId = lastDrawId + primaryPredictedGap;
+    predictedGap = primaryPredictedGap;
+    expectedDrawId = primaryExpectedDrawId;
+    remaining = currentGap == null ? null : predictedGap - currentGap;
+    method = 'EVIDENCE_WEIGHTED_CYCLE';
+
+    if (currentGap != null && currentGap >= primaryPredictedGap) {
+      adaptive = adaptiveResidualForecast(gaps, currentGap);
+      if (adaptive) {
+        predictedGap = currentGap + adaptive.centerResidual;
+        expectedDrawId = lastDrawId + predictedGap;
+        remaining = adaptive.centerResidual;
+        method = 'ADAPTIVE_CONDITIONAL_REFORECAST';
+        followUp = {
+          status: 'NEXT_ZONE',
+          basedOn: 'CONDITIONAL_SURVIVAL_REFORECAST',
+          currentGap,
+          primaryPredictedGap,
+          primaryExpectedDrawId,
+          startGap: currentGap + adaptive.startResidual,
+          endGap: currentGap + adaptive.endResidual,
+          centerGap: predictedGap,
+          startDrawId: lastDrawId + currentGap + adaptive.startResidual,
+          endDrawId: lastDrawId + currentGap + adaptive.endResidual,
+          centerDrawId: expectedDrawId,
+          remainingFromNow: adaptive.centerResidual,
+          samples: adaptive.samples,
+          evidence: adaptive.evidence,
+          confidence: adaptive.evidence,
+          maxHistoricalGap,
+          survivorGaps: adaptive.survivorGaps,
+          residuals: adaptive.residuals,
+          reason: 'The first forecast was missed. The forecast is rebuilt from historical cycles that also survived beyond the current gap, with more recent cycles weighted more heavily.'
+        };
+      } else {
+        method = 'ADAPTIVE_RECALIBRATION';
+        predictedGap = null;
+        expectedDrawId = null;
+        remaining = null;
+        followUp = {
+          status: 'RECALIBRATING',
+          basedOn: 'NO_CONDITIONAL_ANALOGS',
+          currentGap,
+          primaryPredictedGap,
+          primaryExpectedDrawId,
+          samples: 0,
+          evidence: 'WAITING_FOR_ANALOGS',
+          confidence: 'RECALIBRATING',
+          maxHistoricalGap,
+          reason: 'No completed historical cycle survived beyond the current gap. The system will not invent a new draw number.'
+        };
+      }
     }
   }
 
@@ -238,6 +402,12 @@ function predictionFromStats(stat, currentGap, drawCount) {
     confidenceScore,
     followUp,
     adaptive,
+    regime: regimes ? {
+      active: activeRegime,
+      boundaryGap: regimes.boundaryGap,
+      short: regimes.short,
+      long: regimes.long
+    } : null,
     primary: {
       predictedGap: primaryPredictedGap,
       expectedDrawId: primaryExpectedDrawId
@@ -255,7 +425,8 @@ function predictionFromStats(stat, currentGap, drawCount) {
       activityRatio: Number(activityRatio.toFixed(3)),
       activityFactor: Number(activityFactor.toFixed(3)),
       currentGap,
-      maxHistoricalGap
+      maxHistoricalGap,
+      twoRegimeModel: Boolean(regimes)
     }
   };
 }
@@ -439,6 +610,8 @@ function liveDetailFromStats(stat, draws, sources = ['LIVE_DATA']) {
       predictionConfidence: prediction?.confidence || 'NONE',
       predictionConfidenceScore: prediction?.confidenceScore || 0,
       followUp: prediction?.followUp || null,
+      cycleRegime: prediction?.regime?.active || null,
+      regimeModel: prediction?.regime || null,
       latestDrawId,
       lastHitCount: Number(stat.last?.hits || 0) || null,
       lastMatchedNumbers: norm(stat.last?.matchedNumbers || [])
@@ -615,7 +788,7 @@ function evaluateTrackedSet(draws, numbers) {
     type: numbers.length === 3 ? 'CORE3' : 'MANUAL_GROUP_3_PLUS',
     trackingMode: 'ANY_3_PLUS',
     hitRule: 'Any draw containing 3, 4, or 5 numbers from the tracked set counts as a cycle hit.',
-    predictionRule: 'The first forecast uses recent weighted gaps, median, mean, occurrence count, recent activity and consistency. If it is missed, every new draw triggers an adaptive conditional reforecast based only on historical cycles that survived beyond the current gap, with newer cycles weighted more heavily. No random value is used and no new draw is invented when comparable cycles do not exist.',
+    predictionRule: 'Uses a deterministic two-regime cycle model when the historical gaps separate naturally into short and long cycles. The tracker watches the short-cycle zone first, then automatically switches to the long-cycle zone if the short zone passes without a 3+ hit. Adaptive conditional recalculation is retained inside the active regime. No random value is used and no draw number is invented outside observed history.',
     fullSet: full,
     threePlus,
     core3: threePlus,
@@ -626,6 +799,8 @@ function evaluateTrackedSet(draws, numbers) {
       consistency: threePlus.strength.consistency,
       predictionConfidence: threePlus.current.predictionConfidence,
       predictionConfidenceScore: threePlus.current.predictionConfidenceScore,
+      cycleRegime: threePlus.current.cycleRegime,
+      regimeModel: threePlus.current.regimeModel,
       followUp: threePlus.current.followUp
     }
   };
