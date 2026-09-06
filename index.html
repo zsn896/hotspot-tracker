@@ -23,12 +23,21 @@
 .waveBadge{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;border:1px solid currentColor;font-size:11px;font-weight:900}
 .waveMessage{margin-top:10px;line-height:1.5;font-size:13px}
 .waveAlertBtn{border:1px solid #4b5f78;background:#203249;color:white;border-radius:9px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer}
+.waveLeadership{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.waveLeadCard{padding:10px;border-radius:10px;border:1px solid rgba(159,176,199,.28);background:rgba(7,17,31,.34)}
+.waveLeadLabel{font-size:11px;color:#9fb0c7;font-weight:850}
+.waveLeadValue{margin-top:5px;font-size:15px;font-weight:950;color:#fff}
+.waveCores{margin-top:10px;padding-top:10px;border-top:1px solid rgba(159,176,199,.18)}
+.waveCoreRow{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:12px}
+.waveCoreNums{font-weight:900;color:#dce8f7}
+.waveCoreCount{color:#9fb0c7}
 .wave-DORMANT{color:#9fb0c7;border-color:#3a4b60}
 .wave-EARLY_SIGNAL{color:#f6c453;border-color:rgba(246,196,83,.55);background:rgba(246,196,83,.06)}
 .wave-RISING{color:#55a2ff;border-color:rgba(85,162,255,.55);background:rgba(47,128,255,.08)}
 .wave-STRONG{color:#43ea82;border-color:rgba(67,234,130,.60);background:rgba(34,197,94,.09);box-shadow:0 0 0 1px rgba(34,197,94,.12)}
 .wave-COOLING{color:#b5c3d6;border-color:#51647b;background:rgba(159,176,199,.05)}
 .wave-REBOUND_WATCH{color:#ff9d3b;border-color:rgba(255,157,59,.60);background:rgba(255,146,43,.08)}
+@media(max-width:620px){.waveLeadership{grid-template-columns:1fr}}
 `;
 
     const addon=`<script>
@@ -47,6 +56,22 @@
     return labels[s]||s;
   }
 
+  function coreText(core){
+    const nums=Array.isArray(core?.numbers)?core.numbers.map(Number).filter(Number.isFinite):[];
+    return nums.length===3?nums.join(' - '):'—';
+  }
+
+  function activeCoreRows(cores){
+    const rows=Array.isArray(cores)?cores.slice(0,5):[];
+    if(!rows.length) return '<div class="small mut">No active Core3 rotation yet.</div>';
+    return rows.map((row,index)=>
+      '<div class="waveCoreRow">'
+      +'<span class="waveCoreNums">'+(index===0?'★ ':'')+escWave(coreText(row))+'</span>'
+      +'<span class="waveCoreCount">'+Number(row?.count||0)+' hit(s) · '+Math.round(Number(row?.share||0)*100)+'%</span>'
+      +'</div>'
+    ).join('');
+  }
+
   window.enableWaveNotifications=async function(){
     if(!('Notification' in window)){
       alert('Browser notifications are not supported on this device/browser.');
@@ -61,12 +86,13 @@
 
   function maybeNotify(j,wave){
     if(!wave?.alert||!('Notification' in window)||Notification.permission!=='granted') return;
-    const key=(j?.latestDrawId||'')+':'+(wave.state||'')+':'+(wave.score||0);
+    const lead=wave?.leadership?.currentLeaderCore3;
+    const key=(j?.latestDrawId||'')+':'+(wave.state||'')+':'+(wave.score||0)+':'+coreText(lead);
     if(localStorage.getItem('hotspot_wave_alert_key')===key) return;
     localStorage.setItem('hotspot_wave_alert_key',key);
     try{
       new Notification('Hot Spot — '+label(wave.state),{
-        body:wave.messageAr||('Wave score '+Number(wave.score||0)+'/100 — '+String(wave.alertLevel||'ALERT'))
+        body:(wave.messageAr||('Wave score '+Number(wave.score||0)+'/100'))+' | Core3 '+coreText(lead)
       });
     }catch(e){}
   }
@@ -92,6 +118,14 @@
       const state=String(wave.state||'DORMANT').toUpperCase();
       const score=Number(wave.score||0);
       const level=String(wave.alertLevel||'NONE');
+      const leadership=wave?.leadership||{};
+      const current=leadership?.currentLeaderCore3||null;
+      const previous=leadership?.previousLeaderCore3||null;
+      const rotated=Boolean(leadership?.leaderChanged);
+      const rotationScore=Number(leadership?.score||0);
+      const breadth=Number(leadership?.rotationBreadth||0);
+      const activeCores=Array.isArray(wave?.activeCores)?wave.activeCores:(Array.isArray(leadership?.activeCores)?leadership.activeCores:[]);
+
       panel.className='wavePanel '+stateClass(state);
       panel.innerHTML=''
         +'<div class="waveTop">'
@@ -101,8 +135,15 @@
         +'<div class="waveMeta">'
         +'<span class="waveBadge">Wave Score '+score+'/100</span>'
         +'<span class="waveBadge">Alert '+escWave(level)+'</span>'
-        +'<span class="waveBadge">'+(wave.alert?'ACTIVE ALERT':'MONITORING')+'</span>'
+        +'<span class="waveBadge">Rotation '+rotationScore+'/100</span>'
+        +'<span class="waveBadge">Core3 Breadth '+breadth+'/10</span>'
+        +'<span class="waveBadge">'+(rotated?'LEADERSHIP CHANGED':'LEADER STABLE')+'</span>'
         +'</div>'
+        +'<div class="waveLeadership">'
+        +'<div class="waveLeadCard"><div class="waveLeadLabel">Current leading Core3</div><div class="waveLeadValue">'+escWave(coreText(current))+'</div></div>'
+        +'<div class="waveLeadCard"><div class="waveLeadLabel">Previous leading Core3</div><div class="waveLeadValue">'+escWave(coreText(previous))+'</div></div>'
+        +'</div>'
+        +'<div class="waveCores"><div class="waveLeadLabel">Active Core3 rotation inside the same five</div>'+activeCoreRows(activeCores)+'</div>'
         +'<div class="waveMessage">'+escWave(wave.messageAr||wave.message||'No clear wave signal right now.')+'</div>';
 
       maybeNotify(j,wave);
