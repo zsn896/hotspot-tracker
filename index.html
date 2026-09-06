@@ -38,6 +38,9 @@
 .wave-STRONG{color:#43ea82;border-color:rgba(67,234,130,.60);background:rgba(34,197,94,.09);box-shadow:0 0 0 1px rgba(34,197,94,.12)}
 .wave-COOLING{color:#b5c3d6;border-color:#51647b;background:rgba(159,176,199,.05)}
 .wave-REBOUND_WATCH{color:#ff9d3b;border-color:rgba(255,157,59,.60);background:rgba(255,146,43,.08)}
+.learnerWaveNumbers{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.learnerWaveBall{width:46px;height:46px;display:grid;place-items:center;border-radius:50%;font-size:16px;font-weight:950;color:#fff;border:1px solid #6d8fb8;background:linear-gradient(180deg,#24486e,#173653)}
+.learnerWaveTitle{margin-top:4px;font-size:12px;color:#b7c7da;font-weight:900}
 @media(max-width:620px){.waveLeadership{grid-template-columns:1fr}}
 `;
 
@@ -185,6 +188,44 @@
       +'<div class="waveSource">Group Five · draw '+escWave(payload?.drawId||'—')+'</div>';
   }
 
+  function renderLearnerWave(data){
+    const learner=document.getElementById('learnerContent');
+    const suggestion=data?.suggestion||null;
+    const wave=suggestion?.wave||data?.wave||null;
+    const numbers=Array.isArray(suggestion?.numbers)?suggestion.numbers.map(Number).filter(Number.isFinite):[];
+    if(!learner||!wave||numbers.length!==5) return;
+
+    let panel=document.getElementById('learnerWavePanel');
+    if(!panel){
+      panel=document.createElement('div');
+      panel.id='learnerWavePanel';
+      learner.insertAdjacentElement('afterend',panel);
+    }
+
+    const state=String(wave.state||'DORMANT').toUpperCase();
+    panel.className='wavePanel '+stateClass(state);
+    panel.innerHTML=''
+      +'<div class="learnerWaveTitle">12H WAVE WATCH</div>'
+      +'<div class="waveState">'+escWave(label(state))+'</div>'
+      +'<div class="learnerWaveNumbers">'
+      +numbers.map(n=>'<div class="learnerWaveBall">'+escWave(n)+'</div>').join('')
+      +'</div>'
+      +'<div class="waveMeta">'
+      +'<span class="waveBadge">Wave Score '+Number(wave.score||0)+'/100</span>'
+      +'<span class="waveBadge">Alert '+escWave(wave.alertLevel||'NONE')+'</span>'
+      +'</div>'
+      +'<div class="waveMessage">'+escWave(wave.messageAr||'')+'</div>';
+  }
+
+  async function refreshLearnerWave(){
+    try{
+      const r=await fetch('/api/group-six?mode=learner&ts='+Date.now(),{cache:'no-store'});
+      if(!r.ok) return;
+      const j=await r.json();
+      renderLearnerWave(j);
+    }catch(e){}
+  }
+
   async function refreshWave(){
     const stored=readStored();
     if(stored?.wave) renderWave(stored);
@@ -215,10 +256,10 @@
     }catch(e){}
   }
 
-  setTimeout(refreshWave,1200);
-  setInterval(refreshWave,60000);
-  window.addEventListener('focus',refreshWave);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') refreshWave();});
+  setTimeout(()=>{refreshWave();refreshLearnerWave();},1200);
+  setInterval(()=>{refreshWave();refreshLearnerWave();},60000);
+  window.addEventListener('focus',()=>{refreshWave();refreshLearnerWave();});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){refreshWave();refreshLearnerWave();}});
 })();
 <\/script>`;
 
