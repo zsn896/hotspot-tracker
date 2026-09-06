@@ -38,6 +38,8 @@ const CONTROL_PREFIX = 'AUTO_CONTROL_';
 
 const CLOSE_START_MINUTES = 120;
 const MAX_CLOSE_BACKFILL = 80;
+const PRECURSOR_HISTORY_DAYS = 180;
+const PRECURSOR_CRON_BACKFILL = 12;
 
 
 function normalizeFive(values) {
@@ -275,6 +277,162 @@ async function storeCloseDraw(draw) {
       }
     }
   );
+}
+
+
+/* =========================================================
+   PRECURSOR HISTORY BACKFILL
+========================================================= */
+
+function parsedDate(value) {
+  const time = Date.parse(String(value || ''));
+  return Number.isFinite(time) ? time : null;
+}
+
+
+async function precursorHistoryBackfill() {
+  const edges =
+    (
+      await db(
+        'hotspot_draws?select=draw_id,draw_date&order=draw_id.asc&limit=1'
+      )
+    ) || [];
+
+  const oldest =
+    edges[0] ||
+    null;
+
+  if (!oldest?.draw_id) {
+    return {
+      ok: false,
+      stored: 0,
+      completeSixMonths: false,
+      reason: 'no-stored-draws'
+    };
+  }
+
+  const oldestTime =
+    parsedDate(
+      oldest.draw_date
+    );
+
+  const now =
+    Date.now();
+
+  const coverageDays =
+    oldestTime == null
+      ? 0
+      : Math.max(
+          0,
+          Math.floor(
+            (now - oldestTime) /
+            86400000
+          )
+        );
+
+  if (
+    coverageDays >=
+    PRECURSOR_HISTORY_DAYS
+  ) {
+    return {
+      ok: true,
+      stored: 0,
+      completeSixMonths: true,
+      coverageDays,
+      oldestDrawId: Number(oldest.draw_id),
+      oldestDate: oldest.draw_date || '',
+      reason: 'target-reached'
+    };
+  }
+
+  const oldestId =
+    Number(
+      oldest.draw_id
+    );
+
+  const startId =
+    Math.max(
+      1,
+      oldestId -
+      PRECURSOR_CRON_BACKFILL
+    );
+
+  const ids =
+    Array.from(
+      {
+        length:
+          oldestId -
+          startId
+      },
+      (_, index) =>
+        startId +
+        index
+    );
+
+  if (!ids.length) {
+    return {
+      ok: true,
+      stored: 0,
+      completeSixMonths: false,
+      coverageDays,
+      oldestDrawId: oldestId,
+      reason: 'no-earlier-id'
+    };
+  }
+
+  let batch = [];
+
+  try {
+    batch =
+      (
+        await getMany(
+          ids
+        )
+      ) || [];
+  } catch (_) {
+    batch = [];
+  }
+
+  let stored = 0;
+
+  for (
+    const draw
+    of batch
+  ) {
+    if (!draw?.id) {
+      continue;
+    }
+
+    try {
+      await storeCloseDraw(
+        draw
+      );
+      stored++;
+    } catch (_) {
+      // One failed historical insert must not break the live cron.
+    }
+  }
+
+  const newOldest =
+    batch
+      .filter(draw => draw?.id)
+      .sort((a, b) => Number(a.id) - Number(b.id))[0]
+    ||
+    null;
+
+  return {
+    ok: stored > 0,
+    stored,
+    attempted: ids.length,
+    completeSixMonths: false,
+    coverageDays,
+    previousOldestDrawId: oldestId,
+    oldestDrawId: Number(newOldest?.id || oldestId),
+    oldestDate: newOldest?.date || oldest.draw_date || '',
+    reason: stored > 0
+      ? 'background-backfill-added'
+      : 'background-backfill-no-results'
+  };
 }
 
 
@@ -565,10 +723,6 @@ async function finalizeOneCloseGroup(
       );
 
 
-    /*
-      Never count a draw later than 2:00 AM.
-    */
-
     if (
       drawMinutes == null ||
       drawMinutes >
@@ -590,14 +744,6 @@ async function finalizeOneCloseGroup(
         group.numbers
       );
 
-
-    /*
-      Automatic groups:
-      store every result.
-
-      Manual groups:
-      store only 3/5 or better.
-    */
 
     if (
       !isManual ||
@@ -843,10 +989,6 @@ async (
       .WORKER_SECRET;
 
 
-  /* =======================================================
-     RUN ORIGINAL WORKER FIRST
-  ======================================================= */
-
   const collector =
     createCollector();
 
@@ -882,26 +1024,32 @@ async (
   let closeFinalize =
     null;
 
+  let precursorArchive =
+    null;
 
-  /* =======================================================
-     FINAL 2:00 AM FIX
 
-     Between 2:00 AM and 2:30 AM the original worker
-     returns IDLE before tracking.
+  if (
+    collector.statusCode < 400
+    &&
+    workerPayload?.ok !== false
+  ) {
+    try {
+      precursorArchive =
+        await precursorHistoryBackfill();
+    } catch (
+      e
+    ) {
+      precursorArchive = {
+        ok: false,
+        stored: 0,
+        completeSixMonths: false,
+        error:
+          e.message ||
+          String(e)
+      };
+    }
+  }
 
-     This finalizer now catches any missed 1:56 / 2:00
-     draws for:
-
-     - AUTO Group 1
-     - AUTO Group 2
-     - AUTO Group Special
-     - AUTO Group Advanced
-     - AUTO Group Five
-     - Manual Group 1
-     - Manual Group 2
-
-     It will never count a draw after 2:00 AM.
-  ======================================================= */
 
   if (
     collector.statusCode < 400
@@ -937,10 +1085,6 @@ async (
     }
   }
 
-
-  /* =======================================================
-     GROUP FIVE + WAVE ENGINE
-  ======================================================= */
 
   if (
     collector.statusCode < 400
@@ -1042,10 +1186,6 @@ async (
   }
 
 
-  /* =======================================================
-     SPECIAL + ADVANCED
-  ======================================================= */
-
   if (
     collector.statusCode < 400
     &&
@@ -1115,6 +1255,8 @@ async (
       ...workerPayload,
 
       closeFinalize,
+
+      precursorArchive,
 
       groupFive,
 
