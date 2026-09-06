@@ -23,10 +23,6 @@
 .waveBadge{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;border:1px solid currentColor;font-size:11px;font-weight:900}
 .waveMessage{margin-top:10px;line-height:1.45;font-size:13px}
 .waveAlertBtn{border:1px solid #4b5f78;background:#203249;color:white;border-radius:9px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer}
-.waveLeadership{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
-.waveLeadCard{padding:10px;border-radius:10px;border:1px solid rgba(159,176,199,.28);background:rgba(7,17,31,.34)}
-.waveLeadLabel{font-size:11px;color:#9fb0c7;font-weight:850}
-.waveLeadValue{margin-top:5px;font-size:15px;font-weight:950;color:#fff}
 .waveSource{margin-top:8px;font-size:11px;color:#9fb0c7}
 .wave-DORMANT{color:#9fb0c7;border-color:#3a4b60}
 .wave-EARLY_SIGNAL{color:#f6c453;border-color:rgba(246,196,83,.55);background:rgba(246,196,83,.06)}
@@ -39,7 +35,9 @@
 .learnerBall{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;font-size:16px;font-weight:950;color:#fff;border:1px solid #6d8fb8;background:linear-gradient(180deg,#24486e,#173653)}
 .learnerHits{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
 .learnerHit{font-size:12px;font-weight:900;padding:7px 9px;border-radius:8px;background:rgba(7,17,31,.35);border:1px solid rgba(159,176,199,.24);color:#d9e5f3}
-@media(max-width:620px){.waveLeadership{grid-template-columns:1fr}}
+.groupExplain{margin-top:11px;padding:10px;border-radius:10px;border:1px solid rgba(159,176,199,.24);background:rgba(7,17,31,.32)}
+.groupExplainMain{font-size:13px;font-weight:950;color:#fff}
+.groupExplainSub{margin-top:5px;font-size:11px;line-height:1.45;color:#b8c7d8}
 `;
 
     const addon=`<script>
@@ -57,10 +55,6 @@
     const s=String(state||'DORMANT').toUpperCase();
     return labels[s]||s;
   }
-  function coreText(core){
-    const nums=Array.isArray(core?.numbers)?core.numbers.map(Number).filter(Number.isFinite):[];
-    return nums.length===3?nums.join(' - '):'—';
-  }
   function readStored(){
     try{const raw=localStorage.getItem(STORAGE_KEY);return raw?JSON.parse(raw):null;}catch(e){return null;}
   }
@@ -68,7 +62,7 @@
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(payload));}catch(e){}
   }
   function dormantPayload(j){
-    return {drawId:j?.officialDrawId||j?.storedDrawId||null,numbers:[],wave:{state:'DORMANT',stateAr:'جمود / انتظار تكوين Group Five',score:0,alert:false,alertLevel:'NONE',leadership:{currentLeaderCore3:null,previousLeaderCore3:null,leaderChanged:false,rotationBreadth:0,score:0},messageAr:'Group Five غير نشطة بعد. النظام ينتظر اكتمال بيانات الدورة المطلوبة ثم يبدأ مراقبة الموجة تلقائيًا.'}};
+    return {drawId:j?.officialDrawId||j?.storedDrawId||null,numbers:[],wave:{state:'DORMANT',stateAr:'جمود / انتظار تكوين Group Five',score:0,alert:false,alertLevel:'NONE',messageAr:'Group Five غير نشطة بعد. النظام ينتظر اكتمال بيانات الدورة المطلوبة ثم يبدأ مراقبة الموجة تلقائيًا.'}};
   }
 
   window.enableWaveNotifications=async function(){
@@ -82,11 +76,10 @@
 
   function maybeNotify(drawId,wave){
     if(!wave?.alert||!('Notification' in window)||Notification.permission!=='granted') return;
-    const lead=wave?.leadership?.currentLeaderCore3;
-    const key=String(drawId||'')+':'+String(wave.state||'')+':'+String(wave.score||0)+':'+coreText(lead);
+    const key=String(drawId||'')+':'+String(wave.state||'')+':'+String(wave.score||0);
     if(localStorage.getItem('hotspot_wave_alert_key')===key) return;
     localStorage.setItem('hotspot_wave_alert_key',key);
-    try{new Notification('Hot Spot Group Five — '+label(wave.state),{body:(wave.messageAr||('Wave score '+Number(wave.score||0)+'/100'))+' | Core3 '+coreText(lead)});}catch(e){}
+    try{new Notification('Hot Spot Group Five — '+label(wave.state),{body:wave.messageAr||('Wave score '+Number(wave.score||0)+'/100')});}catch(e){}
   }
 
   function ensurePanel(id,afterId){
@@ -100,31 +93,58 @@
     return panel;
   }
 
+  function trackingSummary(stateJson){
+    const g=Array.isArray(stateJson?.groups)?stateJson.groups.find(x=>x?.name==='AUTO Group Five'):null;
+    const rows=Array.isArray(g?.results)?g.results:[];
+    const tracked=Math.min(20,rows.length);
+    const threePlus=rows.filter(r=>Number(r?.hit_count||0)>=3).length;
+    const fourPlus=rows.filter(r=>Number(r?.hit_count||0)>=4).length;
+    const exact5=rows.filter(r=>Number(r?.hit_count||0)===5).length;
+    const lastStrongIndex=[...rows].map((r,i)=>({r,i})).reverse().find(x=>Number(x.r?.hit_count||0)>=3)?.i ?? -1;
+    const lastStrong=lastStrongIndex>=0?rows[lastStrongIndex]:null;
+    const sinceStrong=lastStrongIndex>=0?rows.length-1-lastStrongIndex:null;
+    let continuation='غير مؤكد';
+    if(tracked<3) continuation='بداية المتابعة';
+    else if(rows.slice(-3).some(r=>Number(r?.hit_count||0)>=3)) continuation='مستمر';
+    else if(sinceStrong!=null&&sinceStrong<=3) continuation='غير مؤكد';
+    else if(sinceStrong!=null&&sinceStrong<=6) continuation='يضعف';
+    else continuation='هادئ';
+    return {tracked,threePlus,fourPlus,exact5,lastStrong,sinceStrong,continuation};
+  }
+
   function renderGroupWave(payload){
     const wave=payload?.wave||null;
     if(!wave) return;
     const panel=ensurePanel('wavePanel','learnerWavePanel')||ensurePanel('wavePanel','learnerContent');
     if(!panel) return;
     const state=String(wave.state||'DORMANT').toUpperCase();
-    const lead=wave?.leadership||{};
+    const nums=Array.isArray(payload?.numbers)?payload.numbers.map(Number).filter(Number.isFinite):[];
+    const t=payload?.tracking||null;
     panel.className='wavePanel '+stateClass(state);
     panel.innerHTML=''
       +'<div class="waveTop">'
       +'<div><div class="small mut">Group Five / Early Wave Detection</div><div class="waveState">'+esc(label(state))+'</div></div>'
       +'<button class="waveAlertBtn" id="waveAlertButton" onclick="enableWaveNotifications()">'+(("Notification" in window)&&Notification.permission==='granted'?'Alerts Enabled':'Enable Alerts')+'</button>'
       +'</div>'
+      +(nums.length===5?'<div class="learnerGroupNums">'+nums.map(n=>'<div class="learnerBall">'+esc(n)+'</div>').join('')+'</div>':'')
       +'<div class="waveMeta">'
-      +'<span class="waveBadge">Wave Score '+Number(wave.score||0)+'/100</span>'
-      +'<span class="waveBadge">Alert '+esc(wave.alertLevel||'NONE')+'</span>'
-      +'<span class="waveBadge">Rotation '+Number(lead.score||0)+'/100</span>'
-      +'<span class="waveBadge">Core3 Breadth '+Number(lead.rotationBreadth||0)+'/10</span>'
+      +'<span class="waveBadge">Wave '+Number(wave.score||0)+'/100</span>'
+      +'<span class="waveBadge">'+esc(wave.alertLevel||'NONE')+'</span>'
+      +(t?'<span class="waveBadge">Tracked '+t.tracked+'/20</span>':'')
       +'</div>'
-      +'<div class="waveLeadership">'
-      +'<div class="waveLeadCard"><div class="waveLeadLabel">Current leading Core3</div><div class="waveLeadValue">'+esc(coreText(lead.currentLeaderCore3))+'</div></div>'
-      +'<div class="waveLeadCard"><div class="waveLeadLabel">Previous leading Core3</div><div class="waveLeadValue">'+esc(coreText(lead.previousLeaderCore3))+'</div></div>'
-      +'</div>'
-      +'<div class="waveMessage">'+esc(wave.messageAr||wave.message||'No clear wave signal right now.')+'</div>'
-      +'<div class="waveSource">Group Five · draw '+esc(payload?.drawId||'—')+'</div>';
+      +(t?'<div class="learnerHits">'
+        +'<span class="learnerHit">3/5+ = '+t.threePlus+'</span>'
+        +'<span class="learnerHit">4/5+ = '+t.fourPlus+'</span>'
+        +'<span class="learnerHit">5/5 = '+t.exact5+'</span>'
+        +'</div>':'')
+      +(t?'<div class="groupExplain">'
+        +'<div class="groupExplainMain">الاستمرار الآن: '+esc(t.continuation)+'</div>'
+        +'<div class="groupExplainSub">'
+        +(t.lastStrong
+          ? 'آخر ظهور قوي: '+Number(t.lastStrong.hit_count||0)+'/5 · Draw '+esc(t.lastStrong.draw_id||'—')+' · '+esc(t.lastStrong.time||'')+' · منذ '+esc(t.sinceStrong)+' سحبات'
+          : 'لا يوجد 3/5+ بعد اختيار المجموعة حتى الآن.')
+        +'</div></div>':'')
+      +'<div class="waveMessage">'+esc(wave.messageAr||wave.message||'No clear wave signal right now.')+'</div>';
   }
 
   function renderLearnerDetail(data){
@@ -161,13 +181,20 @@
     const stored=readStored();
     if(stored?.wave) renderGroupWave(stored);
     try{
-      const r=await fetch('/api/sync?ts='+Date.now(),{cache:'no-store'});
-      if(!r.ok) return;
-      const j=await r.json();
+      const [syncRes,stateRes]=await Promise.all([
+        fetch('/api/sync?ts='+Date.now(),{cache:'no-store'}),
+        fetch('/api/state?ts='+Date.now(),{cache:'no-store'})
+      ]);
+      if(!syncRes.ok) return;
+      const j=await syncRes.json();
+      const s=stateRes.ok?await stateRes.json():null;
       const groupFive=j?.worker?.groupFive||j?.groupFive||null;
       const wave=groupFive?.wave||null;
+      const stateGroup=s?.groupFive||null;
+      const nums=Array.isArray(groupFive?.numbers)?groupFive.numbers:(Array.isArray(stateGroup?.numbers)?stateGroup.numbers:[]);
+      const tracking=trackingSummary(s);
       if(wave){
-        const payload={drawId:j?.officialDrawId||j?.storedDrawId||groupFive?.lastSeenDrawId||null,numbers:Array.isArray(groupFive?.numbers)?groupFive.numbers:[],wave};
+        const payload={drawId:j?.officialDrawId||j?.storedDrawId||groupFive?.lastSeenDrawId||null,numbers:nums,wave,tracking};
         storeWave(payload);renderGroupWave(payload);maybeNotify(payload.drawId,wave);return;
       }
       if(groupFive?.active===false) renderGroupWave(dormantPayload(j));
