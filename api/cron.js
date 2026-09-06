@@ -32,6 +32,11 @@ const {
 } =
   require('../lib/wave-engine');
 
+const {
+  analyzePrecursors
+} =
+  require('../lib/precursor-engine');
+
 const AUTO_PREFIX = 'AUTO Group ';
 const MANUAL_PREFIX = 'MANUAL Group';
 const CONTROL_PREFIX = 'AUTO_CONTROL_';
@@ -40,6 +45,9 @@ const CLOSE_START_MINUTES = 120;
 const MAX_CLOSE_BACKFILL = 80;
 const PRECURSOR_HISTORY_DAYS = 180;
 const PRECURSOR_CRON_BACKFILL = 12;
+const PRECURSOR_LIVE_PAGE_SIZE = 1000;
+const PRECURSOR_LIVE_MAX_DRAWS = 8000;
+const PRECURSOR_LIVE_GROUP_LIMIT = 6;
 
 
 function normalizeFive(values) {
@@ -432,6 +440,158 @@ async function precursorHistoryBackfill() {
     reason: stored > 0
       ? 'background-backfill-added'
       : 'background-backfill-no-results'
+  };
+}
+
+
+/* =========================================================
+   PRECURSOR LIVE CONFIDENCE
+========================================================= */
+
+async function precursorLiveDraws() {
+  const rows = [];
+
+  for (
+    let offset = 0;
+    offset < PRECURSOR_LIVE_MAX_DRAWS;
+    offset += PRECURSOR_LIVE_PAGE_SIZE
+  ) {
+    const page =
+      (
+        await db(
+          `hotspot_draws?select=draw_id,draw_date,draw_time,numbers&order=draw_id.desc&limit=${PRECURSOR_LIVE_PAGE_SIZE}&offset=${offset}`
+        )
+      ) || [];
+
+    rows.push(
+      ...page
+    );
+
+    if (
+      page.length <
+      PRECURSOR_LIVE_PAGE_SIZE
+    ) {
+      break;
+    }
+  }
+
+  return rows
+    .filter(
+      draw =>
+        Number.isFinite(
+          Number(draw?.draw_id)
+        ) &&
+        normalizeFive(
+          draw?.numbers
+        ).length === 20
+    )
+    .slice(
+      0,
+      PRECURSOR_LIVE_MAX_DRAWS
+    )
+    .sort(
+      (a, b) =>
+        Number(a.draw_id) -
+        Number(b.draw_id)
+    );
+}
+
+
+async function precursorLiveUpdate() {
+  const groups =
+    (
+      await db(
+        `tracker_groups?select=id,name,numbers,active&active=eq.true&name=like.${encodeURIComponent(
+          MANUAL_PREFIX + '*'
+        )}&order=id.asc&limit=${PRECURSOR_LIVE_GROUP_LIMIT}`
+      )
+    ) || [];
+
+  if (!groups.length) {
+    return {
+      ok: true,
+      groups: [],
+      reason: 'no-server-manual-groups'
+    };
+  }
+
+  const draws =
+    await precursorLiveDraws();
+
+  if (
+    draws.length < 80
+  ) {
+    return {
+      ok: false,
+      analyzedDraws: draws.length,
+      groups: [],
+      reason: 'not-enough-draws'
+    };
+  }
+
+  const latest =
+    draws.at(-1) ||
+    null;
+
+  const results = [];
+
+  for (
+    const group
+    of groups
+  ) {
+    const numbers =
+      normalizeFive(
+        group?.numbers
+      );
+
+    if (
+      numbers.length < 3 ||
+      numbers.length > 5
+    ) {
+      continue;
+    }
+
+    try {
+      const analysis =
+        analyzePrecursors(
+          draws,
+          numbers
+        );
+
+      results.push({
+        groupId: group.id,
+        name: group.name,
+        numbers,
+        ok: Boolean(analysis?.ok),
+        model: analysis?.model || null,
+        confidence: analysis?.liveConfidence || null,
+        activeSignals: Array.isArray(analysis?.activeSignals)
+          ? analysis.activeSignals.slice(0, 5)
+          : [],
+        analyzedDraws: Number(analysis?.analyzedDraws || draws.length)
+      });
+    } catch (
+      e
+    ) {
+      results.push({
+        groupId: group.id,
+        name: group.name,
+        numbers,
+        ok: false,
+        error:
+          e.message ||
+          String(e)
+      });
+    }
+  }
+
+  return {
+    ok: true,
+    latestDrawId: Number(latest?.draw_id || 0) || null,
+    latestTime: latest?.draw_time || '',
+    analyzedDraws: draws.length,
+    groupLimit: PRECURSOR_LIVE_GROUP_LIMIT,
+    groups: results
   };
 }
 
@@ -1027,6 +1187,9 @@ async (
   let precursorArchive =
     null;
 
+  let precursorLive =
+    null;
+
 
   if (
     collector.statusCode < 400
@@ -1043,6 +1206,21 @@ async (
         ok: false,
         stored: 0,
         completeSixMonths: false,
+        error:
+          e.message ||
+          String(e)
+      };
+    }
+
+    try {
+      precursorLive =
+        await precursorLiveUpdate();
+    } catch (
+      e
+    ) {
+      precursorLive = {
+        ok: false,
+        groups: [],
         error:
           e.message ||
           String(e)
@@ -1257,6 +1435,8 @@ async (
       closeFinalize,
 
       precursorArchive,
+
+      precursorLive,
 
       groupFive,
 
