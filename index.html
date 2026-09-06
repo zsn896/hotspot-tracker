@@ -38,15 +38,11 @@
 .coreTitle{font-size:12px;font-weight:950;color:#a9bad0}
 .coreNums{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
 .coreBall{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;font-size:18px;font-weight:950;color:#fff;border:2px solid rgba(67,234,130,.65);background:linear-gradient(180deg,#23543c,#153928)}
-.coreStats{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
-.coreStat{font-size:11px;font-weight:900;padding:7px 9px;border-radius:8px;border:1px solid rgba(159,176,199,.24);background:rgba(7,17,31,.35);color:#d9e5f3}
-.coreLine{margin-top:8px;font-size:12px;line-height:1.5;color:#c7d5e5}
-.coreCounter{margin-top:11px;padding:12px;border-radius:10px;border:1px solid rgba(246,196,83,.35);background:rgba(246,196,83,.06)}
-.coreCounterBig{font-size:23px;font-weight:950;color:#fff}
-.coreCounterLabel{margin-top:2px;font-size:11px;color:#b8c7d8}
-.coreZone{margin-top:8px;font-size:12px;line-height:1.5;color:#f2d98e;font-weight:850}
-.coreState{display:inline-flex;margin-top:10px;padding:6px 10px;border-radius:999px;border:1px solid currentColor;font-size:12px;font-weight:950}
-.core-ACTIVE{color:#43ea82}.core-WATCH{color:#f6c453}.core-COOLING{color:#9fb0c7}.core-INSUFFICIENT{color:#9fb0c7}
+.coreCountdown{margin-top:12px;padding:14px;border-radius:12px;border:1px solid rgba(246,196,83,.45);background:rgba(246,196,83,.07);text-align:center}
+.coreCountdownBig{font-size:32px;font-weight:1000;color:#fff;line-height:1.05}
+.coreCountdownLabel{margin-top:5px;font-size:12px;font-weight:900;color:#f2d98e}
+.coreCountdownSub{margin-top:8px;font-size:12px;line-height:1.45;color:#c7d5e5}
+.coreLast{margin-top:10px;font-size:12px;line-height:1.5;color:#c7d5e5}
 `;
 
     const addon=`<script>
@@ -98,71 +94,44 @@
     try{new Notification('Hot Spot Group Five — '+label(wave.state),{body:wave.messageAr||('Wave score '+Number(wave.score||0)+'/100')});}catch(e){}
   }
 
-  function coreStateClass(state){
-    const s=String(state||'INSUFFICIENT').toUpperCase();
-    return 'core-'+(['ACTIVE','WATCH','COOLING','INSUFFICIENT'].includes(s)?s:'INSUFFICIENT');
-  }
-
-  function percentileNearest(values,p){
-    const a=(values||[]).map(Number).filter(Number.isFinite).sort((x,y)=>x-y);
-    if(!a.length) return null;
-    return a[Math.floor((a.length-1)*p)];
-  }
-
-  function returnZone(gaps,currentGap,meanGap){
-    const clean=(gaps||[]).map(Number).filter(Number.isFinite);
-    if(!clean.length||!Number.isFinite(Number(currentGap))) return null;
-    const current=Number(currentGap);
-    const low=percentileNearest(clean,.25);
-    const high=percentileNearest(clean,.75);
-    const max=Math.max(...clean);
-    const mean=Number(meanGap);
-    const toLow=Math.max(0,low-current);
-    const toHigh=Math.max(0,high-current);
-    const toMax=Math.max(0,max-current);
-    const toMean=Number.isFinite(mean)?Math.max(0,mean-current):null;
-    let message='';
-    if(current<low){
-      message='لم يدخل بعد منطقة العودة المعتادة. بقي تقريبًا '+toLow+' سحبة للوصول لبدايتها.';
-    }else if(current<=high){
-      message='دخل الآن منطقة العودة المعتادة تاريخيًا. لا يعني ذلك أن الظهور مؤكد، لكن هذه هي المنطقة التي عاد فيها غالبًا.';
-    }else if(current<=max){
-      message='تجاوز المنطقة المعتادة، لكنه ما زال داخل أطول فاصل حدث سابقًا.';
-    }else{
-      message='تجاوز أطول فاصل تاريخي مسجل لهذا الثلاثي.';
-    }
-    return {low,high,max,toLow,toHigh,toMax,toMean,message};
-  }
-
   function renderCore3(coreData){
     const core=coreData?.core3||null;
     if(!core||!Array.isArray(core.numbers)||core.numbers.length!==3) return '';
+
     const a=core.analysis||{};
-    const s=core.sinceSelection||{};
     const c=core.current||{};
-    const gapList=Array.isArray(a.gaps)?a.gaps:[];
-    const gaps=gapList.length?gapList.join(' → '):'—';
-    const zone=returnZone(gapList,c.currentGap,a.meanGap);
-    const meanRemain=zone?.toMean==null?'—':Number(zone.toMean.toFixed(1));
+    const lastDraw=Number(a.lastTogetherDrawId||0);
+    const currentGap=Number(c.currentGap);
+    const mean=Number(a.meanGap);
+
+    if(!lastDraw||!Number.isFinite(currentGap)||!Number.isFinite(mean)) return '';
+
+    const meanStep=Math.max(1,Math.round(mean));
+    const expectedDraw=lastDraw+meanStep;
+    const remaining=meanStep-currentGap;
+
+    let big='';
+    let labelText='';
+    if(remaining>0){
+      big=remaining+' سحبة';
+      labelText='متبقية تقريبًا للوصول إلى موعد العودة حسب المتوسط';
+    }else if(remaining===0){
+      big='الآن';
+      labelText='وصلنا تقريبًا إلى موعد العودة حسب المتوسط';
+    }else{
+      big=Math.abs(remaining)+' سحبة';
+      labelText='تجاوزنا بها موعد المتوسط ولم يظهر 3/3 بعد';
+    }
+
     return '<div class="coreCard">'
-      +'<div class="coreTitle">CORE3 الأقوى — الثلاثي الذي ظهر معًا فعليًا</div>'
+      +'<div class="coreTitle">CORE3 الأقوى</div>'
       +'<div class="coreNums">'+core.numbers.map(n=>'<div class="coreBall">'+esc(n)+'</div>').join('')+'</div>'
-      +'<div class="coreCounter">'
-      +'<div class="coreCounterBig">'+(c.currentGap==null?'—':esc(c.currentGap))+' سحبات</div>'
-      +'<div class="coreCounterLabel">مرت منذ آخر ظهور 3/3 للـCore3</div>'
-      +(zone?'<div class="coreZone">منطقة العودة المعتادة: '+zone.low+'–'+zone.high+' سحبة · المتوسط '+esc(a.meanGap)+' · أطول فاصل '+zone.max+'</div>':'')
-      +(zone?'<div class="coreLine">للوصول إلى المتوسط: حوالي '+meanRemain+' سحبة · إلى نهاية المنطقة المعتادة: '+zone.toHigh+' · إلى أطول فاصل سابق: '+zone.toMax+'</div>':'')
-      +(zone?'<div class="coreLine">'+esc(zone.message)+'</div>':'')
+      +'<div class="coreCountdown">'
+      +'<div class="coreCountdownBig">'+esc(big)+'</div>'
+      +'<div class="coreCountdownLabel">'+esc(labelText)+'</div>'
+      +'<div class="coreCountdownSub">السحبة المتوقعة تقريبًا: Draw '+esc(expectedDraw)+' · المتوسط '+esc(meanStep)+' سحبات</div>'
       +'</div>'
-      +'<div class="coreStats">'
-      +'<span class="coreStat">اجتمع أثناء التحليل: '+Number(a.together||0)+' مرات</span>'
-      +'<span class="coreStat">متوسط الفاصل: '+(a.meanGap==null?'—':esc(a.meanGap))+' سحبة</span>'
-      +'</div>'
-      +'<div class="coreLine">عدد السحبات بين كل اجتماع: '+esc(gaps)+'</div>'
-      +'<div class="coreLine">آخر اجتماع: Draw '+esc(a.lastTogetherDrawId||'—')+' · '+esc(a.lastTogetherTime||'—')+'</div>'
-      +'<div class="coreLine">منذ اختيار Group Five: 3/3 = '+Number(s.together||0)+' · 2/3 = '+Number(s.partial2||0)+' · تتبع '+Number(coreData?.groupFive?.trackedDraws||0)+' سحبة</div>'
-      +'<div class="coreState '+coreStateClass(c.state)+'">'+esc(c.state||'INSUFFICIENT')+'</div>'
-      +'<div class="coreLine">'+esc(c.messageAr||'')+'</div>'
+      +'<div class="coreLast">آخر ظهور 3/3: Draw '+esc(lastDraw)+' · '+esc(a.lastTogetherTime||'—')+' · مرّ حتى الآن '+esc(currentGap)+' سحبة بدون ظهور كامل.</div>'
       +'</div>';
   }
 
