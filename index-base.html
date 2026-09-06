@@ -1,0 +1,5159 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hot Spot Automatic 12H</title>
+
+<style>
+:root{
+  --bg:#07111f;
+  --panel:#101d2d;
+  --panel2:#132235;
+  --line:#293b52;
+  --text:#f8fafc;
+  --mut:#9fb0c7;
+  --blue:#2f80ff;
+  --green:#22c55e;
+  --orange:#ff922b;
+  --purple:#b35cff;
+  --red:#ef4444;
+  --yellow:#f6c453;
+  --shadow:0 12px 28px rgba(0,0,0,.24)
+}
+
+*{box-sizing:border-box}
+html{background:var(--bg)}
+
+body{
+  margin:0;
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  background:
+    radial-gradient(circle at 70% 0%,rgba(47,128,255,.08),transparent 28%),
+    linear-gradient(180deg,#07111f,#091522);
+  min-height:100vh
+}
+
+button,input{font:inherit}
+button{touch-action:manipulation}
+
+.wrap{
+  max-width:1120px;
+  margin:0 auto;
+  padding:20px 16px 40px
+}
+
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:20px;
+  margin-bottom:18px
+}
+
+.brandRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap
+}
+
+h1{
+  margin:0;
+  font-size:34px;
+  letter-spacing:-.6px
+}
+
+.version{
+  padding:6px 11px;
+  border-radius:999px;
+  font-size:13px;
+  font-weight:900;
+  background:linear-gradient(180deg,#3489ff,#1d6de0)
+}
+
+.subtitle{
+  margin:10px 0 0;
+  color:var(--mut);
+  line-height:1.5
+}
+
+.headerRight{
+  display:flex;
+  align-items:stretch;
+  gap:16px;
+  color:#cbd5e1;
+  white-space:nowrap
+}
+
+.autoBox{
+  font-size:14px;
+  line-height:1.5;
+  font-weight:800
+}
+
+.autoOn{color:var(--green)}
+
+.timeBox{
+  border-left:1px solid var(--line);
+  padding-left:16px;
+  text-align:right
+}
+
+#clock{font-weight:950}
+
+#today{
+  margin-top:5px;
+  font-size:13px;
+  color:var(--mut)
+}
+
+.card{
+  background:linear-gradient(
+    180deg,
+    rgba(19,34,53,.96),
+    rgba(15,29,46,.96)
+  );
+  border:1px solid var(--line);
+  border-radius:17px;
+  padding:18px;
+  margin:14px 0;
+  box-shadow:var(--shadow)
+}
+
+.title{
+  font-size:23px;
+  font-weight:950
+}
+
+.small{font-size:13px}
+.mut{color:var(--mut)}
+.ok{color:var(--green);font-weight:900}
+.bad{color:#ff6b64;font-weight:900}
+.amber{color:var(--yellow);font-weight:900}
+.blue{color:#55a2ff;font-weight:900}
+
+.redStatus{
+  color:var(--red)!important;
+  font-weight:900
+}
+
+.btn{
+  appearance:none;
+  border:0;
+  border-radius:10px;
+  padding:11px 15px;
+  font-size:14px;
+  font-weight:900;
+  color:white;
+  cursor:pointer
+}
+
+.btn:disabled{
+  opacity:.5;
+  cursor:not-allowed
+}
+
+.btnBlue{
+  background:linear-gradient(180deg,#3489ff,#176be3)
+}
+
+.btnGreen{
+  background:linear-gradient(180deg,#2bd56f,#18a951)
+}
+
+.btnRed{
+  background:linear-gradient(180deg,#ef5555,#c92f37)
+}
+
+.btnDark{
+  background:#263548;
+  border:1px solid #3a4c62
+}
+
+.pill,
+.livePill{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900
+}
+
+.pill{
+  color:#55a2ff;
+  background:rgba(47,128,255,.13);
+  border:1px solid rgba(47,128,255,.25)
+}
+
+.livePill{
+  color:#43ea82;
+  background:rgba(34,197,94,.14);
+  border:1px solid rgba(34,197,94,.24)
+}
+
+.sourceLink{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:7px 11px;
+  border-radius:9px;
+  border:1px solid rgba(47,128,255,.40);
+  background:rgba(47,128,255,.12);
+  color:#69adff;
+  font-size:12px;
+  font-weight:900;
+  text-decoration:none
+}
+
+.toolbar{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap
+}
+
+.statusText{font-weight:850}
+
+.dot{
+  display:inline-block;
+  width:11px;
+  height:11px;
+  margin-right:7px;
+  border-radius:50%;
+  background:var(--green)
+}
+
+.spin{
+  display:inline-block;
+  width:15px;
+  height:15px;
+  border:3px solid rgba(255,255,255,.2);
+  border-top-color:white;
+  border-radius:50%;
+  animation:spin .8s linear infinite
+}
+
+@keyframes spin{
+  to{transform:rotate(360deg)}
+}
+
+.syncInfo{
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:11px;
+  background:rgba(7,17,31,.30);
+  border:1px solid var(--line);
+  font-size:12px;
+  color:var(--mut)
+}
+
+.syncInfo.good{
+  color:#57df88;
+  border-color:rgba(34,197,94,.35)
+}
+
+.syncInfo.working{
+  color:#55a2ff;
+  border-color:rgba(47,128,255,.35)
+}
+
+.syncInfo.warn{
+  color:#ffb14e;
+  border-color:rgba(255,146,43,.35)
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-top:16px
+}
+
+.stat{
+  min-height:90px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  background:rgba(7,17,31,.35);
+  border:1px solid var(--line);
+  border-radius:13px;
+  padding:10px
+}
+
+.statLabel{
+  font-size:13px;
+  color:#d2dbe7
+}
+
+.big{
+  margin-top:6px;
+  font-size:25px;
+  font-weight:950
+}
+
+.cBlue{color:#55a2ff}
+.cGreen{color:#2bd56f}
+.cOrange{color:#ff922b}
+.cPurple{color:#b65cff}
+
+.progress{
+  position:relative;
+  margin-top:13px;
+  height:13px;
+  border-radius:999px;
+  overflow:hidden;
+  background:#07111f;
+  border:1px solid #1b2b3d
+}
+
+.progress i{
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,#3d8cff,#156cff)
+}
+
+.progress span{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  font-size:10px;
+  font-weight:900
+}
+
+.balls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px
+}
+
+.ball{
+  width:40px;
+  height:40px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  border:1px solid #496078;
+  background:linear-gradient(180deg,#101d2d,#0c1725);
+  color:white;
+  font-size:14px;
+  font-weight:900
+}
+
+.hit3{
+  background:linear-gradient(180deg,#3f8fff,#1d6de0);
+  border-color:#74b6ff
+}
+
+.hit4{
+  background:linear-gradient(180deg,#ff9d3b,#e87611);
+  border-color:#ffb36a
+}
+
+.hit5{
+  background:linear-gradient(180deg,#2bd56f,#13a94f);
+  border-color:#6ae89b
+}
+
+.latestBull{
+  background:linear-gradient(180deg,#3794ff,#1668e8)!important;
+  border-color:#74b6ff!important;
+  box-shadow:
+    0 0 0 2px rgba(47,128,255,.22),
+    0 0 14px rgba(47,128,255,.3)!important
+}
+
+.sectionTitle{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap
+}
+
+.titleLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap
+}
+
+.latestMeta{
+  margin-top:12px;
+  color:#afbdd0;
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap
+}
+
+.latestDrawNumber{
+  color:white;
+  font-weight:850
+}
+
+.latestCompact{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-top:15px;
+  padding-top:15px;
+  border-top:1px solid var(--line)
+}
+
+.bullMini{
+  min-width:82px;
+  text-align:center
+}
+
+.bullMiniLabel{
+  font-size:12px;
+  color:var(--mut);
+  margin-bottom:6px
+}
+
+.bullMiniCircle{
+  width:54px;
+  height:54px;
+  margin:auto;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:linear-gradient(180deg,#ff4343,#e81919);
+  font-size:20px;
+  font-weight:950
+}
+
+.groupFiveHero{
+  border:2px solid rgba(47,128,255,.55)
+}
+
+.fiveHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap
+}
+
+.fiveTitle{
+  font-size:26px;
+  font-weight:950
+}
+
+.fiveRule{
+  margin-top:6px;
+  color:#aebdd0;
+  font-size:13px
+}
+
+.fiveNumbers{margin-top:16px}
+
+.fiveStats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:9px;
+  margin-top:15px
+}
+
+.fiveStat{
+  padding:12px 8px;
+  text-align:center;
+  background:rgba(7,17,31,.34);
+  border:1px solid var(--line);
+  border-radius:12px
+}
+
+.fiveStatLabel{
+  font-size:12px;
+  color:#aab8ca
+}
+
+.fiveStatValue{
+  margin-top:5px;
+  font-size:21px;
+  font-weight:950
+}
+
+.bestTime{
+  margin-top:4px;
+  font-size:11px;
+  color:#aebdd0;
+  font-weight:800
+}
+
+/* 12H LEARNER */
+
+.learnerHero{
+  border:2px solid rgba(179,92,255,.62);
+  background:
+    radial-gradient(circle at 90% 0%,rgba(179,92,255,.10),transparent 35%),
+    linear-gradient(180deg,rgba(25,31,57,.98),rgba(15,27,45,.98))
+}
+
+.learnerTitle{
+  font-size:27px;
+  font-weight:950
+}
+
+.learnerSub{
+  margin-top:6px;
+  color:#b5c3d6;
+  font-size:13px;
+  line-height:1.5
+}
+
+.learnerNumbers{
+  margin-top:17px
+}
+
+.learnerNumbers .ball{
+  width:48px;
+  height:48px;
+  font-size:17px;
+  border-color:#8e63d5;
+  background:linear-gradient(180deg,#42316a,#241d43)
+}
+
+.learnerNumbers .coreBall{
+  border-color:#69adff;
+  box-shadow:0 0 0 2px rgba(47,128,255,.18);
+  background:linear-gradient(180deg,#2d65a8,#194b86)
+}
+
+.learnerStats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:9px;
+  margin-top:16px
+}
+
+.learnerStat{
+  padding:12px 8px;
+  text-align:center;
+  background:rgba(7,17,31,.34);
+  border:1px solid var(--line);
+  border-radius:12px
+}
+
+.learnerStatLabel{
+  color:#aab8ca;
+  font-size:12px
+}
+
+.learnerStatValue{
+  margin-top:5px;
+  font-size:21px;
+  font-weight:950
+}
+
+.learnerStrategy{
+  margin-top:13px;
+  padding:11px 13px;
+  border:1px solid rgba(179,92,255,.35);
+  background:rgba(179,92,255,.08);
+  border-radius:11px;
+  font-size:13px;
+  color:#d5c4f7
+}
+
+.learnerStrong{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:8px;
+  margin-top:10px
+}
+
+.strongItem{
+  border:1px solid var(--line);
+  background:rgba(7,17,31,.34);
+  border-radius:11px;
+  padding:10px;
+  text-align:center
+}
+
+.strongNumber{
+  font-size:20px;
+  font-weight:950
+}
+
+.strongCount{
+  margin-top:4px;
+  font-size:11px;
+  color:#a9b8ca
+}
+
+.leaderTable{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+  font-size:12px
+}
+
+.leaderTable th,
+.leaderTable td{
+  border-bottom:1px solid var(--line);
+  padding:9px 7px;
+  text-align:center
+}
+
+.leaderTable th{
+  color:#9fb0c7;
+  font-weight:900
+}
+
+.learnerDetails{
+  display:none;
+  margin-top:12px
+}
+
+.learnerDetails.open{
+  display:block
+}
+
+.groupsSection{margin-top:14px}
+
+.groupsTitleRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+  flex-wrap:wrap
+}
+
+.groupRow{
+  border:1px solid var(--line);
+  border-radius:14px;
+  margin-top:10px;
+  overflow:hidden;
+  background:rgba(7,17,31,.24)
+}
+
+.groupSummary{
+  display:grid;
+  grid-template-columns:
+    minmax(150px,1.2fr)
+    minmax(220px,1.5fr)
+    100px
+    90px
+    110px
+    auto;
+  gap:12px;
+  align-items:center;
+  padding:13px
+}
+
+.groupName{font-weight:950}
+
+.groupMiniLabel{
+  font-size:11px;
+  color:var(--mut);
+  margin-bottom:3px
+}
+
+.groupMetric{
+  font-size:14px;
+  font-weight:900
+}
+
+.toggleBtn{
+  background:#243448;
+  border:1px solid #3a4c62;
+  color:white;
+  border-radius:9px;
+  padding:8px 10px;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer
+}
+
+.groupDetails{
+  display:none;
+  padding:0 13px 13px;
+  border-top:1px solid var(--line)
+}
+
+.groupRow.open .groupDetails{
+  display:block
+}
+
+.result{
+  margin-top:10px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:12px;
+  background:rgba(7,17,31,.34)
+}
+
+.resultHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap
+}
+
+.score{
+  font-size:18px;
+  font-weight:950
+}
+
+.score3{color:#56a0ff}
+.score4{color:#ff9d3b}
+.score5{color:#2bd56f}
+
+.empty{
+  margin-top:10px;
+  padding:13px;
+  text-align:center;
+  color:#9fb0c7;
+  border:1px dashed #3d5065;
+  border-radius:12px;
+  background:rgba(7,17,31,.22)
+}
+
+.manualShell{
+  border:2px solid rgba(34,197,94,.55)
+}
+
+.manualTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap
+}
+
+.manualTop h2{
+  margin:0;
+  font-size:24px
+}
+
+.manualTop p{
+  margin:7px 0 0;
+  color:#aab8ca
+}
+
+.manualGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:15px
+}
+
+.manualGroup{
+  background:rgba(7,17,31,.32);
+  border:1px solid #31435a;
+  border-radius:14px;
+  padding:14px
+}
+
+.manualGroup.active{
+  border-color:#20c46a
+}
+
+.fusionGroup{
+  grid-column:1/-1;
+  border-color:rgba(47,128,255,.55)
+}
+
+.fusionGroup.active{
+  border-color:#2f80ff
+}
+
+.manualHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px
+}
+
+.manualName{font-weight:950}
+
+.manualState{
+  font-size:12px;
+  font-weight:900
+}
+
+.manualInputs{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:6px
+}
+
+.manualInputs input{
+  width:100%;
+  min-width:0;
+  height:46px;
+  border-radius:9px;
+  border:1px solid #34465c;
+  background:#07111f;
+  color:white;
+  text-align:center;
+  outline:none;
+  font-size:16px;
+  font-weight:900
+}
+
+.manualInputs input:focus{
+  border-color:#20c46a
+}
+
+.fusionInputs input{
+  color:#69adff;
+  border-color:#345981;
+  cursor:text
+}
+
+.fusionInputs input:focus{
+  border-color:#2f80ff
+}
+
+.manualActions{
+  display:grid;
+  grid-template-columns:1.3fr 1fr 1fr;
+  gap:7px;
+  margin-top:10px
+}
+
+.fusionActions{
+  grid-template-columns:1fr 1.35fr 1fr 1fr
+}
+
+.manualMsg{
+  min-height:18px;
+  margin-top:8px;
+  font-size:12px
+}
+
+.manualMeta{
+  margin-top:11px;
+  color:#98a9bf;
+  font-size:12px
+}
+
+.manualSummary{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr auto;
+  align-items:center;
+  gap:8px;
+  margin-top:12px;
+  padding:11px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(7,17,31,.30)
+}
+
+.manualMetric{text-align:center}
+
+.manualMetricLabel{
+  font-size:11px;
+  color:var(--mut)
+}
+
+.manualMetricValue{
+  margin-top:4px;
+  font-size:18px;
+  font-weight:950
+}
+
+.manualResults{
+  display:none;
+  margin-top:10px
+}
+
+.manualResults.open{
+  display:block
+}
+
+.fusionSelection{
+  margin-top:10px;
+  padding:10px 12px;
+  border:1px solid rgba(47,128,255,.30);
+  background:rgba(47,128,255,.08);
+  border-radius:10px;
+  color:#a9cfff;
+  font-size:12px
+}
+
+footer{
+  margin-top:22px;
+  text-align:center;
+  color:#8092a8;
+  font-size:12px
+}
+
+@media(max-width:900px){
+  .header{flex-direction:column}
+  .headerRight{width:100%;justify-content:space-between}
+  .manualGrid{grid-template-columns:1fr}
+  .fusionGroup{grid-column:auto}
+  .learnerStrong{grid-template-columns:repeat(3,1fr)}
+
+  .groupSummary{
+    grid-template-columns:1fr 1fr 1fr;
+    gap:10px
+  }
+
+  .groupSummary .groupNumbersCell{
+    grid-column:1/-1
+  }
+
+  .groupSummary .groupNameCell{
+    grid-column:span 2
+  }
+}
+
+@media(max-width:620px){
+  .wrap{padding:16px 10px 30px}
+  h1{font-size:29px}
+  .card{padding:14px;border-radius:14px}
+
+  .stats,
+  .fiveStats,
+  .learnerStats{
+    grid-template-columns:repeat(2,1fr)
+  }
+
+  .latestCompact{
+    align-items:flex-start;
+    flex-direction:column
+  }
+
+  .bullMini{text-align:left}
+  .bullMiniCircle{margin:0}
+
+  .groupSummary{
+    grid-template-columns:1fr 1fr
+  }
+
+  .groupSummary .groupNameCell,
+  .groupSummary .groupNumbersCell{
+    grid-column:1/-1
+  }
+
+  .manualSummary{
+    grid-template-columns:1fr 1fr
+  }
+
+  .manualSummary .manualShowCell{
+    grid-column:1/-1
+  }
+
+  .manualShowCell .toggleBtn{
+    width:100%
+  }
+
+  .ball{
+    width:37px;
+    height:37px;
+    font-size:13px
+  }
+
+  .manualInputs input{
+    height:44px;
+    font-size:15px
+  }
+
+  .manualActions .btn{
+    padding:10px 7px;
+    font-size:12px
+  }
+
+  .fusionActions{
+    grid-template-columns:1fr 1fr
+  }
+
+  .learnerStrong{
+    grid-template-columns:repeat(2,1fr)
+  }
+
+  .learnerNumbers .ball{
+    width:43px;
+    height:43px
+  }
+
+  .leaderTable{
+    font-size:10px
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+<header class="header">
+
+  <div>
+    <div class="brandRow">
+      <h1>Hot Spot Automatic 12H</h1>
+      <span class="version">v31 FIXED</span>
+    </div>
+
+    <p class="subtitle">
+      GROUP FIVE + 12H Daily Pattern Learner + Manual Tracking.
+    </p>
+  </div>
+
+  <div class="headerRight">
+
+    <div class="autoBox">
+      Auto refresh:
+      <span class="autoOn">ON</span>
+      <br>
+      Smart Sync + 60 sec
+    </div>
+
+    <div class="timeBox">
+      <div id="clock">--:--:--</div>
+      <div id="today">--</div>
+    </div>
+
+  </div>
+
+</header>
+
+
+<section class="card">
+
+  <div class="toolbar">
+
+    <button class="btn btnBlue" id="refresh">
+      ↻ Refresh Now
+    </button>
+
+    <span id="busy"></span>
+
+    <span class="statusText" id="status">
+      <span class="dot"></span>
+      Connecting…
+    </span>
+
+  </div>
+
+  <div id="syncInfo" class="syncInfo">
+    Checking official draw…
+  </div>
+
+  <div id="summary"></div>
+
+</section>
+
+
+<div id="latestDraw"></div>
+
+<div id="groupFiveContent"></div>
+
+
+<section
+  class="card learnerHero"
+  id="learnerCard"
+>
+
+  <div class="fiveHeader">
+
+    <div>
+
+      <div class="learnerTitle">
+        12H Learning Group
+      </div>
+
+      <div class="learnerSub">
+        Learns from the 6:00 AM → 6:00 PM draw stream,
+        performs walk-forward testing,
+        compares several selection methods,
+        and produces one 5-number suggestion.
+      </div>
+
+    </div>
+
+    <span
+      class="pill"
+      id="learnerStatusPill"
+    >
+      Loading…
+    </span>
+
+  </div>
+
+  <div id="learnerContent">
+
+    <div class="empty">
+      Loading 12H learner…
+    </div>
+
+  </div>
+
+</section>
+
+
+<section class="card groupsSection">
+
+  <div class="groupsTitleRow">
+
+    <div class="title">
+      Automatic Groups
+    </div>
+
+    <span class="pill">
+      Tap Show Results only when needed
+    </span>
+
+  </div>
+
+  <div id="autoContent"></div>
+
+</section>
+
+
+<section class="card manualShell">
+
+  <div class="manualTop">
+
+    <div>
+      <h2>Manual Analysis</h2>
+      <p>
+        Manual Groups 1 + 2 and Manual/Automatic Fusion Group 3.
+      </p>
+    </div>
+
+    <span class="pill">
+      Future draws only
+    </span>
+
+  </div>
+
+
+  <div class="manualGrid">
+
+    <div class="manualGroup" id="manualGroup1">
+
+      <div class="manualHead">
+
+        <div class="manualName">
+          Manual Group 1
+        </div>
+
+        <div class="manualState mut" id="manualState1">
+          ● Not tracking
+        </div>
+
+      </div>
+
+
+      <div class="manualInputs">
+        <input inputmode="numeric" maxlength="2" id="m1_1">
+        <input inputmode="numeric" maxlength="2" id="m1_2">
+        <input inputmode="numeric" maxlength="2" id="m1_3">
+        <input inputmode="numeric" maxlength="2" id="m1_4">
+        <input inputmode="numeric" maxlength="2" id="m1_5">
+      </div>
+
+
+      <div class="manualActions">
+
+        <button class="btn btnGreen" id="start1">
+          ▶ Start
+        </button>
+
+        <button class="btn btnRed" id="stop1">
+          ■ Stop
+        </button>
+
+        <button class="btn btnDark" id="clear1">
+          Clear
+        </button>
+
+      </div>
+
+
+      <div class="manualMsg mut" id="msg1"></div>
+
+      <div id="manualContent1"></div>
+
+    </div>
+
+
+    <div class="manualGroup" id="manualGroup2">
+
+      <div class="manualHead">
+
+        <div class="manualName">
+          Manual Group 2
+        </div>
+
+        <div class="manualState mut" id="manualState2">
+          ● Not tracking
+        </div>
+
+      </div>
+
+
+      <div class="manualInputs">
+        <input inputmode="numeric" maxlength="2" id="m2_1">
+        <input inputmode="numeric" maxlength="2" id="m2_2">
+        <input inputmode="numeric" maxlength="2" id="m2_3">
+        <input inputmode="numeric" maxlength="2" id="m2_4">
+        <input inputmode="numeric" maxlength="2" id="m2_5">
+      </div>
+
+
+      <div class="manualActions">
+
+        <button class="btn btnGreen" id="start2">
+          ▶ Start
+        </button>
+
+        <button class="btn btnRed" id="stop2">
+          ■ Stop
+        </button>
+
+        <button class="btn btnDark" id="clear2">
+          Clear
+        </button>
+
+      </div>
+
+
+      <div class="manualMsg mut" id="msg2"></div>
+
+      <div id="manualContent2"></div>
+
+    </div>
+
+
+    <div class="manualGroup fusionGroup" id="manualGroup3">
+
+      <div class="manualHead">
+
+        <div>
+
+          <div class="manualName">
+            Manual Group 3 — Fusion
+          </div>
+
+          <div class="small mut" style="margin-top:4px">
+            Enter 5 numbers manually or Generate automatically from Manual Group 1 + 2
+          </div>
+
+        </div>
+
+        <div class="manualState mut" id="manualState3">
+          ● Not tracking
+        </div>
+
+      </div>
+
+
+      <div class="manualInputs fusionInputs">
+        <input inputmode="numeric" maxlength="2" id="m3_1" placeholder="—">
+        <input inputmode="numeric" maxlength="2" id="m3_2" placeholder="—">
+        <input inputmode="numeric" maxlength="2" id="m3_3" placeholder="—">
+        <input inputmode="numeric" maxlength="2" id="m3_4" placeholder="—">
+        <input inputmode="numeric" maxlength="2" id="m3_5" placeholder="—">
+      </div>
+
+
+      <div class="manualActions fusionActions">
+
+        <button class="btn btnGreen" id="start3">
+          ▶ Start
+        </button>
+
+        <button class="btn btnBlue" id="generate3">
+          ⚡ Generate Numbers
+        </button>
+
+        <button class="btn btnRed" id="stop3">
+          ■ Stop
+        </button>
+
+        <button class="btn btnDark" id="clear3">
+          Clear
+        </button>
+
+      </div>
+
+
+      <div class="manualMsg mut" id="msg3">
+        Enter 5 numbers and press Start, or press Generate Numbers for automatic selection.
+      </div>
+
+      <div id="fusionSelectionInfo"></div>
+
+      <div id="manualContent3"></div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<footer>
+  © 2026 Hot Spot Tracker
+</footer>
+
+</div>
+
+
+<script>
+
+const esc =
+  s =>
+    String(
+      s ?? ''
+    ).replace(
+      /[&<>"]/g,
+      c => ({
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;'
+      }[c])
+    );
+
+
+function busy(text){
+
+  document
+    .getElementById('busy')
+    .innerHTML =
+      text
+        ?
+        `
+        <span class="spin"></span>
+        <span class="small mut">
+          ${esc(text)}
+        </span>
+        `
+        :
+        '';
+}
+
+
+async function api(
+  url,
+  options={}
+){
+
+  const r =
+    await fetch(
+      url,
+      {
+        cache:'no-store',
+        ...options
+      }
+    );
+
+  let j;
+
+  try{
+    j =
+      await r.json();
+  }catch{
+    throw Error(
+      'Invalid server response'
+    );
+  }
+
+  if(
+    !r.ok
+    ||
+    j?.ok === false
+  ){
+    throw Error(
+      j?.error
+      ||
+      `Request failed (${r.status})`
+    );
+  }
+
+  return j;
+}
+
+
+/* CLOCK */
+
+function updateClock(){
+
+  const now =
+    new Date();
+
+  document
+    .getElementById('clock')
+    .textContent =
+      now.toLocaleTimeString(
+        [],
+        {
+          hour:'2-digit',
+          minute:'2-digit',
+          second:'2-digit'
+        }
+      );
+
+  document
+    .getElementById('today')
+    .textContent =
+      now.toLocaleDateString(
+        [],
+        {
+          month:'short',
+          day:'numeric',
+          year:'numeric'
+        }
+      );
+}
+
+updateClock();
+
+setInterval(
+  updateClock,
+  1000
+);
+
+
+/* SYNC */
+
+function renderSyncInfo(sync){
+
+  const el =
+    document.getElementById(
+      'syncInfo'
+    );
+
+  if(!sync){
+
+    el.className =
+      'syncInfo warn';
+
+    el.textContent =
+      'Smart Sync status unavailable.';
+
+    return;
+  }
+
+  if(sync.synced){
+
+    if(
+      sync.caughtUp === false
+      ||
+      Number(
+        sync.remainingLag || 0
+      ) > 0
+    ){
+
+      el.className =
+        'syncInfo warn';
+
+      el.textContent =
+        `Sync ran — still ${
+          Number(
+            sync.remainingLag || 0
+          )
+        } draw(s) behind.`;
+
+      return;
+    }
+
+    el.className =
+      'syncInfo good';
+
+    el.textContent =
+      `✓ Smart Sync caught up to official draw #${
+        sync.storedDrawId
+        ??
+        sync.officialDrawId
+        ??
+        '—'
+      }.`;
+
+    return;
+  }
+
+  el.className =
+    'syncInfo good';
+
+  el.textContent =
+    `✓ Already current — official draw #${
+      sync.officialDrawId
+      ??
+      sync.storedDrawId
+      ??
+      '—'
+    }.`;
+}
+
+
+/* STATUS */
+
+function renderStatus(mode){
+
+  const el =
+    document.getElementById(
+      'status'
+    );
+
+  if(mode === 'collecting'){
+    el.innerHTML =
+      '<span class="dot"></span>Live: Collecting';
+    return;
+  }
+
+  if(mode === 'preparing'){
+    el.innerHTML =
+      '<span class="amber">● Preparing</span>';
+    return;
+  }
+
+  if(mode === 'tracking'){
+    el.innerHTML =
+      '<span class="redStatus">● Automatic Tracking</span>';
+    return;
+  }
+
+  if(mode === 'cleanup'){
+    el.innerHTML =
+      '<span class="blue">● Cleanup</span>';
+    return;
+  }
+
+  el.innerHTML =
+    '<span class="mut">● Idle</span>';
+}
+
+
+/* SUMMARY */
+
+function renderSummary(j){
+
+  const c =
+    j?.collection || {};
+
+  const have =
+    Number(
+      c.have || 0
+    );
+
+  const need =
+    Number(
+      c.need || 180
+    );
+
+  const remaining =
+    Number(
+      c.remaining
+      ??
+      Math.max(
+        0,
+        need - have
+      )
+    );
+
+  const pct =
+    need
+      ?
+      Math.min(
+        100,
+        Math.round(
+          have /
+          need *
+          100
+        )
+      )
+      :
+      0;
+
+  document
+    .getElementById('summary')
+    .innerHTML =
+      `
+
+      <div class="stats">
+
+        <div class="stat">
+          <div class="statLabel">
+            Mode
+          </div>
+          <div class="big cBlue">
+            ${esc(j?.mode || '—')}
+          </div>
+        </div>
+
+
+        <div class="stat">
+          <div class="statLabel">
+            Collection
+          </div>
+          <div class="big cGreen">
+            ${have}/${need}
+          </div>
+        </div>
+
+
+        <div class="stat">
+          <div class="statLabel">
+            Remaining
+          </div>
+          <div class="big cOrange">
+            ${remaining}
+          </div>
+        </div>
+
+
+        <div class="stat">
+          <div class="statLabel">
+            Stored Draw
+          </div>
+          <div class="big cPurple">
+            ${
+              j?.latest?.draw_id
+              ??
+              j?.latest?.id
+              ??
+              '—'
+            }
+          </div>
+        </div>
+
+      </div>
+
+
+      <div class="progress">
+
+        <i style="width:${pct}%"></i>
+
+        <span>
+          ${pct}%
+        </span>
+
+      </div>
+      `;
+}
+
+
+/* LATEST */
+
+function latestFromTrack(j){
+
+  if(j?.latest){
+    return j.latest;
+  }
+
+  const pool =
+    Array.isArray(
+      j?.draws
+    )
+    &&
+    j.draws.length
+      ?
+      j.draws
+      :
+      [];
+
+  if(!pool.length){
+    return null;
+  }
+
+  return pool
+    .slice()
+    .sort(
+      (a,b) =>
+        Number(
+          b.id
+          ??
+          b.draw_id
+          ??
+          0
+        )
+        -
+        Number(
+          a.id
+          ??
+          a.draw_id
+          ??
+          0
+        )
+    )[0];
+}
+
+
+function renderLatestDraw(d){
+
+  const box =
+    document.getElementById(
+      'latestDraw'
+    );
+
+  if(!d){
+
+    box.innerHTML =
+      `
+      <section class="card">
+
+        <div class="sectionTitle">
+
+          <div class="title">
+            Latest Draw
+          </div>
+
+          <a
+            class="sourceLink"
+            href="https://www.calottery.com/en/draw-games/hot-spot"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Official Source ↗
+          </a>
+
+        </div>
+
+        <div class="empty">
+          Waiting for latest draw…
+        </div>
+
+      </section>
+      `;
+
+    return;
+  }
+
+  const nums =
+    Array.isArray(
+      d.numbers
+    )
+      ?
+      d.numbers
+        .map(Number)
+        .filter(
+          Number.isFinite
+        )
+      :
+      [];
+
+  const bullRaw =
+    d.bullsEye
+    ??
+    d.bulls_eye
+    ??
+    null;
+
+  const bull =
+    bullRaw === null
+    ||
+    bullRaw === undefined
+    ||
+    bullRaw === ''
+      ?
+      null
+      :
+      Number(
+        bullRaw
+      );
+
+  const drawId =
+    d.id
+    ??
+    d.draw_id
+    ??
+    '—';
+
+  const drawDate =
+    d.date
+    ??
+    d.draw_date
+    ??
+    '';
+
+  const drawTime =
+    d.time
+    ??
+    d.draw_time
+    ??
+    '';
+
+  box.innerHTML =
+    `
+
+    <section class="card">
+
+      <div class="sectionTitle">
+
+        <div class="titleLeft">
+
+          <div class="title">
+            Latest Draw
+          </div>
+
+          <span class="livePill">
+            LIVE
+          </span>
+
+        </div>
+
+
+        <a
+          class="sourceLink"
+          href="https://www.calottery.com/en/draw-games/hot-spot"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Official Source ↗
+        </a>
+
+      </div>
+
+
+      <div class="latestMeta">
+
+        <span class="latestDrawNumber">
+          Draw #${esc(drawId)}
+        </span>
+
+        <span>
+          ${esc(drawDate)}
+          ${
+            drawTime
+              ?
+              ' — ' + esc(drawTime)
+              :
+              ''
+          }
+        </span>
+
+      </div>
+
+
+      <div class="latestCompact">
+
+        <div class="balls">
+
+          ${
+            nums
+              .map(
+                n =>
+                  `
+                  <span
+                    class="ball ${
+                      bull !== null
+                      &&
+                      n === bull
+                        ?
+                        'latestBull'
+                        :
+                        ''
+                    }"
+                  >
+                    ${n}
+                  </span>
+                  `
+              )
+              .join('')
+          }
+
+        </div>
+
+
+        <div class="bullMini">
+
+          <div class="bullMiniLabel">
+            Bulls-eye
+          </div>
+
+          <div class="bullMiniCircle">
+            ${
+              bull !== null
+                ?
+                bull
+                :
+                '—'
+            }
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+    `;
+}
+
+
+/* RESULTS */
+
+function scoreClass(n){
+
+  return n >= 5
+    ?
+    'score5'
+    :
+    n === 4
+      ?
+      'score4'
+      :
+      'score3';
+}
+
+
+function hitClass(n){
+
+  return n >= 5
+    ?
+    'hit5'
+    :
+    n === 4
+      ?
+      'hit4'
+      :
+      'hit3';
+}
+
+
+function resultCard(
+  r,
+  groupNumbers
+){
+
+  const hits =
+    (
+      r.hit_numbers || []
+    ).map(Number);
+
+  const hc =
+    Number(
+      r.hit_count || 0
+    );
+
+  return `
+
+    <div class="result">
+
+      <div class="resultHead">
+
+        <div>
+
+          <b>
+            Draw ${
+              esc(
+                r.draw_id ?? '—'
+              )
+            }
+          </b>
+
+          <span class="mut">
+            — ${esc(r.time || '')}
+          </span>
+
+        </div>
+
+
+        <div
+          class="score ${scoreClass(hc)}"
+        >
+          ${hc}/5
+        </div>
+
+      </div>
+
+
+      <div
+        class="balls"
+        style="margin-top:9px"
+      >
+
+        ${
+          (
+            groupNumbers || []
+          )
+          .map(
+            n => {
+
+              const num =
+                Number(n);
+
+              const isHit =
+                hits.includes(
+                  num
+                );
+
+              const isBull =
+                Boolean(
+                  r.bulls_eye_match
+                )
+                &&
+                Number(
+                  r.bulls_eye
+                ) === num;
+
+              return `
+                <span
+                  class="ball ${
+                    isHit
+                      ?
+                      hitClass(hc)
+                      :
+                      ''
+                  } ${
+                    isBull
+                      ?
+                      'latestBull'
+                      :
+                      ''
+                  }"
+                >
+                  ${num}
+                </span>
+              `;
+            }
+          )
+          .join('')
+        }
+
+      </div>
+
+
+      <div
+        class="small"
+        style="margin-top:7px"
+      >
+
+        Matched:
+
+        <b>
+          ${
+            hits.length
+              ?
+              hits.join(', ')
+              :
+              '—'
+          }
+        </b>
+
+        ${
+          r.bulls_eye_match
+            ?
+            `
+            &nbsp; • &nbsp;
+            <span class="blue">
+              Bulls-eye ${esc(r.bulls_eye)}
+            </span>
+            `
+            :
+            ''
+        }
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+function importantResults(g){
+
+  return (
+    Array.isArray(
+      g?.results
+    )
+      ?
+      g.results
+      :
+      []
+  )
+    .filter(
+      r =>
+        Number(
+          r.hit_count
+        ) >= 3
+    )
+    .sort(
+      (a,b) =>
+        Number(
+          b.draw_id
+        )
+        -
+        Number(
+          a.draw_id
+        )
+    );
+}
+
+
+function bestInfo(results){
+
+  const rows =
+    Array.isArray(
+      results
+    )
+      ?
+      results
+      :
+      [];
+
+  let best =
+    0;
+
+  for(
+    const r of rows
+  ){
+
+    best =
+      Math.max(
+        best,
+        Number(
+          r.hit_count || 0
+        )
+      );
+  }
+
+  if(best < 3){
+
+    return {
+      best,
+      time:'',
+      drawId:null
+    };
+  }
+
+  const match =
+    rows
+      .filter(
+        r =>
+          Number(
+            r.hit_count || 0
+          ) === best
+      )
+      .sort(
+        (a,b) =>
+          Number(
+            b.draw_id || 0
+          )
+          -
+          Number(
+            a.draw_id || 0
+          )
+      )[0]
+      ||
+      null;
+
+  return {
+    best,
+
+    time:
+      String(
+        match?.time || ''
+      ),
+
+    drawId:
+      match?.draw_id
+      ??
+      null
+  };
+}
+
+
+/* GROUP FIVE */
+
+function renderGroupFive(state){
+
+  const root =
+    document.getElementById(
+      'groupFiveContent'
+    );
+
+  const groups =
+    Array.isArray(
+      state?.groups
+    )
+      ?
+      state.groups
+      :
+      [];
+
+  const g =
+    groups.find(
+      x =>
+        String(
+          x?.name || ''
+        ) ===
+        'AUTO Group Five'
+    );
+
+  const top =
+    state?.groupFive || {};
+
+  if(!g){
+
+    const analysisTarget =
+      Number(
+        top.analysisWindow
+        ??
+        50
+      );
+
+    const have =
+      Number(
+        top.analysisHave || 0
+      );
+
+    const remain =
+      Number(
+        top.analysisRemaining
+        ??
+        Math.max(
+          0,
+          analysisTarget -
+          have
+        )
+      );
+
+    root.innerHTML =
+      `
+
+      <section class="card groupFiveHero">
+
+        <div class="fiveHeader">
+
+          <div>
+
+            <div class="fiveTitle">
+              GROUP FIVE
+            </div>
+
+            <div class="fiveRule">
+              First analyze ${analysisTarget} draws
+              → Track next 20
+              → Then add each completed 20-draw block
+            </div>
+
+          </div>
+
+
+          <span class="pill">
+            Cumulative ${analysisTarget} + 20
+          </span>
+
+        </div>
+
+
+        <div class="fiveStats">
+
+          <div class="fiveStat">
+            <div class="fiveStatLabel">
+              Analysis
+            </div>
+            <div class="fiveStatValue cBlue">
+              ${have}/${analysisTarget}
+            </div>
+          </div>
+
+
+          <div class="fiveStat">
+            <div class="fiveStatLabel">
+              Remaining
+            </div>
+            <div class="fiveStatValue cOrange">
+              ${remain}
+            </div>
+          </div>
+
+
+          <div class="fiveStat">
+            <div class="fiveStatLabel">
+              Tracking
+            </div>
+            <div class="fiveStatValue">
+              0/20
+            </div>
+          </div>
+
+
+          <div class="fiveStat">
+            <div class="fiveStatLabel">
+              Cycle
+            </div>
+            <div class="fiveStatValue cPurple">
+              ${top.cycle ?? '—'}
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+      `;
+
+    return;
+  }
+
+  const important =
+    importantResults(g);
+
+  const all =
+    Array.isArray(
+      g.results
+    )
+      ?
+      g.results
+      :
+      [];
+
+  const bi =
+    bestInfo(all);
+
+  const five =
+    g.groupFive
+    ||
+    top
+    ||
+    {};
+
+  const tracked =
+    Number(
+      five.tracked
+      ??
+      all.length
+      ??
+      0
+    );
+
+  const remaining =
+    Number(
+      five.remaining
+      ??
+      Math.max(
+        0,
+        20 - tracked
+      )
+    );
+
+  const cycle =
+    five.cycle
+    ??
+    top.cycle
+    ??
+    '—';
+
+  const currentAnalysis =
+    Number(
+      five.analysisWindow
+      ??
+      top.analysisWindow
+      ??
+      50
+    );
+
+  const nextAnalysis =
+    currentAnalysis + 20;
+
+  const nextSelection =
+    five.nextSelectionAfterDrawId
+    ??
+    top.nextSelectionAfterDrawId
+    ??
+    '—';
+
+  root.innerHTML =
+    `
+
+    <section class="card groupFiveHero">
+
+      <div class="fiveHeader">
+
+        <div>
+
+          <div class="fiveTitle">
+            GROUP FIVE
+          </div>
+
+          <div class="fiveRule">
+            Analyze ${currentAnalysis} draws
+            → Track next 20
+            → Next analysis ${nextAnalysis} draws
+          </div>
+
+        </div>
+
+
+        <span class="pill">
+          ${currentAnalysis}
+          →
+          ${nextAnalysis}
+          Cumulative
+        </span>
+
+      </div>
+
+
+      <div class="balls fiveNumbers">
+
+        ${
+          (
+            g.numbers || []
+          )
+          .map(
+            n =>
+              `
+              <span class="ball">
+                ${Number(n)}
+              </span>
+              `
+          )
+          .join('')
+        }
+
+      </div>
+
+
+      <div class="fiveStats">
+
+        <div class="fiveStat">
+
+          <div class="fiveStatLabel">
+            Progress
+          </div>
+
+          <div class="fiveStatValue cBlue">
+            ${tracked}/20
+          </div>
+
+        </div>
+
+
+        <div class="fiveStat">
+
+          <div class="fiveStatLabel">
+            Remaining
+          </div>
+
+          <div class="fiveStatValue cOrange">
+            ${remaining}
+          </div>
+
+        </div>
+
+
+        <div class="fiveStat">
+
+          <div class="fiveStatLabel">
+            Best
+          </div>
+
+          <div class="fiveStatValue cGreen">
+            ${bi.best}/5
+          </div>
+
+          ${
+            bi.best >= 3
+            &&
+            bi.time
+              ?
+              `
+              <div class="bestTime">
+                ${esc(bi.time)}
+              </div>
+              `
+              :
+              ''
+          }
+
+        </div>
+
+
+        <div class="fiveStat">
+
+          <div class="fiveStatLabel">
+            Cycle
+          </div>
+
+          <div class="fiveStatValue cPurple">
+            ${cycle}
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="small mut"
+        style="margin-top:12px"
+      >
+
+        Analysis window:
+        <b>
+          ${currentAnalysis} draws
+        </b>
+
+        &nbsp; • &nbsp;
+
+        3/5+ results:
+        <b>
+          ${important.length}
+        </b>
+
+        &nbsp; • &nbsp;
+
+        Next selection after draw:
+        <b>
+          ${esc(nextSelection)}
+        </b>
+
+      </div>
+
+
+      <div style="margin-top:10px">
+
+        <button
+          class="toggleBtn"
+          onclick="toggleFiveResults()"
+          id="fiveToggle"
+        >
+          Show Results
+        </button>
+
+      </div>
+
+
+      <div
+        id="fiveResults"
+        style="display:none"
+      >
+
+        ${
+          important.length
+            ?
+            important
+              .map(
+                r =>
+                  resultCard(
+                    r,
+                    g.numbers || []
+                  )
+              )
+              .join('')
+            :
+            `
+            <div class="empty">
+              No 3/5 or better result yet.
+            </div>
+            `
+        }
+
+      </div>
+
+    </section>
+    `;
+}
+
+
+function toggleFiveResults(){
+
+  const box =
+    document.getElementById(
+      'fiveResults'
+    );
+
+  const btn =
+    document.getElementById(
+      'fiveToggle'
+    );
+
+  if(
+    !box
+    ||
+    !btn
+  ){
+    return;
+  }
+
+  const open =
+    box.style.display !==
+    'none';
+
+  box.style.display =
+    open
+      ?
+      'none'
+      :
+      'block';
+
+  btn.textContent =
+    open
+      ?
+      'Show Results'
+      :
+      'Hide Results';
+}
+
+
+/* 12H LEARNER */
+
+function toggleLearnerDetails(){
+
+  const box =
+    document.getElementById(
+      'learnerDetails'
+    );
+
+  const btn =
+    document.getElementById(
+      'learnerToggle'
+    );
+
+  if(
+    !box
+    ||
+    !btn
+  ){
+    return;
+  }
+
+  const open =
+    box.classList.contains(
+      'open'
+    );
+
+  box.classList.toggle(
+    'open'
+  );
+
+  btn.textContent =
+    open
+      ?
+      'Show Learning Details'
+      :
+      'Hide Learning Details';
+}
+
+
+function renderLearner(j){
+
+  const root =
+    document.getElementById(
+      'learnerContent'
+    );
+
+  const pill =
+    document.getElementById(
+      'learnerStatusPill'
+    );
+
+  if(
+    !root
+    ||
+    !pill
+  ){
+    return;
+  }
+
+  if(!j){
+
+    pill.textContent =
+      'Unavailable';
+
+    root.innerHTML =
+      `
+      <div class="empty">
+        12H Learner data unavailable.
+      </div>
+      `;
+
+    return;
+  }
+
+  if(
+    j.reason ===
+    'no-daily-control'
+  ){
+
+    pill.textContent =
+      'Waiting';
+
+    root.innerHTML =
+      `
+      <div class="empty">
+        Waiting for today's 6:00 AM cycle.
+      </div>
+      `;
+
+    return;
+  }
+
+  const have =
+    Number(
+      j.have || 0
+    );
+
+  const target =
+    Number(
+      j.dayTarget || 180
+    );
+
+  const remaining =
+    Number(
+      j.remaining
+      ??
+      Math.max(
+        0,
+        target - have
+      )
+    );
+
+  const pct =
+    target
+      ?
+      Math.min(
+        100,
+        Math.round(
+          have /
+          target *
+          100
+        )
+      )
+      :
+      0;
+
+  if(
+    j.completed
+  ){
+
+    pill.textContent =
+      '12H COMPLETE';
+
+  }else if(
+    j.active
+  ){
+
+    pill.textContent =
+      'LEARNING';
+
+  }else{
+
+    pill.textContent =
+      'COLLECTING';
+  }
+
+  if(
+    !j?.suggestion
+  ){
+
+    root.innerHTML =
+      `
+
+      <div class="learnerStats">
+
+        <div class="learnerStat">
+
+          <div class="learnerStatLabel">
+            Draws
+          </div>
+
+          <div class="learnerStatValue cBlue">
+            ${have}/${target}
+          </div>
+
+        </div>
+
+
+        <div class="learnerStat">
+
+          <div class="learnerStatLabel">
+            Remaining
+          </div>
+
+          <div class="learnerStatValue cOrange">
+            ${remaining}
+          </div>
+
+        </div>
+
+
+        <div class="learnerStat">
+
+          <div class="learnerStatLabel">
+            Minimum Training
+          </div>
+
+          <div class="learnerStatValue">
+            50
+          </div>
+
+        </div>
+
+
+        <div class="learnerStat">
+
+          <div class="learnerStatLabel">
+            Schedule
+          </div>
+
+          <div class="learnerStatValue cPurple">
+            6A–6P
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="progress">
+        <i style="width:${pct}%"></i>
+        <span>${pct}%</span>
+      </div>
+
+      <div class="empty">
+        ${
+          esc(
+            j.message
+            ||
+            'Collecting data before producing a suggestion.'
+          )
+        }
+      </div>
+      `;
+
+    return;
+  }
+
+  const suggestion =
+    j.suggestion || {};
+
+  const numbers =
+    Array.isArray(
+      suggestion.numbers
+    )
+      ?
+      suggestion.numbers.map(Number)
+      :
+      [];
+
+  const core =
+    Array.isArray(
+      suggestion.core
+    )
+      ?
+      suggestion.core.map(Number)
+      :
+      [];
+
+  const leaders =
+    Array.isArray(
+      j?.walkForward?.leaderboard
+    )
+      ?
+      j.walkForward.leaderboard
+      :
+      [];
+
+  const strongest =
+    Array.isArray(
+      j.strongestNumbers
+    )
+      ?
+      j.strongestNumbers
+      :
+      [];
+
+  root.innerHTML =
+    `
+
+    <div class="balls learnerNumbers">
+
+      ${
+        numbers
+          .map(
+            n =>
+              `
+              <span
+                class="ball ${
+                  core.includes(
+                    Number(n)
+                  )
+                    ?
+                    'coreBall'
+                    :
+                    ''
+                }"
+              >
+                ${Number(n)}
+              </span>
+              `
+          )
+          .join('')
+      }
+
+    </div>
+
+
+    <div
+      class="small mut"
+      style="margin-top:8px"
+    >
+      Blue-highlighted numbers = current Core 3
+    </div>
+
+
+    <div class="learnerStats">
+
+      <div class="learnerStat">
+
+        <div class="learnerStatLabel">
+          Draws Learned
+        </div>
+
+        <div class="learnerStatValue cBlue">
+          ${have}/${target}
+        </div>
+
+      </div>
+
+
+      <div class="learnerStat">
+
+        <div class="learnerStatLabel">
+          Remaining
+        </div>
+
+        <div class="learnerStatValue cOrange">
+          ${remaining}
+        </div>
+
+      </div>
+
+
+      <div class="learnerStat">
+
+        <div class="learnerStatLabel">
+          Confidence
+        </div>
+
+        <div class="learnerStatValue cGreen">
+          ${Number(
+            suggestion.confidence || 0
+          )}%
+        </div>
+
+      </div>
+
+
+      <div class="learnerStat">
+
+        <div class="learnerStatLabel">
+          Walk-Forward Stages
+        </div>
+
+        <div class="learnerStatValue cPurple">
+          ${Number(
+            j?.walkForward
+              ?.completedStages || 0
+          )}
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="progress">
+      <i style="width:${pct}%"></i>
+      <span>${pct}% of 12H learning window</span>
+    </div>
+
+
+    <div class="learnerStrategy">
+
+      Current winning strategy:
+
+      <b>
+        ${esc(
+          suggestion.strategyLabel
+          ||
+          suggestion.strategy
+          ||
+          '—'
+        )}
+      </b>
+
+      &nbsp; • &nbsp;
+
+      ${
+        suggestion.provisional
+          ?
+          '<span class="amber">Provisional — still learning</span>'
+          :
+          '<span class="ok">Final 12H selection</span>'
+      }
+
+      <br><br>
+
+      Core 3:
+
+      <b>
+        ${
+          core.length
+            ?
+            core.join(' - ')
+            :
+            '—'
+        }
+      </b>
+
+    </div>
+
+
+    <div style="margin-top:12px">
+
+      <button
+        class="toggleBtn"
+        id="learnerToggle"
+        onclick="toggleLearnerDetails()"
+      >
+        Show Learning Details
+      </button>
+
+    </div>
+
+
+    <div
+      class="learnerDetails"
+      id="learnerDetails"
+    >
+
+      <div
+        class="title"
+        style="font-size:17px;margin-top:14px"
+      >
+        Strategy Leaderboard
+      </div>
+
+
+      ${
+        leaders.length
+          ?
+          `
+          <div style="overflow-x:auto">
+
+            <table class="leaderTable">
+
+              <thead>
+
+                <tr>
+                  <th>Strategy</th>
+                  <th>Wins</th>
+                  <th>3/5+</th>
+                  <th>4/5+</th>
+                  <th>5/5</th>
+                  <th>Avg</th>
+                  <th>Score</th>
+                </tr>
+
+              </thead>
+
+              <tbody>
+
+                ${
+                  leaders
+                    .map(
+                      (
+                        row,
+                        index
+                      ) =>
+                        `
+                        <tr>
+
+                          <td>
+                            ${
+                              index === 0
+                                ?
+                                '★ '
+                                :
+                                ''
+                            }
+                            ${esc(
+                              row.label
+                              ||
+                              row.id
+                              ||
+                              '—'
+                            )}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.wins || 0
+                            )}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.threePlus || 0
+                            )}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.fourPlus || 0
+                            )}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.exact5 || 0
+                            )}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.averageHits || 0
+                            ).toFixed(2)}
+                          </td>
+
+                          <td>
+                            ${Number(
+                              row.validationScore || 0
+                            ).toFixed(1)}
+                          </td>
+
+                        </tr>
+                        `
+                    )
+                    .join('')
+                }
+
+              </tbody>
+
+            </table>
+
+          </div>
+          `
+          :
+          `
+          <div class="empty">
+            No completed walk-forward stages yet.
+          </div>
+          `
+      }
+
+
+      <div
+        class="title"
+        style="font-size:17px;margin-top:18px"
+      >
+        Strongest Numbers Today
+      </div>
+
+
+      <div class="learnerStrong">
+
+        ${
+          strongest
+            .slice(
+              0,
+              10
+            )
+            .map(
+              x =>
+                `
+                <div class="strongItem">
+
+                  <div class="strongNumber">
+                    ${Number(
+                      x.number
+                    )}
+                  </div>
+
+                  <div class="strongCount">
+                    Appeared:
+                    <b>
+                      ${Number(
+                        x.count || 0
+                      )}
+                    </b>
+                  </div>
+
+                  <div class="strongCount">
+                    Recent:
+                    <b>
+                      ${Number(
+                        x.recentCount || 0
+                      )}
+                    </b>
+                  </div>
+
+                  <div class="strongCount">
+                    Strength:
+                    <b>
+                      ${Number(
+                        x.strength || 0
+                      ).toFixed(1)}
+                    </b>
+                  </div>
+
+                </div>
+                `
+            )
+            .join('')
+        }
+
+      </div>
+
+
+      <div
+        class="small mut"
+        style="margin-top:14px;line-height:1.6"
+      >
+        The learner trains only on earlier draws and tests each method
+        on the next unseen 20-draw block. It does not use those future
+        validation draws when making the earlier selection.
+      </div>
+
+    </div>
+    `;
+}
+
+
+/* AUTOMATIC GROUPS */
+
+function groupLabel(
+  g,
+  index
+){
+
+  const name =
+    String(
+      g?.name || ''
+    );
+
+  if(name === 'AUTO Group Special'){
+    return 'Special Group';
+  }
+
+  if(name === 'AUTO Group Advanced'){
+    return 'Advanced Group';
+  }
+
+  const match =
+    name.match(
+      /^AUTO Group (\d+)$/
+    );
+
+  if(match){
+    return (
+      `Automatic Group ${match[1]}`
+    );
+  }
+
+  return (
+    name
+    ||
+    `Automatic Group ${index+1}`
+  );
+}
+
+
+function automaticRow(
+  g,
+  index
+){
+
+  const important =
+    importantResults(g);
+
+  const all =
+    Array.isArray(
+      g.results
+    )
+      ?
+      g.results
+      :
+      [];
+
+  const bi =
+    bestInfo(all);
+
+  const id =
+    `autoRow_${index}`;
+
+  return `
+
+    <div
+      class="groupRow"
+      id="${id}"
+    >
+
+      <div class="groupSummary">
+
+
+        <div class="groupNameCell">
+
+          <div class="groupMiniLabel">
+            Group
+          </div>
+
+          <div class="groupName">
+            ${esc(groupLabel(g,index))}
+          </div>
+
+        </div>
+
+
+        <div class="groupNumbersCell">
+
+          <div class="groupMiniLabel">
+            Numbers
+          </div>
+
+          <div class="balls">
+
+            ${
+              (
+                g.numbers || []
+              )
+              .map(
+                n =>
+                  `
+                  <span class="ball">
+                    ${Number(n)}
+                  </span>
+                  `
+              )
+              .join('')
+            }
+
+          </div>
+
+        </div>
+
+
+        <div>
+
+          <div class="groupMiniLabel">
+            Best
+          </div>
+
+          <div class="groupMetric cGreen">
+            ${bi.best}/5
+          </div>
+
+          ${
+            bi.best >= 3
+            &&
+            bi.time
+              ?
+              `
+              <div class="bestTime">
+                ${esc(bi.time)}
+              </div>
+              `
+              :
+              ''
+          }
+
+        </div>
+
+
+        <div>
+
+          <div class="groupMiniLabel">
+            3+
+          </div>
+
+          <div class="groupMetric cBlue">
+            ${important.length}
+          </div>
+
+        </div>
+
+
+        <div>
+
+          <div class="groupMiniLabel">
+            Last Seen
+          </div>
+
+          <div class="groupMetric cPurple">
+            ${
+              g.last_seen_draw_id
+              ??
+              g.lastSeenDrawId
+              ??
+              '—'
+            }
+          </div>
+
+        </div>
+
+
+        <div>
+
+          <button
+            class="toggleBtn"
+            onclick="toggleGroup('${id}')"
+          >
+            Show Results
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <div class="groupDetails">
+
+        ${
+          important.length
+            ?
+            important
+              .map(
+                r =>
+                  resultCard(
+                    r,
+                    g.numbers || []
+                  )
+              )
+              .join('')
+            :
+            `
+            <div class="empty">
+              No 3/5 or better result yet.
+            </div>
+            `
+        }
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+function toggleGroup(id){
+
+  const row =
+    document.getElementById(
+      id
+    );
+
+  if(!row){
+    return;
+  }
+
+  const wasOpen =
+    row.classList.contains(
+      'open'
+    );
+
+  row.classList.toggle(
+    'open'
+  );
+
+  const btn =
+    row.querySelector(
+      '.toggleBtn'
+    );
+
+  if(btn){
+
+    btn.textContent =
+      wasOpen
+        ?
+        'Show Results'
+        :
+        'Hide Results';
+  }
+}
+
+
+function renderAutomaticGroups(state){
+
+  const groups =
+    Array.isArray(
+      state?.groups
+    )
+      ?
+      state.groups
+      :
+      [];
+
+  const other =
+    groups.filter(
+      g =>
+        String(
+          g?.name || ''
+        ) !==
+        'AUTO Group Five'
+    );
+
+  const root =
+    document.getElementById(
+      'autoContent'
+    );
+
+  root.innerHTML =
+    other.length
+      ?
+      other
+        .map(
+          automaticRow
+        )
+        .join('')
+      :
+      `
+      <div class="empty">
+        No other automatic groups yet.
+      </div>
+      `;
+}
+
+
+/* MANUAL GROUPS */
+
+function normalizeManuals(j){
+
+  return Array.isArray(
+    j?.manuals
+  )
+    ?
+    [
+      j.manuals[0] || null,
+      j.manuals[1] || null
+    ]
+    :
+    [
+      j?.manual || null,
+      null
+    ];
+}
+
+
+function fillInputs(
+  slot,
+  nums
+){
+
+  for(
+    let i = 1;
+    i <= 5;
+    i++
+  ){
+
+    const el =
+      document.getElementById(
+        `m${slot}_${i}`
+      );
+
+    if(!el){
+      continue;
+    }
+
+    if(
+      document.activeElement !==
+      el
+    ){
+
+      el.value =
+        nums?.[i-1]
+        ??
+        '';
+    }
+  }
+}
+
+
+function manualImportantMatches(m){
+
+  return (
+    Array.isArray(
+      m?.matches
+    )
+      ?
+      m.matches
+      :
+      []
+  )
+    .filter(
+      r =>
+        Number(
+          r.hit_count || 0
+        ) >= 3
+    )
+    .sort(
+      (a,b) =>
+        Number(
+          b.draw_id || 0
+        )
+        -
+        Number(
+          a.draw_id || 0
+        )
+    );
+}
+
+
+function toggleManualResults(slot){
+
+  const box =
+    document.getElementById(
+      `manualResults${slot}`
+    );
+
+  const btn =
+    document.getElementById(
+      `manualToggle${slot}`
+    );
+
+  if(
+    !box
+    ||
+    !btn
+  ){
+    return;
+  }
+
+  const open =
+    box.classList.contains(
+      'open'
+    );
+
+  box.classList.toggle(
+    'open'
+  );
+
+  btn.textContent =
+    open
+      ?
+      'Show Results'
+      :
+      'Hide Results';
+}
+
+
+function renderManualSlot(
+  slot,
+  m
+){
+
+  const groupBox =
+    document.getElementById(
+      `manualGroup${slot}`
+    );
+
+  const state =
+    document.getElementById(
+      `manualState${slot}`
+    );
+
+  const content =
+    document.getElementById(
+      `manualContent${slot}`
+    );
+
+  if(
+    !groupBox
+    ||
+    !state
+    ||
+    !content
+  ){
+    return;
+  }
+
+  if(!m){
+
+    groupBox
+      .classList
+      .remove(
+        'active'
+      );
+
+    state.className =
+      'manualState mut';
+
+    state.textContent =
+      '● Not tracking';
+
+    fillInputs(
+      slot,
+      []
+    );
+
+    content.innerHTML =
+      `
+      <div class="empty">
+        No manual tracking data yet.
+      </div>
+      `;
+
+    return;
+  }
+
+  const nums =
+    (
+      m.numbers || []
+    ).map(
+      Number
+    );
+
+  fillInputs(
+    slot,
+    nums
+  );
+
+  if(m.active){
+
+    groupBox
+      .classList
+      .add(
+        'active'
+      );
+
+    state.className =
+      'manualState ok';
+
+    state.textContent =
+      '● Tracking';
+
+  }else{
+
+    groupBox
+      .classList
+      .remove(
+        'active'
+      );
+
+    state.className =
+      'manualState amber';
+
+    state.textContent =
+      '● Stopped';
+  }
+
+  const matches =
+    manualImportantMatches(
+      m
+    );
+
+  const latestStrong =
+    m?.lastSeenResult
+    ??
+    (
+      matches.length
+        ?
+        {
+          drawId:
+            matches[0].draw_id,
+
+          hitCount:
+            Number(
+              matches[0].hit_count || 0
+            ),
+
+          time:
+            matches[0].time || ''
+        }
+        :
+        null
+    );
+
+  const latestHit =
+    Number(
+      latestStrong?.hitCount
+      ??
+      0
+    );
+
+  const latestTime =
+    String(
+      latestStrong?.time
+      ??
+      ''
+    );
+
+  const latestDrawId =
+    latestStrong?.drawId
+    ??
+    m?.lastSeenDrawId
+    ??
+    null;
+
+  content.innerHTML =
+    `
+
+    <div class="manualMeta">
+
+      Started after draw
+      <b>
+        ${m.startDrawId ?? '—'}
+      </b>
+
+      &nbsp; • &nbsp;
+
+      Last checked
+      <b>
+        ${
+          m.trackingLastSeenDrawId
+          ??
+          '—'
+        }
+      </b>
+
+    </div>
+
+
+    <div class="manualSummary">
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          Best
+        </div>
+
+        <div class="manualMetricValue cGreen">
+          ${latestHit}/5
+        </div>
+
+        ${
+          latestHit >= 3
+          &&
+          latestTime
+            ?
+            `
+            <div class="bestTime">
+              ${esc(latestTime)}
+            </div>
+            `
+            :
+            ''
+        }
+
+      </div>
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          3/5+
+        </div>
+
+        <div class="manualMetricValue cBlue">
+          ${matches.length}
+        </div>
+
+      </div>
+
+
+      <div class="manualMetric">
+
+        <div class="manualMetricLabel">
+          Last Seen
+        </div>
+
+        <div class="manualMetricValue cPurple">
+          ${
+            latestDrawId
+            ??
+            '—'
+          }
+        </div>
+
+      </div>
+
+
+      <div class="manualShowCell">
+
+        <button
+          class="toggleBtn"
+          id="manualToggle${slot}"
+          onclick="toggleManualResults(${slot})"
+        >
+          Show Results
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div
+      class="manualResults"
+      id="manualResults${slot}"
+    >
+
+      ${
+        matches.length
+          ?
+          matches
+            .map(
+              r =>
+                resultCard(
+                  r,
+                  nums
+                )
+            )
+            .join('')
+          :
+          `
+          <div class="empty">
+            No 3/5 or better result yet.
+          </div>
+          `
+      }
+
+    </div>
+    `;
+}
+
+
+function renderManuals(j){
+
+  const m =
+    normalizeManuals(j);
+
+  renderManualSlot(
+    1,
+    m[0]
+  );
+
+  renderManualSlot(
+    2,
+    m[1]
+  );
+}
+
+
+function renderFusion(j){
+
+  renderManualSlot(
+    3,
+    j?.manual || null
+  );
+
+  const info =
+    document.getElementById(
+      'fusionSelectionInfo'
+    );
+
+  if(
+    j?.selection
+    &&
+    info
+  ){
+
+    info.innerHTML =
+      `
+      <div class="fusionSelection">
+
+        Analyzed:
+        <b>
+          ${Number(
+            j.selection.analyzedDraws || 0
+          )} draws
+        </b>
+
+        &nbsp; • &nbsp;
+
+        Combinations tested:
+        <b>
+          ${Number(
+            j.selection.combinationsTested || 0
+          )}
+        </b>
+
+        &nbsp; • &nbsp;
+
+        Historical score:
+        <b>
+          ${Number(
+            j.selection.exact5 || 0
+          )} × 5/5,
+          ${Number(
+            j.selection.fourPlus || 0
+          )} × 4/5+,
+          ${Number(
+            j.selection.threePlus || 0
+          )} × 3/5+
+        </b>
+
+      </div>
+      `;
+  }
+}
+
+
+function readNumbers(slot){
+
+  const nums =
+    [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+    .map(
+      i =>
+        Number(
+          document
+            .getElementById(
+              `m${slot}_${i}`
+            )
+            .value
+        )
+    );
+
+  if(
+    nums.some(
+      n =>
+        !Number.isInteger(n)
+        ||
+        n < 1
+        ||
+        n > 80
+    )
+  ){
+
+    throw Error(
+      'Enter exactly 5 numbers from 1 to 80.'
+    );
+  }
+
+  if(
+    new Set(nums).size !== 5
+  ){
+
+    throw Error(
+      'All 5 numbers must be different.'
+    );
+  }
+
+  return nums;
+}
+
+
+function setManualBusy(
+  slot,
+  isBusy
+){
+
+  document
+    .getElementById(
+      `start${slot}`
+    )
+    .disabled =
+      isBusy;
+
+  document
+    .getElementById(
+      `stop${slot}`
+    )
+    .disabled =
+      isBusy;
+
+  document
+    .getElementById(
+      `clear${slot}`
+    )
+    .disabled =
+      isBusy;
+}
+
+
+async function startManual(slot){
+
+  const msg =
+    document.getElementById(
+      `msg${slot}`
+    );
+
+  try{
+
+    const numbers =
+      readNumbers(
+        slot
+      );
+
+    setManualBusy(
+      slot,
+      true
+    );
+
+    msg.className =
+      'manualMsg mut';
+
+    msg.textContent =
+      'Starting new cycle…';
+
+    const j =
+      await api(
+        '/api/group',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'start',
+              slot,
+              numbers
+            })
+        }
+      );
+
+    msg.className =
+      'manualMsg ok';
+
+    msg.textContent =
+      `New tracking cycle started after draw ${
+        j?.latest?.id
+        ??
+        j?.manual?.startDrawId
+        ??
+        '—'
+      }. Previous cycle results were reset.`;
+
+    renderManuals(j);
+
+  }catch(e){
+
+    msg.className =
+      'manualMsg bad';
+
+    msg.textContent =
+      String(
+        e?.message || e
+      );
+
+  }finally{
+
+    setManualBusy(
+      slot,
+      false
+    );
+  }
+}
+
+
+async function stopManual(slot){
+
+  const msg =
+    document.getElementById(
+      `msg${slot}`
+    );
+
+  try{
+
+    setManualBusy(
+      slot,
+      true
+    );
+
+    msg.className =
+      'manualMsg mut';
+
+    msg.textContent =
+      'Stopping…';
+
+    const j =
+      await api(
+        '/api/group',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'stop',
+              slot
+            })
+        }
+      );
+
+    msg.className =
+      'manualMsg amber';
+
+    msg.textContent =
+      'Tracking stopped. Existing results were kept.';
+
+    renderManuals(j);
+
+  }catch(e){
+
+    msg.className =
+      'manualMsg bad';
+
+    msg.textContent =
+      String(
+        e?.message || e
+      );
+
+  }finally{
+
+    setManualBusy(
+      slot,
+      false
+    );
+  }
+}
+
+
+async function clearManual(slot){
+
+  const msg =
+    document.getElementById(
+      `msg${slot}`
+    );
+
+  try{
+
+    setManualBusy(
+      slot,
+      true
+    );
+
+    msg.className =
+      'manualMsg mut';
+
+    msg.textContent =
+      'Clearing…';
+
+    const j =
+      await api(
+        '/api/group',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'clear',
+              slot
+            })
+        }
+      );
+
+    fillInputs(
+      slot,
+      []
+    );
+
+    msg.className =
+      'manualMsg ok';
+
+    msg.textContent =
+      'Manual group cleared.';
+
+    renderManuals(j);
+
+    fillInputs(
+      slot,
+      []
+    );
+
+  }catch(e){
+
+    msg.className =
+      'manualMsg bad';
+
+    msg.textContent =
+      String(
+        e?.message || e
+      );
+
+  }finally{
+
+    setManualBusy(
+      slot,
+      false
+    );
+  }
+}
+
+
+/* FUSION GROUP 3 */
+
+function setFusionBusy(
+  isBusy
+){
+
+  document
+    .getElementById(
+      'start3'
+    )
+    .disabled =
+      isBusy;
+
+  document
+    .getElementById(
+      'generate3'
+    )
+    .disabled =
+      isBusy;
+
+  document
+    .getElementById(
+      'stop3'
+    )
+    .disabled =
+      isBusy;
+
+  document
+    .getElementById(
+      'clear3'
+    )
+    .disabled =
+      isBusy;
+}
+
+
+async function startFusion(){
+
+  const msg =
+    document.getElementById(
+      'msg3'
+    );
+
+  try{
+
+    const numbers =
+      readNumbers(
+        3
+      );
+
+    setFusionBusy(
+      true
+    );
+
+    msg.className =
+      'manualMsg mut';
+
+    msg.textContent =
+      'Starting Manual Group 3…';
+
+    const j =
+      await api(
+        '/api/fusion',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'start',
+              numbers
+            })
+        }
+      );
+
+    msg.className =
+      'manualMsg ok';
+
+    if(j?.unchanged){
+
+      msg.textContent =
+        `Already tracking these numbers. Original start draw ${
+          j?.manual?.startDrawId
+          ??
+          '—'
+        } was preserved.`;
+
+    }else if(j?.resumed){
+
+      msg.textContent =
+        `Manual Group 3 resumed from draw ${
+          j?.latest?.id
+          ??
+          '—'
+        }. Previous results were preserved.`;
+
+    }else{
+
+      msg.textContent =
+        `Manual Group 3 started after draw ${
+          j?.latest?.id
+          ??
+          j?.manual?.startDrawId
+          ??
+          '—'
+        }.`;
+    }
+
+    const info =
+      document.getElementById(
+        'fusionSelectionInfo'
+      );
+
+    if(info){
+      info.innerHTML =
+        `
+        <div class="fusionSelection">
+          Manual mode — tracking the 5 numbers you entered.
+        </div>
+        `;
+    }
+
+    renderFusion(
+      j
+    );
+
+  }catch(e){
+
+    msg.className =
+      'manualMsg bad';
+
+    msg.textContent =
+      String(
+        e?.message || e
+      );
+
+  }finally{
+
+    setFusionBusy(
+      false
+    );
+  }
+}
+
+
+async function generateFusion(){
+
+  const msg =
+    document.getElementById(
+      'msg3'
+    );
+
+  try{
+
+    setFusionBusy(
+      true
+    );
+
+    msg.className =
+      'manualMsg mut';
+
+    msg.textContent =
+      'Analyzing Manual Group 1 + 2 and testing combinations…';
+
+    const j =
+      await api(
+        '/api/fusion',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'generate'
+            })
+        }
+      );
+
+    msg.className =
+      'manualMsg ok';
+
+    msg.textContent =
+      j?.unchanged
+        ?
+        'The same five numbers are still ranked first. Existing tracking was preserved.'
+        :
+        `New Fusion numbers selected. Tracking starts after draw ${
+          j?.latest?.id
+          ??
+          j?.manual?.startDrawId
+          ??
+          '—'
+        }.`;
+
+    renderFusion(
+      j
+    );
+
+  }catch(e){
+
+    msg.className =
+      'manualMsg bad';
+
+    msg.textContent =
+      String(
+        e?.message || e
+      );
+
+  }finally{
+
+    setFusionBusy(
+      false
+    );
+  }
+}
+
+
+async function stopFusion(){
+
+  const msg =
+    document.getElementById(
+      'msg3'
+    );
+
+  try{
+
+    setFusionBusy(
+      true
+    );
+
+    msg.className =
+      'manualMsg mut';
+
+    msg.textContent =
+      'Stopping Fusion tracking…';
+
+    const j =
+      await api(
+        '/api/fusion',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'stop'
+            })
+        }
+      );
+
+    msg.className =
+      'manualMsg amber';
+
+    msg.textContent =
+      'Fusion tracking stopped. Existing results were kept.';
+
+    renderFusion(
+      j
+    );
+
+  }catch(e){
+
+    msg.className =
+      'manualMsg bad';
+
+    msg.textContent =
+      String(
+        e?.message || e
+      );
+
+  }finally{
+
+    setFusionBusy(
+      false
+    );
+  }
+}
+
+
+async function clearFusion(){
+
+  const msg =
+    document.getElementById(
+      'msg3'
+    );
+
+  try{
+
+    setFusionBusy(
+      true
+    );
+
+    msg.className =
+      'manualMsg mut';
+
+    msg.textContent =
+      'Clearing Fusion Group 3…';
+
+    const j =
+      await api(
+        '/api/fusion',
+        {
+          method:'POST',
+
+          headers:{
+            'content-type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              action:'clear'
+            })
+        }
+      );
+
+    fillInputs(
+      3,
+      []
+    );
+
+    const info =
+      document.getElementById(
+        'fusionSelectionInfo'
+      );
+
+    if(info){
+      info.innerHTML =
+        '';
+    }
+
+    msg.className =
+      'manualMsg ok';
+
+    msg.textContent =
+      'Manual Group 3 cleared. Enter numbers and press Start, or press Generate Numbers.';
+
+    renderFusion(
+      j
+    );
+
+    fillInputs(
+      3,
+      []
+    );
+
+  }catch(e){
+
+    msg.className =
+      'manualMsg bad';
+
+    msg.textContent =
+      String(
+        e?.message || e
+      );
+
+  }finally{
+
+    setFusionBusy(
+      false
+    );
+  }
+}
+
+
+/* SMART SYNC */
+
+async function smartSync(){
+
+  const el =
+    document.getElementById(
+      'syncInfo'
+    );
+
+  el.className =
+    'syncInfo working';
+
+  el.textContent =
+    'Checking official draw and syncing if needed…';
+
+  try{
+
+    const result =
+      await api(
+        '/api/sync?ts='
+        +
+        Date.now()
+      );
+
+    renderSyncInfo(
+      result
+    );
+
+    return result;
+
+  }catch(e){
+
+    el.className =
+      'syncInfo warn';
+
+    el.textContent =
+      'Smart Sync warning: '
+      +
+      String(
+        e?.message || e
+      );
+
+    return null;
+  }
+}
+
+
+/* LOAD */
+
+let loadingAll =
+  false;
+
+
+async function loadAll(){
+
+  if(
+    loadingAll
+  ){
+    return;
+  }
+
+  loadingAll =
+    true;
+
+  const refreshBtn =
+    document.getElementById(
+      'refresh'
+    );
+
+  refreshBtn.disabled =
+    true;
+
+  busy(
+    'Checking official draw…'
+  );
+
+  try{
+
+    await smartSync();
+
+    busy(
+      'Loading updated results…'
+    );
+
+    const ts =
+      Date.now();
+
+    const [
+      stateResult,
+      trackResult,
+      manualResult,
+      fusionResult,
+      learnerResult
+    ] =
+      await Promise.allSettled([
+
+        api(
+          '/api/state?ts='
+          +
+          ts
+        ),
+
+        api(
+          '/api/track?ts='
+          +
+          ts
+        ),
+
+        api(
+          '/api/group?ts='
+          +
+          ts
+        ),
+
+        api(
+          '/api/fusion?ts='
+          +
+          ts
+        ),
+
+        api(
+          '/api/group-six?mode=learner&ts='
+          +
+          ts
+        )
+
+      ]);
+
+
+    if(
+      stateResult.status ===
+      'fulfilled'
+    ){
+
+      const state =
+        stateResult.value;
+
+      renderSummary(
+        state
+      );
+
+      renderStatus(
+        state.mode
+      );
+
+      renderGroupFive(
+        state
+      );
+
+      renderAutomaticGroups(
+        state
+      );
+
+    }else{
+
+      document
+        .getElementById(
+          'status'
+        )
+        .innerHTML =
+          `
+          <span class="bad">
+            ${
+              esc(
+                stateResult
+                  .reason
+                  ?.message
+                ||
+                'State error'
+              )
+            }
+          </span>
+          `;
+    }
+
+
+    if(
+      trackResult.status ===
+      'fulfilled'
+    ){
+
+      renderLatestDraw(
+        latestFromTrack(
+          trackResult.value
+        )
+      );
+
+    }else{
+
+      document
+        .getElementById(
+          'latestDraw'
+        )
+        .innerHTML =
+          `
+          <section class="card">
+
+            <div class="title">
+              Latest Draw
+            </div>
+
+            <div
+              class="bad"
+              style="margin-top:10px"
+            >
+              ${
+                esc(
+                  trackResult
+                    .reason
+                    ?.message
+                  ||
+                  'Latest draw error'
+                )
+              }
+            </div>
+
+          </section>
+          `;
+    }
+
+
+    if(
+      learnerResult.status ===
+      'fulfilled'
+    ){
+
+      renderLearner(
+        learnerResult.value
+      );
+
+    }else{
+
+      renderLearner(
+        null
+      );
+
+      const root =
+        document.getElementById(
+          'learnerContent'
+        );
+
+      if(root){
+
+        root.innerHTML =
+          `
+          <div class="bad" style="margin-top:10px">
+            ${
+              esc(
+                learnerResult
+                  .reason
+                  ?.message
+                ||
+                '12H Learner error'
+              )
+            }
+          </div>
+          `;
+      }
+    }
+
+
+    if(
+      manualResult.status ===
+      'fulfilled'
+    ){
+
+      renderManuals(
+        manualResult.value
+      );
+
+    }else{
+
+      const msg =
+        `
+        <div
+          class="bad"
+          style="margin-top:10px"
+        >
+          ${
+            esc(
+              manualResult
+                .reason
+                ?.message
+              ||
+              'Manual tracker error'
+            )
+          }
+        </div>
+        `;
+
+      document
+        .getElementById(
+          'manualContent1'
+        )
+        .innerHTML =
+          msg;
+
+      document
+        .getElementById(
+          'manualContent2'
+        )
+        .innerHTML =
+          msg;
+    }
+
+
+    if(
+      fusionResult.status ===
+      'fulfilled'
+    ){
+
+      renderFusion(
+        fusionResult.value
+      );
+
+    }else{
+
+      document
+        .getElementById(
+          'manualContent3'
+        )
+        .innerHTML =
+          `
+          <div
+            class="bad"
+            style="margin-top:10px"
+          >
+            ${
+              esc(
+                fusionResult
+                  .reason
+                  ?.message
+                ||
+                'Fusion tracker error'
+              )
+            }
+          </div>
+          `;
+    }
+
+  }finally{
+
+    busy('');
+
+    refreshBtn.disabled =
+      false;
+
+    loadingAll =
+      false;
+  }
+}
+
+
+/* BUTTONS */
+
+document
+  .getElementById(
+    'refresh'
+  )
+  .addEventListener(
+    'click',
+    loadAll
+  );
+
+
+for(
+  const slot of [
+    1,
+    2
+  ]
+){
+
+  document
+    .getElementById(
+      `start${slot}`
+    )
+    .addEventListener(
+      'click',
+      () =>
+        startManual(
+          slot
+        )
+    );
+
+  document
+    .getElementById(
+      `stop${slot}`
+    )
+    .addEventListener(
+      'click',
+      () =>
+        stopManual(
+          slot
+        )
+    );
+
+  document
+    .getElementById(
+      `clear${slot}`
+    )
+    .addEventListener(
+      'click',
+      () =>
+        clearManual(
+          slot
+        )
+    );
+}
+
+
+document
+  .getElementById(
+    'start3'
+  )
+  .addEventListener(
+    'click',
+    startFusion
+  );
+
+
+document
+  .getElementById(
+    'generate3'
+  )
+  .addEventListener(
+    'click',
+    generateFusion
+  );
+
+
+document
+  .getElementById(
+    'stop3'
+  )
+  .addEventListener(
+    'click',
+    stopFusion
+  );
+
+
+document
+  .getElementById(
+    'clear3'
+  )
+  .addEventListener(
+    'click',
+    clearFusion
+  );
+
+
+/* AUTO REFRESH */
+
+loadAll();
+
+
+setInterval(
+  loadAll,
+  60000
+);
+
+
+document.addEventListener(
+  'visibilitychange',
+  () => {
+
+    if(
+      document.visibilityState ===
+      'visible'
+    ){
+      loadAll();
+    }
+  }
+);
+
+
+window.addEventListener(
+  'focus',
+  loadAll
+);
+
+
+window.addEventListener(
+  'pageshow',
+  loadAll
+);
+
+</script>
+
+</body>
+</html>
