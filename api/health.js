@@ -1,9 +1,10 @@
 'use strict';
 
-const { db, californiaNowParts, cycleDateKey, scheduleMode } = require('./lib');
+const { db, getMany, californiaNowParts, cycleDateKey, scheduleMode } = require('./lib');
 const { runDailyPatternLearner } = require('./group-six');
 const { selectFive: persistentSelectFive } = require('../lib/group-five');
 const { analyzeGroupWave } = require('../lib/wave-engine');
+const { analyzePrecursors } = require('../lib/precursor-engine');
 
 const WAVE_BACKTEST_CUTOFF = 3298607;
 const WAVE_BACKTEST_WINDOW = 250;
@@ -18,6 +19,10 @@ const CORE3_MAX_ACTIVE = 3;
 const CORE3_MIN_OCCURRENCES = 10;
 const CORE3_MAX_STALE_DRAWS = 25;
 const TRACKER_MAX_SETS = 24;
+const PRECURSOR_BACKFILL_BATCH = 32;
+const PRECURSOR_HISTORY_DAYS = 180;
+const PRECURSOR_PAGE_SIZE = 1000;
+const PRECURSOR_ANALYSIS_MAX_DRAWS = 8000;
 
 function norm(values) {
   return [...new Set((values || []).map(Number))]
@@ -830,6 +835,146 @@ async function trackerEvaluate(rawSets) {
   };
 }
 
+function parseStoredDate(value) {
+  const date = new Date(String(value || ''));
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+async function precursorArchiveRows(limit = PRECURSOR_ANALYSIS_MAX_DRAWS) {
+  const out = [];
+  let offset = 0;
+  while (out.length < limit) {
+    const take = Math.min(PRECURSOR_PAGE_SIZE, limit - out.length);
+    const rows = (
+      await db(
+        `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&order=draw_id.desc&limit=${take}&offset=${offset}`
+      )
+    ) || [];
+    if (!rows.length) break;
+    out.push(...rows);
+    if (rows.length < take) break;
+    offset += rows.length;
+  }
+  return out
+    .filter(d => Number.isFinite(Number(d?.draw_id)) && norm(d?.numbers).length === 20)
+    .sort((a, b) => Number(a.draw_id) - Number(b.draw_id));
+}
+
+async function precursorArchiveEdges() {
+  const oldestRows = (
+    await db('hotspot_draws?select=draw_id,draw_date,draw_time&order=draw_id.asc&limit=1')
+  ) || [];
+  const newestRows = (
+    await db('hotspot_draws?select=draw_id,draw_date,draw_time&order=draw_id.desc&limit=1')
+  ) || [];
+  return { oldest: oldestRows[0] || null, newest: newestRows[0] || null };
+}
+
+async function storeHistoricalBatch(draws) {
+  const rows = (draws || [])
+    .filter(d => d?.id && norm(d?.numbers).length === 20)
+    .map(d => ({
+      draw_id: Number(d.id),
+      draw_date: d.date || '',
+      draw_time: d.time || '',
+      numbers: norm(d.numbers),
+      bulls_eye: Number.isInteger(d.bullsEye) ? d.bullsEye : null
+    }));
+  if (!rows.length) return 0;
+  await db('hotspot_draws?on_conflict=draw_id', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: rows
+  });
+  return rows.length;
+}
+
+async function precursorBackfillOneBatch() {
+  const { oldest, newest } = await precursorArchiveEdges();
+  const oldestId = Number(oldest?.draw_id || 0);
+  if (!oldestId || !newest) {
+    return { attempted: 0, stored: 0, reason: 'archive-empty' };
+  }
+
+  const oldestDate = parseStoredDate(oldest.draw_date);
+  const newestDate = parseStoredDate(newest.draw_date);
+  const cutoff = newestDate ? new Date(newestDate.getTime() - PRECURSOR_HISTORY_DAYS * 86400000) : null;
+  if (oldestDate && cutoff && oldestDate <= cutoff) {
+    return { attempted: 0, stored: 0, reason: 'six-month-target-reached' };
+  }
+
+  const start = Math.max(1, oldestId - PRECURSOR_BACKFILL_BATCH);
+  const ids = [];
+  for (let id = start; id < oldestId; id++) ids.push(id);
+  if (!ids.length) return { attempted: 0, stored: 0, reason: 'no-older-id' };
+
+  let fetched = [];
+  try {
+    fetched = await getMany(ids);
+  } catch {
+    fetched = [];
+  }
+  const stored = await storeHistoricalBatch(fetched);
+  return {
+    attempted: ids.length,
+    stored,
+    firstRequestedDrawId: ids[0],
+    lastRequestedDrawId: ids.at(-1),
+    reason: stored ? 'backfill-added' : 'backfill-fetch-failed-or-empty'
+  };
+}
+
+function precursorArchiveProgress(edges, rows) {
+  const oldest = edges.oldest;
+  const newest = edges.newest;
+  const oldestDate = parseStoredDate(oldest?.draw_date);
+  const newestDate = parseStoredDate(newest?.draw_date);
+  const coverageDays = oldestDate && newestDate
+    ? Math.max(0, (newestDate.getTime() - oldestDate.getTime()) / 86400000)
+    : 0;
+  const cutoff = newestDate ? new Date(newestDate.getTime() - PRECURSOR_HISTORY_DAYS * 86400000) : null;
+  return {
+    targetDays: PRECURSOR_HISTORY_DAYS,
+    completeSixMonths: Boolean(oldestDate && cutoff && oldestDate <= cutoff),
+    coverageDays: Number(coverageDays.toFixed(2)),
+    percentOfTarget: Number(Math.min(100, coverageDays / PRECURSOR_HISTORY_DAYS * 100).toFixed(2)),
+    oldestDrawId: Number(oldest?.draw_id || 0) || null,
+    oldestDate: oldest?.draw_date || '',
+    newestDrawId: Number(newest?.draw_id || 0) || null,
+    newestDate: newest?.draw_date || '',
+    newestTime: newest?.draw_time || '',
+    analyzedDraws: rows.length,
+    analysisCap: PRECURSOR_ANALYSIS_MAX_DRAWS,
+    analysisCapped: rows.length >= PRECURSOR_ANALYSIS_MAX_DRAWS
+  };
+}
+
+async function precursorAnalyze(rawNumbers, doBackfill = false) {
+  const target = norm(String(rawNumbers || '').split(/[^0-9]+/).filter(Boolean));
+  if (target.length < 3 || target.length > 5) {
+    return { ok: false, reason: 'send-3-to-5-target-numbers' };
+  }
+
+  let backfill = null;
+  if (doBackfill) backfill = await precursorBackfillOneBatch();
+
+  const rows = await precursorArchiveRows();
+  const edges = await precursorArchiveEdges();
+  const archive = precursorArchiveProgress(edges, rows);
+  const analysis = analyzePrecursors(rows, target);
+
+  return {
+    ok: true,
+    target,
+    archive,
+    backfill,
+    analysis,
+    note: archive.completeSixMonths
+      ? 'Six-month archive target has been reached. The precursor result is based on the stored historical archive, subject to the analysis cap reported above.'
+      : 'The archive is still being extended backward. Precursor results are provisional until the six-month target is reached.'
+  };
+}
+
 function collectRuns(records) {
   const runs = [];
   for (const cycle of records) {
@@ -1100,6 +1245,14 @@ module.exports = async (req, res) => {
 
     if (mode === 'tracker-evaluate') {
       const result = await trackerEvaluate(req.query?.sets || req.query?.numbers || '');
+      return res.status(result.ok ? 200 : 400).json(result);
+    }
+
+    if (mode === 'precursor-analyze') {
+      const result = await precursorAnalyze(
+        req.query?.numbers || req.query?.set || '',
+        String(req.query?.backfill || '') === '1'
+      );
       return res.status(result.ok ? 200 : 400).json(result);
     }
 
