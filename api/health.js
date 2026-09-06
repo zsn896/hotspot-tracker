@@ -109,6 +109,49 @@ function predictionFromStats(stat, currentGap, drawCount) {
         ? 'LOW'
         : 'EARLY';
 
+  const sortedGaps = [...gaps].sort((a, b) => a - b);
+  const maxHistoricalGap = sortedGaps.at(-1) || null;
+  let followUp = {
+    status: 'NOT_NEEDED',
+    reason: 'Primary expected draw has not been missed yet.'
+  };
+
+  if (currentGap != null && currentGap >= predictedGap) {
+    const longerGaps = sortedGaps.filter(gap => gap > currentGap);
+    if (longerGaps.length) {
+      const startGap = longerGaps[0];
+      const upperIndex = Math.min(
+        longerGaps.length - 1,
+        Math.max(0, Math.floor((longerGaps.length - 1) * 0.65))
+      );
+      const endGap = Math.max(startGap, longerGaps[upperIndex]);
+      const sampleCount = longerGaps.length;
+      followUp = {
+        status: 'NEXT_ZONE',
+        basedOn: 'HISTORICAL_LONGER_GAPS',
+        currentGap,
+        startGap,
+        endGap,
+        startDrawId: Number(stat.last.drawId) + startGap,
+        endDrawId: Number(stat.last.drawId) + endGap,
+        samples: sampleCount,
+        maxHistoricalGap,
+        confidence: sampleCount >= 4 ? 'MEDIUM' : sampleCount >= 2 ? 'LOW' : 'VERY_LOW',
+        reason: 'Primary prediction was missed; next watch zone is derived only from historical cycle gaps longer than the current gap.'
+      };
+    } else {
+      followUp = {
+        status: 'OUTSIDE_HISTORY',
+        basedOn: 'HISTORICAL_GAP_LIMIT',
+        currentGap,
+        maxHistoricalGap,
+        samples: 0,
+        confidence: 'NONE',
+        reason: 'Current gap is at or beyond every historical gap in the analyzed data, so no reliable next draw zone is available.'
+      };
+    }
+  }
+
   return {
     method: 'EVIDENCE_WEIGHTED_CYCLE',
     predictedGap,
@@ -116,6 +159,7 @@ function predictionFromStats(stat, currentGap, drawCount) {
     remaining,
     confidence,
     confidenceScore,
+    followUp,
     components: {
       occurrences: stat.count,
       gapsCount: gaps.length,
@@ -128,7 +172,8 @@ function predictionFromStats(stat, currentGap, drawCount) {
       recentRate: Number(recentRate.toFixed(4)),
       activityRatio: Number(activityRatio.toFixed(3)),
       activityFactor: Number(activityFactor.toFixed(3)),
-      currentGap
+      currentGap,
+      maxHistoricalGap
     }
   };
 }
@@ -311,6 +356,7 @@ function liveDetailFromStats(stat, draws, sources = ['LIVE_DATA']) {
       remainingToAverage,
       predictionConfidence: prediction?.confidence || 'NONE',
       predictionConfidenceScore: prediction?.confidenceScore || 0,
+      followUp: prediction?.followUp || null,
       latestDrawId,
       lastHitCount: Number(stat.last?.hits || 0) || null,
       lastMatchedNumbers: norm(stat.last?.matchedNumbers || [])
@@ -487,7 +533,7 @@ function evaluateTrackedSet(draws, numbers) {
     type: numbers.length === 3 ? 'CORE3' : 'MANUAL_GROUP_3_PLUS',
     trackingMode: 'ANY_3_PLUS',
     hitRule: 'Any draw containing 3, 4, or 5 numbers from the tracked set counts as a cycle hit.',
-    predictionRule: 'Expected draw is evidence-weighted from recent gaps, median gap, overall mean gap, occurrence count, recent-20 activity, consistency and current gap. No random value is used.',
+    predictionRule: 'Expected draw is evidence-weighted from recent gaps, median gap, overall mean gap, occurrence count, recent-20 activity, consistency and current gap. If the primary expected draw is missed, the next watch zone is derived only from longer historical gaps; if none remain, the cycle is marked outside historical range. No random value is used.',
     fullSet: full,
     threePlus,
     core3: threePlus,
@@ -497,7 +543,8 @@ function evaluateTrackedSet(draws, numbers) {
       recent20: threePlus.strength.recent20,
       consistency: threePlus.strength.consistency,
       predictionConfidence: threePlus.current.predictionConfidence,
-      predictionConfidenceScore: threePlus.current.predictionConfidenceScore
+      predictionConfidenceScore: threePlus.current.predictionConfidenceScore,
+      followUp: threePlus.current.followUp
     }
   };
 }
