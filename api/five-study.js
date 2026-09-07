@@ -358,7 +358,7 @@ module.exports = async function handler(req, res) {
         firstDate: rows[0].draw_date || '',
         lastDrawId: Number(rows.at(-1).draw_id),
         lastDate: rows.at(-1).draw_date || '',
-        lastTime: rows.at(-1].draw_time || ''
+        lastTime: rows.at(-1).draw_time || ''
       } : null,
       study,
       walkForward,
