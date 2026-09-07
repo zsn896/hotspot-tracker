@@ -62,6 +62,14 @@ async function refreshPrecursor(sets){ensurePrecursorCache();if(precursorBusy||!
     "+'</div>';Array.prototype.forEach.call(p.querySelectorAll('.coreSection'),function(s){var h=s.querySelector('.coreSectionTitle'),t=h?String(h.textContent||'').trim():'';if(t==='ACTIVE STRONG'||t==='HISTORICAL STRONG')s.remove()});setupBoxes();restoreDraft();var a=document.getElementById('manualCoreAdd');"
   );
 
+  /* Manual Strong is intentionally isolated from the separate Manual Analysis tool. */
+  src=src.replace(/MANUAL_KEY/g,'STRONG_MANUAL_KEY');
+  src=src.replace(
+    "STRONG_MANUAL_KEY='hotspot_core_manual_saved_v4'",
+    "STRONG_MANUAL_KEY='hotspot_core_strong_manual_saved_v1'"
+  );
+  src=src.replace(/MANUAL TRACKING \+ ANALYSIS/g,'MANUAL STRONG');
+
   document.open();
   document.write(src);
   document.close();
