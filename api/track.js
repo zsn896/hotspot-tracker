@@ -9,7 +9,9 @@ const {
 } = require('./lib');
 
 const MANUAL_PREFIX = 'MANUAL Group';
+const STRONG_MANUAL_PREFIX = 'STRONG_MANUAL Group';
 const MAX_SERVER_MANUAL = 24;
+const MAX_SERVER_STRONG_MANUAL = 24;
 
 function normalizeGroup(values) {
   return uniqSorted((values || []).map(Number))
@@ -44,12 +46,16 @@ function serverName(numbers) {
   return `${MANUAL_PREFIX} ${groupKey(numbers)}`;
 }
 
-async function listServerManualGroups() {
+function strongServerName(numbers) {
+  return `${STRONG_MANUAL_PREFIX} ${groupKey(numbers)}`;
+}
+
+async function listGroupsByPrefix(prefix, limit) {
   const rows = (
     await db(
       `tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id&name=like.${encodeURIComponent(
-        MANUAL_PREFIX + '*'
-      )}&order=id.asc&limit=${MAX_SERVER_MANUAL}`
+        prefix + '*'
+      )}&order=id.asc&limit=${limit}`
     )
   ) || [];
 
@@ -63,14 +69,32 @@ async function listServerManualGroups() {
   }));
 }
 
-async function registerManualGroup(req) {
+async function listServerManualGroups() {
+  return listGroupsByPrefix(
+    MANUAL_PREFIX,
+    MAX_SERVER_MANUAL
+  );
+}
+
+async function listServerStrongManualGroups() {
+  return listGroupsByPrefix(
+    STRONG_MANUAL_PREFIX,
+    MAX_SERVER_STRONG_MANUAL
+  );
+}
+
+async function registerGroup(req, options) {
   const numbers = parseOneGroup(req);
+  const label = options.label;
+  const limit = options.limit;
+  const name = options.nameFor(numbers);
+  const listCurrent = options.listCurrent;
 
   if (numbers.length < 3 || numbers.length > 5) {
     return {
       ok: false,
       status: 400,
-      error: 'Manual group must contain 3 to 5 unique numbers from 1 to 80.'
+      error: `${label} must contain 3 to 5 unique numbers from 1 to 80.`
     };
   }
 
@@ -83,7 +107,6 @@ async function registerManualGroup(req) {
     };
   }
 
-  const name = serverName(numbers);
   const rows = (
     await db(
       `tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id&name=eq.${encodeURIComponent(name)}&limit=1`
@@ -120,12 +143,12 @@ async function registerManualGroup(req) {
     };
   }
 
-  const current = await listServerManualGroups();
-  if (current.length >= MAX_SERVER_MANUAL) {
+  const current = await listCurrent();
+  if (current.length >= limit) {
     return {
       ok: false,
       status: 409,
-      error: `Server manual group limit reached (${MAX_SERVER_MANUAL}).`
+      error: `${label} limit reached (${limit}).`
     };
   }
 
@@ -159,6 +182,24 @@ async function registerManualGroup(req) {
       lastSeenDrawId: Number(latest.id)
     }
   };
+}
+
+async function registerManualGroup(req) {
+  return registerGroup(req, {
+    label: 'Manual group',
+    limit: MAX_SERVER_MANUAL,
+    nameFor: serverName,
+    listCurrent: listServerManualGroups
+  });
+}
+
+async function registerStrongManualGroup(req) {
+  return registerGroup(req, {
+    label: 'Strong Manual group',
+    limit: MAX_SERVER_STRONG_MANUAL,
+    nameFor: strongServerName,
+    listCurrent: listServerStrongManualGroups
+  });
 }
 
 async function legacyTrack(req, res) {
@@ -212,8 +253,22 @@ module.exports = async (req, res) => {
       return res.status(result.status || (result.ok ? 200 : 400)).json(result);
     }
 
+    if (method === 'POST' && action === 'register-strong-manual') {
+      const result = await registerStrongManualGroup(req);
+      return res.status(result.status || (result.ok ? 200 : 400)).json(result);
+    }
+
     if (method === 'GET' && action === 'manual-groups') {
       const groups = await listServerManualGroups();
+      return res.status(200).json({
+        ok: true,
+        count: groups.length,
+        groups
+      });
+    }
+
+    if (method === 'GET' && action === 'strong-manual-groups') {
+      const groups = await listServerStrongManualGroups();
       return res.status(200).json({
         ok: true,
         count: groups.length,
