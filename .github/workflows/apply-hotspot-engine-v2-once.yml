@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '_hotspot_engine_v2_payload.b64'
+      - '_hotspot_engine_v2_payload.part*'
       - '.github/workflows/apply-hotspot-engine-v2-once.yml'
 
 permissions:
@@ -23,12 +23,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -f _hotspot_engine_v2_payload.b64 ]; then
+
+          if [ ! -f _hotspot_engine_v2_payload.part00 ]; then
             echo "Payload already cleaned up; nothing to do."
             exit 0
           fi
+
+          test -f _hotspot_engine_v2_payload.part01
+          test -f _hotspot_engine_v2_payload.part02
+          test -f _hotspot_engine_v2_payload.part03
+
+          cat \
+            _hotspot_engine_v2_payload.part00 \
+            _hotspot_engine_v2_payload.part01 \
+            _hotspot_engine_v2_payload.part02 \
+            _hotspot_engine_v2_payload.part03 \
+            > /tmp/hotspot-engine-v2.b64
+
+          base64 -d /tmp/hotspot-engine-v2.b64 > /tmp/hotspot-engine-v2.zip
+          echo '78c182a133b96965ae39a48a6530c46ae0b79f64acb4767bc473af2d1e275495  /tmp/hotspot-engine-v2.zip' | sha256sum -c -
+          unzip -t /tmp/hotspot-engine-v2.zip
+
+          rm -rf /tmp/hotspot-engine-v2
           mkdir -p /tmp/hotspot-engine-v2
-          base64 -d _hotspot_engine_v2_payload.b64 > /tmp/hotspot-engine-v2.zip
           unzip -q /tmp/hotspot-engine-v2.zip -d /tmp/hotspot-engine-v2
           SRC=/tmp/hotspot-engine-v2/hotspot-engine-v2
           test -d "$SRC"
@@ -43,10 +60,17 @@ jobs:
             rel="${file#$SRC/}"
             src_hash=$(sha256sum "$file" | awk '{print $1}')
             dst_hash=$(sha256sum "$rel" | awk '{print $1}')
-            test "$src_hash" = "$dst_hash"
+            if [ "$src_hash" != "$dst_hash" ]; then
+              echo "Mismatch: $rel"
+              exit 1
+            fi
           done < <(find "$SRC" -type f -print0)
 
           rm -f _hotspot_engine_v2_payload.b64
+          rm -f _hotspot_engine_v2_payload.part00
+          rm -f _hotspot_engine_v2_payload.part01
+          rm -f _hotspot_engine_v2_payload.part02
+          rm -f _hotspot_engine_v2_payload.part03
           rm -f .github/workflows/apply-hotspot-engine-v2-once.yml
 
           git config user.name "zsn896"
