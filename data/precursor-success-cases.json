@@ -1,0 +1,21 @@
+[
+  {
+    "drawId": 3299023,
+    "time": "5:08 p.m.",
+    "target": [11, 17, 47, 56, 71],
+    "hit": {
+      "count": 3,
+      "outOf": 5,
+      "type": "3_PLUS"
+    },
+    "preSignalHistory": [
+      {"time": "4:56 p.m.", "level": "VERY_HIGH", "score": 88},
+      {"time": "5:00 p.m.", "level": "VERY_HIGH", "score": 85},
+      {"time": "5:04 p.m.", "level": "VERY_HIGH", "score": 82}
+    ],
+    "resultState": "HIT_RESET",
+    "resultScore": 12,
+    "purpose": "Historical successful early-warning example for later comparison between 3/5 and 4/5 outcomes.",
+    "note": "Reference case only; do not treat as proof of predictive edge."
+  }
+]
