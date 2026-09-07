@@ -56,6 +56,12 @@ async function refreshPrecursor(sets){ensurePrecursorCache();if(precursorBusy||!
     "async function refreshTrackerDetails(){var manualSets=readSets(MANUAL_KEY),v=await Promise.all([evaluateSets(readSets(AUTO_KEY)),evaluateSets(manualSets)]);autoDetails=v[0];manualDetails=v[1];renderTracker();setTimeout(function(){refreshPrecursor(manualSets)},650);if(!manualServerSynced&&!manualServerSyncBusy){setTimeout(async function(){var changed=await syncManualsFromServer();if(changed)refreshTrackerDetails()},80)}}"
   );
 
+  /* Hide automatic Core3 cards from the Active/Historical UI only. Backend analysis and storage remain unchanged. */
+  src=src.replace(
+    "+'</div>';setupBoxes();restoreDraft();var a=document.getElementById('manualCoreAdd');",
+    "+'</div>';Array.prototype.forEach.call(p.querySelectorAll('.coreSection'),function(s){var h=s.querySelector('.coreSectionTitle'),t=h?String(h.textContent||'').trim():'';if(t==='ACTIVE STRONG'||t==='HISTORICAL STRONG')s.remove()});setupBoxes();restoreDraft();var a=document.getElementById('manualCoreAdd');"
+  );
+
   document.open();
   document.write(src);
   document.close();
