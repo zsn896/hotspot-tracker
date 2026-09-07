@@ -17,5 +17,39 @@
     "resultScore": 12,
     "purpose": "Historical successful early-warning example for later comparison between 3/5 and 4/5 outcomes.",
     "note": "Reference case only; do not treat as proof of predictive edge."
+  },
+  {
+    "caseType": "ADVANCED_GROUP_LIVE_4_OF_5_SUCCESS",
+    "selectionDrawId": 3299036,
+    "target": [3, 13, 17, 28, 50],
+    "resultDrawId": 3299060,
+    "resultTime": "7:36 p.m.",
+    "resultDate": "Sep 6, 2026",
+    "drawsAfterSelection": 24,
+    "hit": {
+      "count": 4,
+      "outOf": 5,
+      "type": "4_PLUS",
+      "matchedNumbers": [3, 17, 28, 50],
+      "missedNumbers": [13]
+    },
+    "preHitLiveConfidence": [
+      {"drawId": 3299055, "time": "7:16 p.m.", "level": "MEDIUM", "score": 61, "drawsBeforeHit": 5},
+      {"drawId": 3299056, "time": "7:20 p.m.", "level": "MEDIUM", "score": 57, "drawsBeforeHit": 4},
+      {"drawId": 3299057, "time": "7:24 p.m.", "level": "MEDIUM", "score": 53, "drawsBeforeHit": 3},
+      {"drawId": 3299058, "time": "7:28 p.m.", "level": "MEDIUM", "score": 50, "drawsBeforeHit": 2},
+      {"drawId": 3299059, "time": "7:32 p.m.", "level": "MEDIUM", "score": 47, "drawsBeforeHit": 1}
+    ],
+    "resultState": "HIT_RESET",
+    "resultScore": 12,
+    "historicalArchiveAtReview": {
+      "analyzedDraws": 8000,
+      "exactThreeHits": 698,
+      "exactFourHits": 108,
+      "exactFiveHits": 7,
+      "fourPlusHits": 115
+    },
+    "purpose": "Verified live Advanced Group success selected before the outcome; preserve for later comparison of genuine pre-hit behavior and 4+ timing.",
+    "note": "The five pre-hit scores are verified live-confidence history. Do not retroactively label them as a validated 4+ precursor snapshot; the historical 4+ tier was not persisted at those exact moments. The 4/5 result itself is a genuine post-selection live outcome."
   }
 ]
