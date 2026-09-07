@@ -21,7 +21,7 @@ try{
 
   src=src.replace(
     "function refreshAll(){refreshLearner();refreshGroup()}setTimeout(refreshAll,900);setInterval(refreshAll,240000);window.addEventListener('focus',refreshAll);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')refreshAll()});",
-    "var drawWatchId=null,drawWatchBusy=false;async function checkLatestDraw(){if(drawWatchBusy||document.visibilityState==='hidden')return;drawWatchBusy=true;try{var r=await fetch('/api/state?ts='+Date.now(),{cache:'no-store'});if(!r.ok)return;var j=await r.json(),id=Number(j&&j.latest&&j.latest.draw_id||0);if(!id)return;if(drawWatchId===null){drawWatchId=Number(trackerLatest||id);if(id>drawWatchId){drawWatchId=id;refreshAll()}return}if(id!==drawWatchId){drawWatchId=id;refreshAll()}}catch(e){}finally{drawWatchBusy=false}}function refreshAll(){try{if(typeof loadAll==='function')loadAll()}catch(e){}refreshLearner();refreshGroup()}setTimeout(function(){refreshAll();setTimeout(checkLatestDraw,2500)},900);setInterval(checkLatestDraw,15000);window.addEventListener('focus',function(){refreshAll();setTimeout(checkLatestDraw,1200)});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){refreshAll();setTimeout(checkLatestDraw,1200)}});"
+    "var drawWatchId=null,drawWatchBusy=false;async function checkLatestDraw(){if(drawWatchBusy||document.visibilityState==='hidden')return;drawWatchBusy=true;try{var r=await fetch('/api/state?ts='+Date.now(),{cache:'no-store'});if(!r.ok)return;var j=await r.json(),id=Number(j&&j.latest&&j.latest.draw_id||0);if(!id)return;if(drawWatchId===null){drawWatchId=Number(trackerLatest||id);if(id>drawWatchId){drawWatchId=id;refreshAll()}return}if(id!==drawWatchId){drawWatchId=id;refreshAll()}}catch(e){}finally{drawWatchBusy=false}}function refreshAll(){try{if(typeof loadAll==='function')loadAll()}catch(e){}refreshLearner();refreshGroup()}setTimeout(function(){refreshAll();setTimeout(checkLatestDraw,3000)},900);setInterval(checkLatestDraw,60000);window.addEventListener('focus',function(){setTimeout(checkLatestDraw,800)});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(checkLatestDraw,800)});"
   );
 
   const precursorCss=`
@@ -31,7 +31,7 @@ try{
 
   src=src.replace(
     "var allowed=['DORMANT','EARLY_SIGNAL','RISING','STRONG','COOLING','REBOUND_WATCH'];var labels={DORMANT:'DORMANT',EARLY_SIGNAL:'EARLY SIGNAL',RISING:'RISING',STRONG:'STRONG',COOLING:'COOLING',REBOUND_WATCH:'REBOUND WATCH'};var trackerLatest=null,trackerWindow=null,autoDetails=[],manualDetails=[];",
-    "var allowed=['DORMANT','EARLY_SIGNAL','RISING','STRONG','COOLING','REBOUND_WATCH'];var labels={DORMANT:'DORMANT',EARLY_SIGNAL:'EARLY SIGNAL',RISING:'RISING',STRONG:'STRONG',COOLING:'COOLING',REBOUND_WATCH:'REBOUND WATCH'};var trackerLatest=null,trackerWindow=null,autoDetails=[],manualDetails=[],precursorByKey={},precursorLoaded=false,precursorBusy=false,manualServerSyncBusy=false,manualServerSynced=false;var PREC_KEY='hotspot_precursor_ui_cache_v2';"
+    "var allowed=['DORMANT','EARLY_SIGNAL','RISING','STRONG','COOLING','REBOUND_WATCH'];var labels={DORMANT:'DORMANT',EARLY_SIGNAL:'EARLY SIGNAL',RISING:'RISING',STRONG:'STRONG',COOLING:'COOLING',REBOUND_WATCH:'REBOUND WATCH'};var trackerLatest=null,trackerWindow=null,autoDetails=[],manualDetails=[],precursorByKey={},precursorLoaded=false,precursorBusy=false,precursorDelayTimer=null,manualServerSyncBusy=false,manualServerSynced=false;var PREC_KEY='hotspot_precursor_ui_cache_v2';"
   );
 
   const precursorFns=`
@@ -68,7 +68,7 @@ async function refreshPrecursor(sets){ensurePrecursorCache();if(precursorBusy||!
 
   src=src.replace(
     "async function refreshTrackerDetails(){var v=await Promise.all([evaluateSets(readSets(AUTO_KEY)),evaluateSets(readSets(MANUAL_KEY))]);autoDetails=v[0];manualDetails=v[1];renderTracker()}",
-    "async function refreshTrackerDetails(){var manualSets=migrateStrongManualLocal(),v=await Promise.all([evaluateSets(readSets(AUTO_KEY)),evaluateSets(manualSets)]);autoDetails=v[0];manualDetails=v[1];renderTracker();setTimeout(function(){refreshPrecursor(manualSets)},650);if(!manualServerSynced&&!manualServerSyncBusy){setTimeout(async function(){var changed=await syncManualsFromServer();if(changed)refreshTrackerDetails()},80)}}"
+    "async function refreshTrackerDetails(){var manualSets=migrateStrongManualLocal(),v=await Promise.all([evaluateSets(readSets(AUTO_KEY)),evaluateSets(manualSets)]);autoDetails=v[0];manualDetails=v[1];renderTracker();if(precursorDelayTimer)clearTimeout(precursorDelayTimer);precursorDelayTimer=setTimeout(function(){refreshPrecursor(manualSets)},7000);if(!manualServerSynced&&!manualServerSyncBusy){setTimeout(async function(){var changed=await syncManualsFromServer();if(changed)refreshTrackerDetails()},2500)}}"
   );
 
   /* Hide automatic Core3 cards from the Active/Historical UI only. Backend analysis and storage remain unchanged. */
