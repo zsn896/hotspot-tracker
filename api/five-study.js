@@ -79,7 +79,6 @@ function buildFiveStudy(rows, target, lookback) {
       const key = count === 0 ? 'zero' : count === 1 ? 'one' : count === 2 ? 'two' : count === 3 ? 'three' : count === 4 ? 'four' : 'five';
       priorHitCountDistribution[key]++;
       hitNumbers.forEach(n => { targetNumberPresence[n] = (targetNumberPresence[n] || 0) + 1; });
-
       return {
         lead: eventIndex - (start + i),
         drawId: Number(draw.draw_id),
@@ -194,34 +193,54 @@ function recentState(hitCounts, targetMatches, index) {
     if (threePlusPositions[i] - threePlusPositions[i - 1] <= 5) compressedThreePlus = true;
   }
 
-  const cluster20 = last20.some(x => x === 5);
+  const recent20ExactFive = last20.filter(x => x === 5).length;
+  const recent10ThreePlus = last10.filter(x => x >= 3).length;
+  const recent10TwoPlus = last10.filter(x => x >= 2).length;
+  const recent5DistinctTargetNumbers = union5.size;
+  const recent5TotalTargetHits = last5.reduce((s, x) => s + x, 0);
+
+  const cluster20 = recent20ExactFive > 0;
   const expansion10 =
-    last10.some(x => x >= 3) &&
-    last10.filter(x => x >= 2).length >= 2 &&
-    union5.size >= 4 &&
-    last5.reduce((s, x) => s + x, 0) >= 6;
-  const compressionExpansion = compressedThreePlus && union5.size >= 4;
+    recent10ThreePlus >= 1 &&
+    recent10TwoPlus >= 2 &&
+    recent5DistinctTargetNumbers >= 4 &&
+    recent5TotalTargetHits >= 6;
+  const compressionExpansion = compressedThreePlus && recent5DistinctTargetNumbers >= 4;
+
+  const singlePulse =
+    expansion10 &&
+    recent20ExactFive === 0 &&
+    recent10ThreePlus === 1 &&
+    !compressedThreePlus;
+  const singlePulseFullCoverage = singlePulse && recent5DistinctTargetNumbers === 5;
+  const singlePulseDense = singlePulse && recent5TotalTargetHits >= 8;
+  const singlePulseFullDense = singlePulseFullCoverage && recent5TotalTargetHits >= 8;
 
   return {
     cluster20,
     expansion10,
     compressionExpansion,
     clusterOrExpansion: cluster20 || expansion10,
+    singlePulse,
+    singlePulseFullCoverage,
+    singlePulseDense,
+    singlePulseFullDense,
     evidence: {
-      recent20ExactFive: last20.filter(x => x === 5).length,
-      recent10ThreePlus: last10.filter(x => x >= 3).length,
-      recent10TwoPlus: last10.filter(x => x >= 2).length,
-      recent5DistinctTargetNumbers: union5.size,
-      recent5TotalTargetHits: last5.reduce((s, x) => s + x, 0),
+      recent20ExactFive,
+      recent10ThreePlus,
+      recent10TwoPlus,
+      recent5DistinctTargetNumbers,
+      recent5TotalTargetHits,
       compressedThreePlus
     }
   };
 }
 
-function baselineRate(hitCounts, startIndex, horizon) {
+function baselineRate(hitCounts, startIndex, endIndex, horizon) {
   let opportunities = 0;
   let successes = 0;
-  for (let i = Math.max(20, startIndex); i < hitCounts.length - horizon; i++) {
+  const end = Math.min(hitCounts.length - horizon, endIndex ?? hitCounts.length - horizon);
+  for (let i = Math.max(20, startIndex); i < end; i++) {
     opportunities++;
     if (futureExactFive(hitCounts, i, horizon) >= 0) successes++;
   }
@@ -232,11 +251,13 @@ function baselineRate(hitCounts, startIndex, horizon) {
   };
 }
 
-function evaluateRule(rows, hitCounts, targetMatches, startIndex, ruleKey) {
+function collectEpisodes(rows, hitCounts, targetMatches, startIndex, endIndex, ruleKey) {
   const episodes = [];
   let previousActive = false;
+  const start = Math.max(20, startIndex);
+  const end = Math.min(rows.length - 1, endIndex ?? rows.length - 1);
 
-  for (let i = Math.max(20, startIndex); i < rows.length - 1; i++) {
+  for (let i = start; i < end; i++) {
     const state = recentState(hitCounts, targetMatches, i);
     const active = Boolean(state[ruleKey]);
     if (active && !previousActive) {
@@ -250,17 +271,22 @@ function evaluateRule(rows, hitCounts, targetMatches, startIndex, ruleKey) {
     }
     previousActive = active;
   }
+  return episodes;
+}
+
+function evaluateRule(rows, hitCounts, targetMatches, startIndex, ruleKey, endIndex = rows.length - 1) {
+  const episodes = collectEpisodes(rows, hitCounts, targetMatches, startIndex, endIndex, ruleKey);
 
   const summarizeHorizon = horizon => {
-    const baseline = baselineRate(hitCounts, startIndex, horizon);
-    const eligible = episodes.filter(e => e.index + horizon < rows.length);
+    const baseline = baselineRate(hitCounts, startIndex, endIndex, horizon);
+    const eligible = episodes.filter(e => e.index + horizon < Math.min(rows.length, endIndex + 1));
     const successes = [];
     const failures = [];
     const uniqueFutureEvents = new Set();
 
     eligible.forEach(e => {
       const found = futureExactFive(hitCounts, e.index, horizon);
-      if (found >= 0) {
+      if (found >= 0 && found <= endIndex) {
         uniqueFutureEvents.add(Number(rows[found].draw_id));
         successes.push({
           signalDrawId: e.drawId,
@@ -300,19 +326,47 @@ function evaluateRule(rows, hitCounts, targetMatches, startIndex, ruleKey) {
   };
 }
 
+function buildDiscriminatorStudy(rows, hitCounts, targetMatches, validationStartIndex) {
+  const rules = ['singlePulse', 'singlePulseFullCoverage', 'singlePulseDense', 'singlePulseFullDense'];
+  const definitions = {
+    singlePulse: 'Expansion state with no 5/5 in prior 20 draws, exactly one 3+ in prior 10 draws, and no compressed 3+ pair.',
+    singlePulseFullCoverage: 'singlePulse plus all five target numbers appeared somewhere across the latest 5 draws.',
+    singlePulseDense: 'singlePulse plus at least 8 total target-number hits across the latest 5 draws.',
+    singlePulseFullDense: 'singlePulseFullCoverage plus at least 8 total target-number hits across the latest 5 draws.'
+  };
+
+  return {
+    model: 'EXACT_5_SUCCESS_PROFILE_FILTERS_V1',
+    exploratory: true,
+    warning: 'These filters were chosen after inspecting the three successful Expansion cases, so their validation results are descriptive and can overfit. They must not be treated as proven until they survive fresh future draws or an untouched dataset.',
+    commonProfileObservedInThreeShortHorizonSuccesses: {
+      recent20ExactFive: 0,
+      recent10ThreePlus: 1,
+      compressedThreePlus: false
+    },
+    definitions,
+    validation: Object.fromEntries(rules.map(rule => [
+      rule,
+      evaluateRule(rows, hitCounts, targetMatches, validationStartIndex, rule)
+    ])),
+    fullHistoryReference: Object.fromEntries(rules.map(rule => [
+      rule,
+      evaluateRule(rows, hitCounts, targetMatches, 20, rule)
+    ]))
+  };
+}
+
 function buildWalkForwardBacktest(rows, target) {
   const targetMatches = rows.map(draw => matched(draw, target));
   const hitCounts = targetMatches.map(x => x.length);
   const validationStartIndex = Math.floor(rows.length * (1 - VALIDATION_RATIO));
-  const exactFiveValidation = hitCounts
-    .slice(validationStartIndex)
-    .filter(x => x === 5).length;
+  const exactFiveValidation = hitCounts.slice(validationStartIndex).filter(x => x === 5).length;
 
   const rules = ['cluster20', 'expansion10', 'compressionExpansion', 'clusterOrExpansion'];
   return {
-    model: 'EXACT_5_CLUSTER_EXPANSION_WALK_FORWARD_V1',
+    model: 'EXACT_5_CLUSTER_EXPANSION_WALK_FORWARD_V2_FILTER_TEST',
     noFutureLeakage: true,
-    caveat: 'The rule family was motivated by patterns already observed in this target, so this is a chronological walk-forward test but not a fully independent untouched-data experiment.',
+    caveat: 'The original rule family and the added discriminator filters were motivated by patterns already observed in this target. Chronology is respected, but the discriminator study is exploratory rather than a fully independent untouched-data experiment.',
     definitions: {
       cluster20: 'At least one exact 5/5 occurred in the most recent 20 completed draws.',
       expansion10: 'Past-only state: at least one 3+ in the latest 10 draws, at least two 2+ draws in the latest 10, at least four distinct target numbers seen across the latest 5 draws, and at least six total target hits across those latest 5 draws.',
@@ -326,6 +380,7 @@ function buildWalkForwardBacktest(rows, target) {
       exactFiveEvents: exactFiveValidation,
       rules: Object.fromEntries(rules.map(rule => [rule, evaluateRule(rows, hitCounts, targetMatches, validationStartIndex, rule)]))
     },
+    discriminatorStudy: buildDiscriminatorStudy(rows, hitCounts, targetMatches, validationStartIndex),
     fullHistoryReference: {
       draws: rows.length,
       exactFiveEvents: hitCounts.filter(x => x === 5).length,
@@ -349,7 +404,7 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
-      model: 'EXACT_5_OF_5_EVENT_STUDY_V2_WALK_FORWARD',
+      model: 'EXACT_5_OF_5_EVENT_STUDY_V3_DISCRIMINATOR',
       target,
       noFutureLeakage: true,
       analyzedDraws: rows.length,
@@ -362,7 +417,7 @@ module.exports = async function handler(req, res) {
       } : null,
       study,
       walkForward,
-      note: 'Historical test only. A high lift on a small number of 5/5 events is not proof of predictive power; validation sample size and future live performance matter.'
+      note: 'Historical research only. The discriminator filters were derived after inspecting successful cases and therefore require fresh out-of-sample confirmation before use as a predictive signal.'
     });
   } catch (error) {
     return res.status(500).json({ ok: false, error: error?.message || String(error) });
