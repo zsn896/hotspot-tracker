@@ -1,0 +1,102 @@
+  const discoveryHits = hitMask.slice(0, split).filter(Boolean).length;
+  const validationHits = hitMask.slice(split).filter(Boolean).length;
+  if (discoveryHits < options.minDiscoveryHits) {
+    return { ok: false, reason: 'not-enough-discovery-hits', discoveryHits, validationHits, draws: draws.length };
+  }
+
+  const discoveryCandidates = discoverCandidateTriples(draws, hitMask, 0, split, options);
+  const discovery = segmentMetrics(draws, hitMask, 0, split, discoveryCandidates.candidates, options);
+  const validation = segmentMetrics(draws, hitMask, split, draws.length, discoveryCandidates.candidates, options);
+  const validationMap = new Map(validation.candidates.map(x => [tripleKey(x.numbers), x]));
+
+  const ranked = discovery.candidates
+    .map(d => {
+      const v = validationMap.get(tripleKey(d.numbers));
+      const confidence = confidenceLabel(d, v || {});
+      const stability = v && d.forwardLift > 0
+        ? Math.min(v.forwardLift, d.forwardLift) / Math.max(v.forwardLift, d.forwardLift)
+        : 0;
+      const score = (
+        Math.min(3, Number(v?.forwardLift || 0)) * 35 +
+        Math.min(1, Number(v?.precursorCoverage || 0) * 3) * 25 +
+        Math.min(1, Number(stability || 0)) * 20 +
+        Math.min(1, Number(v?.signalDraws || 0) / 12) * 20
+      );
+      return {
+        numbers: d.numbers,
+        confidence,
+        score: Math.round(score),
+        discovery: d,
+        validation: v || null,
+        stableLiftRatio: round(stability, 3)
+      };
+    })
+    .filter(x => x.validation && x.validation.signalDraws >= 2)
+    .sort((a, b) =>
+      b.score - a.score ||
+      Number(b.validation?.forwardLift || 0) - Number(a.validation?.forwardLift || 0) ||
+      Number(b.validation?.precursorCoverage || 0) - Number(a.validation?.precursorCoverage || 0)
+    )
+    .slice(0, options.resultLimit);
+
+  const tierCandidates = ranked.map(x => ({ key: tripleKey(x.numbers) }));
+  const discovery4 = segmentMetrics(draws, hitMask4, 0, split, tierCandidates, options);
+  const validation4 = segmentMetrics(draws, hitMask4, split, draws.length, tierCandidates, options);
+  const discovery5 = segmentMetrics(draws, hitMask5, 0, split, tierCandidates, options);
+  const validation5 = segmentMetrics(draws, hitMask5, split, draws.length, tierCandidates, options);
+
+  const summary = hitSummary(draws, target);
+  const first = draws[0];
+  const last = draws.at(-1);
+  const currentSignals = activeSignals(draws, ranked, options);
+  const liveConfidence = buildLiveConfidence(draws, ranked, options, target);
+  const hitTierForecast = buildHitTierForecast(draws, ranked, options, target, {
+    discovery4,
+    validation4,
+    discovery5,
+    validation5
+  });
+
+  return {
+    ok: true,
+    model: 'HISTORICAL_PRECURSOR_VALIDATED_V4_STRICT_4PLUS',
+    target,
+    rule: 'A target HIT is any draw containing 3 or more target numbers. Candidate precursor triples are discovered only in the first 70% of history and validated on the later 30%. STRONG is now intentionally strict: it requires materially larger held-out 4+ support, success rate and lift, and exposes successes versus failures in fourPlusOutcomeCalibration.',
+    noFutureLeakage: true,
+    analyzedDraws: draws.length,
+    range: {
+      firstDrawId: Number(first?.draw_id || 0) || null,
+      firstDate: first?.draw_date || '',
+      lastDrawId: Number(last?.draw_id || 0) || null,
+      lastDate: last?.draw_date || '',
+      lastTime: last?.draw_time || ''
+    },
+    targetHits: summary,
+    split: {
+      discoveryDraws: split,
+      validationDraws: draws.length - split,
+      discoveryHits,
+      validationHits,
+      discoveryRatio: round(split / draws.length, 3)
+    },
+    leadWindow: { min: options.leadMin, max: options.leadMax },
+    candidatesDiscovered: discoveryCandidates.candidates.length,
+    baseline: {
+      discoveryForwardHitRate: discovery.baselineForwardRate,
+      validationForwardHitRate: validation.baselineForwardRate,
+      discovery4PlusForwardHitRate: discovery4.baselineForwardRate,
+      validation4PlusForwardHitRate: validation4.baselineForwardRate,
+      discovery5ForwardHitRate: discovery5.baselineForwardRate,
+      validation5ForwardHitRate: validation5.baselineForwardRate
+    },
+    precursors: ranked,
+    activeSignals: currentSignals,
+    liveConfidence,
+    hitTierForecast
+  };
+}
+
+module.exports = {
+  analyzePrecursors,
+  combinations3,
+  hitCount

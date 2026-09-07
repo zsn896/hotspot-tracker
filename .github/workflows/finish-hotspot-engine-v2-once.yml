@@ -1,0 +1,45 @@
+name: Finish HotSpot Engine V2 Once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/finish-hotspot-engine-v2-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Assemble exact precursor engine and clean temporary files
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat \
+            _precursor_engine_v2.part1 \
+            _precursor_engine_v2.part2 \
+            _precursor_engine_v2.part3a \
+            _precursor_engine_v2.part3b \
+            _precursor_engine_v2.part3c \
+            > lib/precursor-engine.js
+
+          actual=$(git hash-object lib/precursor-engine.js)
+          expected=52c00538607638aa1e271bb36e7d85a0134c8005
+          echo "precursor blob: $actual"
+          test "$actual" = "$expected"
+
+          rm -f _precursor_engine_v2.part1 _precursor_engine_v2.part2 _precursor_engine_v2.part3a _precursor_engine_v2.part3b _precursor_engine_v2.part3c
+          rm -f .github/workflows/finish-hotspot-engine-v2-once.yml
+
+          git config user.name "zsn896"
+          git config user.email "48352047+zsn896@users.noreply.github.com"
+          git add -A
+          git commit -m "Finish exact HotSpot Engine V2 import"
+          git push origin HEAD:main

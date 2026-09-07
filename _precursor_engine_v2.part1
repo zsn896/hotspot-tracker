@@ -1,0 +1,220 @@
+'use strict';
+
+const DEFAULT_OPTIONS = {
+  leadMin: 1,
+  leadMax: 5,
+  discoveryRatio: 0.70,
+  minDiscoveryHits: 20,
+  minCandidateSupport: 4,
+  candidateLimit: 240,
+  resultLimit: 24,
+  confidenceHistory: 12
+};
+
+function norm(values) {
+  return [...new Set((values || []).map(Number))]
+    .filter(n => Number.isInteger(n) && n >= 1 && n <= 80)
+    .sort((a, b) => a - b);
+}
+
+function hitCount(draw, numbers) {
+  const set = new Set(norm(draw?.numbers));
+  return norm(numbers).filter(n => set.has(n)).length;
+}
+
+function combinations3(values) {
+  const a = norm(values);
+  const out = [];
+  for (let i = 0; i < a.length - 2; i++) {
+    for (let j = i + 1; j < a.length - 1; j++) {
+      for (let k = j + 1; k < a.length; k++) out.push([a[i], a[j], a[k]]);
+    }
+  }
+  return out;
+}
+
+function tripleKey(values) {
+  return norm(values).join('-');
+}
+
+function parseTripleKey(key) {
+  return String(key).split('-').map(Number);
+}
+
+function drawHasTriple(draw, triple) {
+  const set = new Set(norm(draw?.numbers));
+  return triple.every(n => set.has(n));
+}
+
+function hour24(timeText) {
+  const text = String(timeText || '').trim().toLowerCase();
+  const m = text.match(/(\d{1,2}):(\d{2})\s*([ap])\.?m\.?/i);
+  if (!m) return null;
+  let hour = Number(m[1]);
+  if (!Number.isFinite(hour) || hour < 1 || hour > 12) return null;
+  const ampm = m[3].toLowerCase();
+  if (ampm === 'a' && hour === 12) hour = 0;
+  if (ampm === 'p' && hour !== 12) hour += 12;
+  return hour;
+}
+
+function safeRate(a, b) {
+  return b > 0 ? a / b : 0;
+}
+
+function round(value, digits = 4) {
+  if (!Number.isFinite(value)) return null;
+  const p = 10 ** digits;
+  return Math.round(value * p) / p;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+// ---------------------------------------------------------------------------
+// Precomputation layer (performance only)
+//
+// The algorithm below is unchanged. What changed is that the three operations
+// it repeats millions of times no longer redo work from scratch every call:
+//
+//   drawHasTriple  rebuilt `new Set(norm(draw.numbers))` on EVERY call, and it
+//                  is called once per candidate per draw per segment. Membership
+//                  is now a precomputed byte table, looked up in O(1).
+//   futureHitFlags re-scanned the forward window per candidate per draw. The
+//                  window only depends on the segment, so it is now computed
+//                  once per segment in a single linear pass.
+//   combinations3  allocated 1,140 arrays and 1,140 strings per draw. Triples
+//                  are now packed into one integer, so discovery allocates
+//                  nothing in its inner loop.
+//
+// Outputs are bit-for-bit identical to the previous implementation, including
+// candidate ordering: ties still resolve by first-seen order, which the old
+// Map iteration order provided implicitly and `candidateOrder` provides here.
+// ---------------------------------------------------------------------------
+
+const TRIPLE_SPACE = 81 * 81 * 81;
+
+function tripleId(a, b, c) {
+  return (a * 81 + b) * 81 + c;
+}
+
+function decodeTripleId(id) {
+  const c = id % 81;
+  const b = ((id - c) / 81) % 81;
+  const a = ((id - c - b * 81) / (81 * 81));
+  return [a, b, c];
+}
+
+/** Byte table of number membership per draw, built once per analysis. */
+function buildPresence(draws) {
+  return draws.map(draw => {
+    const flags = new Uint8Array(81);
+    for (const n of norm(draw?.numbers)) flags[n] = 1;
+    return flags;
+  });
+}
+
+/** Ascending, de-duplicated numbers per draw, built once. */
+function buildNumberLists(draws) {
+  return draws.map(draw => norm(draw?.numbers));
+}
+
+const contextCache = new WeakMap();
+const forwardCache = new WeakMap();
+
+/** Membership tables and normalised number lists, computed once per draw array. */
+function getContext(draws) {
+  let ctx = contextCache.get(draws);
+  if (!ctx) {
+    ctx = { presence: buildPresence(draws), numbers: buildNumberLists(draws) };
+    contextCache.set(draws, ctx);
+  }
+  return ctx;
+}
+
+function getForward(hitMask, start, end, leadMin, leadMax) {
+  let byRange = forwardCache.get(hitMask);
+  if (!byRange) { byRange = new Map(); forwardCache.set(hitMask, byRange); }
+  const key = `${start}:${end}:${leadMin}:${leadMax}`;
+  let forward = byRange.get(key);
+  if (!forward) { forward = buildForwardHits(hitMask, start, end, leadMin, leadMax); byRange.set(key, forward); }
+  return forward;
+}
+
+function presenceHasTriple(presence, index, triple) {
+  const flags = presence[index];
+  return Boolean(flags && flags[triple[0]] && flags[triple[1]] && flags[triple[2]]);
+}
+
+/**
+ * forward[i] = does any draw in [i+leadMin, i+leadMax] inside [start,end) hit?
+ * One linear pass replaces a rescan per candidate.
+ */
+function buildForwardHits(hitMask, start, end, leadMin, leadMax) {
+  const forward = new Uint8Array(Math.max(0, end - start));
+  for (let i = start; i < end; i++) {
+    let found = 0;
+    for (let lead = leadMin; lead <= leadMax; lead++) {
+      const idx = i + lead;
+      if (idx >= end) break;
+      if (hitMask[idx]) { found = 1; break; }
+    }
+    forward[i - start] = found;
+  }
+  return forward;
+}
+
+function futureHitFlags(hitMask, start, leadMin, leadMax, endExclusive) {
+  for (let lead = leadMin; lead <= leadMax; lead++) {
+    const idx = start + lead;
+    if (idx >= endExclusive) break;
+    if (hitMask[idx]) return true;
+  }
+  return false;
+}
+
+function hitSummary(draws, target) {
+  const out = { total: 0, three: 0, four: 0, five: 0, byHour: {} };
+  for (const draw of draws) {
+    const hits = hitCount(draw, target);
+    if (hits < 3) continue;
+    out.total++;
+    if (hits === 3) out.three++;
+    else if (hits === 4) out.four++;
+    else if (hits >= 5) out.five++;
+    const h = hour24(draw?.draw_time);
+    if (h != null) out.byHour[h] = (out.byHour[h] || 0) + 1;
+  }
+  return out;
+}
+
+function discoverCandidateTriples(draws, hitMask, start, end, options) {
+  const { leadMin, leadMax, minCandidateSupport } = options;
+  const ctx = getContext(draws);
+  // Integer keys instead of joined strings. A Map still backs this because its
+  // insertion order is what breaks ties in the sort below, exactly as before.
+  const stats = new Map();
+  let eligibleHits = 0;
+
+  for (let hitIndex = start; hitIndex < end; hitIndex++) {
+    if (!hitMask[hitIndex] || hitIndex - leadMax < start) continue;
+    eligibleHits++;
+    const anySeen = new Set();
+
+    for (let lead = leadMin; lead <= leadMax; lead++) {
+      const nums = ctx.numbers[hitIndex - lead] || [];
+      const len = nums.length;
+      // Enumerated in the same ascending order the old combinations3 produced,
+      // so first-seen order — and therefore tie-breaking — is preserved.
+      for (let i = 0; i < len - 2; i++) {
+        for (let j = i + 1; j < len - 1; j++) {
+          for (let k = j + 1; k < len; k++) {
+            const id = tripleId(nums[i], nums[j], nums[k]);
+            let item = stats.get(id);
+            if (!item) {
+              item = { id, precursorHits: 0, leadCounts: Array(leadMax + 1).fill(0) };
+              stats.set(id, item);
+            }
+            item.leadCounts[lead]++;
+            anySeen.add(id);

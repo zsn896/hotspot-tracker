@@ -1,0 +1,100 @@
+
+  const best4 = tierSignals[0] || null;
+  const second4 = tierSignals[1] || null;
+  const fourPlusScore = Math.round(clamp(
+    Number(best4?.fourPlusScore || 0) + Math.min(12, Math.round(Number(second4?.fourPlusScore || 0) * 0.12)),
+    0,
+    100
+  ));
+  const fiveScore = Math.max(...tierSignals.map(x => Number(x.fiveScore || 0)), 0);
+  const fourEvidence = best4?.fourPlus;
+  const validationSignals = Number(fourEvidence?.validationSignals || 0);
+  const validationHits = Number(fourEvidence?.validationHits || 0);
+  const validationSuccessRate = safeRate(validationHits, validationSignals);
+  const validated4 = Boolean(
+    fourEvidence &&
+    validationSignals >= 12 &&
+    validationHits >= 5 &&
+    validationSuccessRate >= 0.16 &&
+    Number(fourEvidence.validationLift || 0) >= 1.60 &&
+    Number(fourEvidence.discoveryHits || 0) >= 5
+  );
+
+  const fourPlusOutcomeCalibration = fourEvidence ? {
+    signal: best4?.numbers || [],
+    windowDraws: options.leadMax,
+    validationOpportunities: validationSignals,
+    fourPlusSuccesses: validationHits,
+    fourPlusFailures: Math.max(0, validationSignals - validationHits),
+    successRate: round(validationSuccessRate, 4),
+    baselineRate: Number(tierMetrics.validation4?.baselineForwardRate || 0),
+    lift: Number(fourEvidence.validationLift || 0),
+    discoverySuccesses: Number(fourEvidence.discoveryHits || 0),
+    qualifiesStrong: validated4,
+    thresholds: {
+      minValidationOpportunities: 12,
+      minValidationSuccesses: 5,
+      minValidationSuccessRate: 0.16,
+      minValidationLift: 1.60,
+      minDiscoverySuccesses: 5,
+      minFourPlusScore: 70
+    }
+  } : null;
+
+  const live3 = buildLiveConfidence(draws, ranked, options, target);
+  let status = 'QUIET';
+  let expectedTier = 'NONE';
+  let score = Math.max(Number(live3.score || 0), fourPlusScore);
+
+  if (currentHits >= 3) {
+    status = 'HIT_RESET';
+    expectedTier = currentHits >= 5 ? '5_OF_5_HIT' : currentHits >= 4 ? '4_PLUS_HIT' : '3_PLUS_HIT';
+    score = 12;
+  } else if (validated4 && fourPlusScore >= 70) {
+    status = 'STRONG';
+    expectedTier = '4_PLUS';
+    score = Math.max(fourPlusScore, 70);
+  } else if (Number(live3.score || 0) >= 45) {
+    status = 'MEDIUM';
+    expectedTier = '3_PLUS';
+    score = Number(live3.score || 0);
+  } else if (Number(live3.score || 0) >= 25 || fourPlusScore >= 35) {
+    status = 'LOW';
+    expectedTier = fourPlusScore >= Number(live3.score || 0) ? '4_PLUS_WATCH' : '3_PLUS_WATCH';
+  }
+
+  return {
+    status,
+    expectedTier,
+    score: Math.round(clamp(score, 0, 100)),
+    threePlusScore: Number(live3.score || 0),
+    fourPlusScore,
+    fiveScore,
+    validatedFourPlus: validated4,
+    fourPlusOutcomeCalibration,
+    currentHitCount: currentHits,
+    latestDrawId: Number(draws[index]?.draw_id || 0) || null,
+    latestTime: draws[index]?.draw_time || '',
+    rule: 'STRONG requires a current 4+ precursor that survives held-out validation with at least 12 validation opportunities, 5 validation 4+ successes, 16% validation success rate, 1.60 lift, 5 discovery 4+ successes, and a 4+ score of at least 70. MEDIUM reflects 3+ pressure only.',
+    strongestTierSignals: tierSignals.slice(0, 5)
+  };
+}
+
+function analyzePrecursors(inputDraws, targetNumbers, rawOptions = {}) {
+  const options = { ...DEFAULT_OPTIONS, ...rawOptions };
+  const target = norm(targetNumbers);
+  const draws = (inputDraws || [])
+    .filter(d => Number.isFinite(Number(d?.draw_id)) && norm(d?.numbers).length === 20)
+    .sort((a, b) => Number(a.draw_id) - Number(b.draw_id));
+
+  if (target.length < 3 || target.length > 5) return { ok: false, reason: 'target-must-have-3-to-5-numbers' };
+  if (draws.length < 80) return { ok: false, reason: 'not-enough-draws', have: draws.length, need: 80 };
+
+  const hitMask = draws.map(draw => hitCount(draw, target) >= 3);
+  const hitMask4 = draws.map(draw => hitCount(draw, target) >= 4);
+  const hitMask5 = draws.map(draw => hitCount(draw, target) >= 5);
+  const split = Math.max(
+    options.leadMax + 10,
+    Math.min(draws.length - (options.leadMax + 10), Math.floor(draws.length * options.discoveryRatio))
+  );
+
