@@ -5,6 +5,7 @@ const { db } = require('./lib');
 const PAGE_SIZE = 1000;
 const MAX_DRAWS = 8000;
 const DEFAULT_LOOKBACK = 10;
+const VALIDATION_RATIO = 0.30;
 
 function norm(values) {
   return [...new Set((values || []).map(Number))]
@@ -90,7 +91,6 @@ function buildFiveStudy(rows, target, lookback) {
       };
     });
 
-    // Count non-target precursor triples that appear 1-5 draws before exact 5/5 events.
     prior.slice(Math.max(0, prior.length - 5)).forEach((draw, localIndex, arr) => {
       const lead = arr.length - localIndex;
       combinations3(draw.numbers).forEach(triple => {
@@ -164,6 +164,176 @@ function buildFiveStudy(rows, target, lookback) {
   };
 }
 
+function futureExactFive(hitCounts, index, horizon) {
+  const end = Math.min(hitCounts.length - 1, index + horizon);
+  for (let i = index + 1; i <= end; i++) {
+    if (hitCounts[i] === 5) return i;
+  }
+  return -1;
+}
+
+function recentState(hitCounts, targetMatches, index) {
+  const last20Start = Math.max(0, index - 19);
+  const last10Start = Math.max(0, index - 9);
+  const last5Start = Math.max(0, index - 4);
+  const last20 = hitCounts.slice(last20Start, index + 1);
+  const last10 = hitCounts.slice(last10Start, index + 1);
+  const last5 = hitCounts.slice(last5Start, index + 1);
+
+  const union5 = new Set();
+  for (let i = last5Start; i <= index; i++) {
+    (targetMatches[i] || []).forEach(n => union5.add(n));
+  }
+
+  const threePlusPositions = [];
+  for (let i = last10Start; i <= index; i++) {
+    if (hitCounts[i] >= 3) threePlusPositions.push(i);
+  }
+  let compressedThreePlus = false;
+  for (let i = 1; i < threePlusPositions.length; i++) {
+    if (threePlusPositions[i] - threePlusPositions[i - 1] <= 5) compressedThreePlus = true;
+  }
+
+  const cluster20 = last20.some(x => x === 5);
+  const expansion10 =
+    last10.some(x => x >= 3) &&
+    last10.filter(x => x >= 2).length >= 2 &&
+    union5.size >= 4 &&
+    last5.reduce((s, x) => s + x, 0) >= 6;
+  const compressionExpansion = compressedThreePlus && union5.size >= 4;
+
+  return {
+    cluster20,
+    expansion10,
+    compressionExpansion,
+    clusterOrExpansion: cluster20 || expansion10,
+    evidence: {
+      recent20ExactFive: last20.filter(x => x === 5).length,
+      recent10ThreePlus: last10.filter(x => x >= 3).length,
+      recent10TwoPlus: last10.filter(x => x >= 2).length,
+      recent5DistinctTargetNumbers: union5.size,
+      recent5TotalTargetHits: last5.reduce((s, x) => s + x, 0),
+      compressedThreePlus
+    }
+  };
+}
+
+function baselineRate(hitCounts, startIndex, horizon) {
+  let opportunities = 0;
+  let successes = 0;
+  for (let i = Math.max(20, startIndex); i < hitCounts.length - horizon; i++) {
+    opportunities++;
+    if (futureExactFive(hitCounts, i, horizon) >= 0) successes++;
+  }
+  return {
+    opportunities,
+    successes,
+    successRate: opportunities ? Number((successes / opportunities).toFixed(6)) : 0
+  };
+}
+
+function evaluateRule(rows, hitCounts, targetMatches, startIndex, ruleKey) {
+  const episodes = [];
+  let previousActive = false;
+
+  for (let i = Math.max(20, startIndex); i < rows.length - 1; i++) {
+    const state = recentState(hitCounts, targetMatches, i);
+    const active = Boolean(state[ruleKey]);
+    if (active && !previousActive) {
+      episodes.push({
+        index: i,
+        drawId: Number(rows[i].draw_id),
+        date: rows[i].draw_date || '',
+        time: rows[i].draw_time || '',
+        evidence: state.evidence
+      });
+    }
+    previousActive = active;
+  }
+
+  const summarizeHorizon = horizon => {
+    const baseline = baselineRate(hitCounts, startIndex, horizon);
+    const eligible = episodes.filter(e => e.index + horizon < rows.length);
+    const successes = [];
+    const failures = [];
+    const uniqueFutureEvents = new Set();
+
+    eligible.forEach(e => {
+      const found = futureExactFive(hitCounts, e.index, horizon);
+      if (found >= 0) {
+        uniqueFutureEvents.add(Number(rows[found].draw_id));
+        successes.push({
+          signalDrawId: e.drawId,
+          signalTime: e.time,
+          eventDrawId: Number(rows[found].draw_id),
+          eventTime: rows[found].draw_time || '',
+          leadDraws: found - e.index,
+          evidence: e.evidence
+        });
+      } else {
+        failures.push({ signalDrawId: e.drawId, signalTime: e.time, evidence: e.evidence });
+      }
+    });
+
+    const rate = eligible.length ? successes.length / eligible.length : 0;
+    return {
+      horizonDraws: horizon,
+      signalEpisodes: eligible.length,
+      successes: successes.length,
+      failures: failures.length,
+      successRate: Number(rate.toFixed(6)),
+      baselineSuccessRate: baseline.successRate,
+      liftVsBaseline: baseline.successRate > 0 ? Number((rate / baseline.successRate).toFixed(3)) : null,
+      uniqueExactFiveEventsCaught: uniqueFutureEvents.size,
+      successCases: successes.slice(0, 30),
+      failureCases: failures.slice(0, 30)
+    };
+  };
+
+  return {
+    rule: ruleKey,
+    episodeDefinition: 'A signal is counted only when the rule changes from inactive to active, so consecutive active draws do not inflate opportunity counts.',
+    horizons: {
+      oneToFive: summarizeHorizon(5),
+      oneToTwenty: summarizeHorizon(20)
+    }
+  };
+}
+
+function buildWalkForwardBacktest(rows, target) {
+  const targetMatches = rows.map(draw => matched(draw, target));
+  const hitCounts = targetMatches.map(x => x.length);
+  const validationStartIndex = Math.floor(rows.length * (1 - VALIDATION_RATIO));
+  const exactFiveValidation = hitCounts
+    .slice(validationStartIndex)
+    .filter(x => x === 5).length;
+
+  const rules = ['cluster20', 'expansion10', 'compressionExpansion', 'clusterOrExpansion'];
+  return {
+    model: 'EXACT_5_CLUSTER_EXPANSION_WALK_FORWARD_V1',
+    noFutureLeakage: true,
+    caveat: 'The rule family was motivated by patterns already observed in this target, so this is a chronological walk-forward test but not a fully independent untouched-data experiment.',
+    definitions: {
+      cluster20: 'At least one exact 5/5 occurred in the most recent 20 completed draws.',
+      expansion10: 'Past-only state: at least one 3+ in the latest 10 draws, at least two 2+ draws in the latest 10, at least four distinct target numbers seen across the latest 5 draws, and at least six total target hits across those latest 5 draws.',
+      compressionExpansion: 'At least two 3+ occurrences inside the latest 10 draws separated by no more than 5 draws, plus at least four distinct target numbers seen across the latest 5 draws.',
+      clusterOrExpansion: 'cluster20 OR expansion10.'
+    },
+    validation: {
+      startIndex: validationStartIndex,
+      startDrawId: rows[validationStartIndex] ? Number(rows[validationStartIndex].draw_id) : null,
+      draws: rows.length - validationStartIndex,
+      exactFiveEvents: exactFiveValidation,
+      rules: Object.fromEntries(rules.map(rule => [rule, evaluateRule(rows, hitCounts, targetMatches, validationStartIndex, rule)]))
+    },
+    fullHistoryReference: {
+      draws: rows.length,
+      exactFiveEvents: hitCounts.filter(x => x === 5).length,
+      rules: Object.fromEntries(rules.map(rule => [rule, evaluateRule(rows, hitCounts, targetMatches, 20, rule)]))
+    }
+  };
+}
+
 module.exports = async function handler(req, res) {
   try {
     const target = parseTarget(req.query?.numbers || req.query?.set || '');
@@ -175,10 +345,11 @@ module.exports = async function handler(req, res) {
     const lookback = Math.max(1, Math.min(20, Number.isFinite(requested) ? Math.round(requested) : DEFAULT_LOOKBACK));
     const rows = await loadRows(MAX_DRAWS);
     const study = buildFiveStudy(rows, target, lookback);
+    const walkForward = buildWalkForwardBacktest(rows, target);
 
     return res.status(200).json({
       ok: true,
-      model: 'EXACT_5_OF_5_EVENT_STUDY_V1',
+      model: 'EXACT_5_OF_5_EVENT_STUDY_V2_WALK_FORWARD',
       target,
       noFutureLeakage: true,
       analyzedDraws: rows.length,
@@ -187,10 +358,11 @@ module.exports = async function handler(req, res) {
         firstDate: rows[0].draw_date || '',
         lastDrawId: Number(rows.at(-1).draw_id),
         lastDate: rows.at(-1).draw_date || '',
-        lastTime: rows.at(-1).draw_time || ''
+        lastTime: rows.at(-1].draw_time || ''
       } : null,
       study,
-      note: 'Descriptive historical study only. It exposes exact 5/5 events and the draws that occurred before them; it does not by itself prove predictive power.'
+      walkForward,
+      note: 'Historical test only. A high lift on a small number of 5/5 events is not proof of predictive power; validation sample size and future live performance matter.'
     });
   } catch (error) {
     return res.status(500).json({ ok: false, error: error?.message || String(error) });
