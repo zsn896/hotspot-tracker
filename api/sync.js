@@ -5,6 +5,12 @@ const cron = require('./cron');
 
 const GROUP_FIVE_NAME = 'AUTO Group Five';
 const GROUP_FIVE_TRACK_DRAWS = 20;
+const MANUAL_GROUP_NAMES = new Set([
+  'MANUAL Group',
+  'MANUAL Group 2',
+  'MANUAL Group 3'
+]);
+const MANUAL_FAST_CATCHUP_LIMIT = 25;
 
 function createCollector() {
   return {
@@ -33,6 +39,19 @@ async function getActiveGroupFive() {
     )}&active=eq.true&order=id.desc&limit=1`
   );
   return rows?.[0] || null;
+}
+
+async function getActiveManualGroups() {
+  const rows = await db(
+    'tracker_groups?select=id,name,numbers,start_draw_id,last_seen_draw_id,active&active=eq.true&order=id.asc&limit=200'
+  );
+
+  return (rows || []).filter(
+    group =>
+      MANUAL_GROUP_NAMES.has(String(group?.name || '')) &&
+      Array.isArray(group?.numbers) &&
+      group.numbers.length === 5
+  );
 }
 
 function groupFiveStatus(group, officialId) {
@@ -163,6 +182,99 @@ async function catchUpGroupFiveOne(group, officialId) {
   return true;
 }
 
+/*
+  Manual Groups 1/2/3 must advance their tracking cursor on every verified draw,
+  even when the draw is only a 0/5, 1/5 or 2/5. Only 3/5+ rows belong in the
+  visible result history. This mirrors api/group.js and api/fusion.js, but uses
+  already-stored draws only so a browser refresh remains lightweight.
+*/
+async function catchUpManualGroups(targetDrawId) {
+  const groups = await getActiveManualGroups();
+  let groupsUpdated = 0;
+  let drawsProcessed = 0;
+  let strongHitsRecorded = 0;
+
+  for (const group of groups) {
+    const startId = Number(group.start_draw_id || 0);
+    const after = Number(group.last_seen_draw_id ?? startId ?? 0);
+    const target = Number(targetDrawId || 0);
+
+    if (!Number.isFinite(after) || !target || after >= target) {
+      continue;
+    }
+
+    const end = Math.min(target, after + MANUAL_FAST_CATCHUP_LIMIT);
+    const rows = (
+      await db(
+        `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=gt.${after}&draw_id=lte.${end}&order=draw_id.asc&limit=${MANUAL_FAST_CATCHUP_LIMIT}`
+      )
+    ) || [];
+
+    let expected = after + 1;
+    let lastProcessed = after;
+    let processedForGroup = 0;
+
+    for (const d of rows) {
+      const drawId = Number(d?.draw_id || 0);
+
+      /* Never jump over a missing draw; the scheduled cron can repair gaps. */
+      if (drawId !== expected) {
+        break;
+      }
+
+      const result = score(
+        {
+          id: drawId,
+          date: d.draw_date,
+          time: d.draw_time,
+          numbers: d.numbers,
+          bullsEye: d.bulls_eye
+        },
+        group.numbers
+      );
+
+      if (Number(result?.count || 0) >= 3) {
+        await db('tracker_results?on_conflict=group_id,draw_id', {
+          method: 'POST',
+          prefer: 'resolution=merge-duplicates,return=minimal',
+          body: {
+            group_id: group.id,
+            draw_id: drawId,
+            hit_count: result.count,
+            hit_numbers: result.hit,
+            bulls_eye: result.bullsEye,
+            bulls_eye_match: result.bullsEyeMatch
+          }
+        });
+        strongHitsRecorded++;
+      }
+
+      lastProcessed = drawId;
+      processedForGroup++;
+      drawsProcessed++;
+      expected++;
+    }
+
+    if (lastProcessed > after) {
+      await db(`tracker_groups?id=eq.${group.id}`, {
+        method: 'PATCH',
+        prefer: 'return=minimal',
+        body: {
+          last_seen_draw_id: lastProcessed
+        }
+      });
+      groupsUpdated++;
+    }
+  }
+
+  return {
+    groupsUpdated,
+    drawsProcessed,
+    strongHitsRecorded,
+    updated: groupsUpdated > 0
+  };
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store,max-age=0');
 
@@ -221,41 +333,58 @@ module.exports = async (req, res) => {
     let groupFiveBefore = await getActiveGroupFive();
     let gfBefore = groupFiveStatus(groupFiveBefore, officialId);
     let groupFiveFastForwarded = false;
+    let manualFastSync = {
+      groupsUpdated: 0,
+      drawsProcessed: 0,
+      strongHitsRecorded: 0,
+      updated: false
+    };
 
-    if (method === 'GET' && gfBefore.trackingLag > 0) {
-      groupFiveFastForwarded = await catchUpGroupFiveOne(
-        groupFiveBefore,
-        officialId
-      );
+    if (method === 'GET') {
+      if (gfBefore.trackingLag > 0) {
+        groupFiveFastForwarded = await catchUpGroupFiveOne(
+          groupFiveBefore,
+          officialId
+        );
 
-      if (groupFiveFastForwarded) {
-        groupFiveBefore = await getActiveGroupFive();
-        gfBefore = groupFiveStatus(groupFiveBefore, officialId);
+        if (groupFiveFastForwarded) {
+          groupFiveBefore = await getActiveGroupFive();
+          gfBefore = groupFiveStatus(groupFiveBefore, officialId);
+        }
       }
+
+      /* Align Manual Group 1, 2 and 3 to the latest stored official draw too. */
+      manualFastSync = await catchUpManualGroups(storedId);
     }
 
     /*
-      Browser/UI reads stay fast. GET may write only one exact verified official
-      draw and align one active Group Five result, but it never launches the
-      expensive cron pipeline.
+      Browser/UI reads stay fast. GET may write one exact verified official draw,
+      align one active Group Five result, and advance manual group cursors using
+      stored draws only. It never launches the expensive cron pipeline.
     */
     if (method === 'GET') {
       const current = storedId >= officialId && !gfBefore.needsWork;
       return res.status(200).json({
         ok: true,
-        synced: fastForwarded || groupFiveFastForwarded,
+        synced:
+          fastForwarded ||
+          groupFiveFastForwarded ||
+          manualFastSync.updated,
         reason: fastForwarded
           ? 'fast-forwarded-one-official-draw'
           : groupFiveFastForwarded
             ? 'aligned-group-five-one-draw'
-            : current
-              ? 'already-current'
-              : 'background-sync-pending',
+            : manualFastSync.updated
+              ? 'aligned-manual-groups'
+              : current
+                ? 'already-current'
+                : 'background-sync-pending',
         officialDrawId: officialId,
         storedDrawId: storedId,
         lag: Math.max(0, officialId - storedId),
         drawLag: Math.max(0, officialId - storedId),
         groupFive: groupFivePayload(gfBefore),
+        manual: manualFastSync,
         caughtUp: current,
         backgroundSync: !current,
         fastForwarded,
