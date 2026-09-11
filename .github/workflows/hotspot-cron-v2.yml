@@ -1,0 +1,76 @@
+name: HotSpot Worker Cron v2
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: hotspot-worker-cron-v2
+  cancel-in-progress: false
+
+jobs:
+  run-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+
+    steps:
+      - name: Check cron secret
+        run: |
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "::error::CRON_SECRET is not set in GitHub Actions secrets."
+            exit 1
+          fi
+          echo "CRON_SECRET is present."
+
+      - name: Call protected cron endpoint
+        run: |
+          echo "Calling HotSpot cron endpoint..."
+
+          status=$(curl \
+            --silent \
+            --show-error \
+            --connect-timeout 15 \
+            --max-time 310 \
+            -o response.txt \
+            -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "accept: application/json" \
+            https://zsn896hotspottrackerlatest.vercel.app/api/cron) || curl_exit=$?
+
+          echo "HTTP status: ${status:-none}"
+          echo "----- response body -----"
+          if [ -f response.txt ]; then
+            head -c 12000 response.txt
+          else
+            echo "(no response body)"
+          fi
+          echo
+          echo "-------------------------"
+
+          if [ -n "${curl_exit:-}" ]; then
+            echo "::error::curl failed with exit code ${curl_exit}."
+            exit "$curl_exit"
+          fi
+
+          case "$status" in
+            200)
+              echo "Cron completed successfully."
+              ;;
+            401)
+              echo "::error::401 Unauthorized. GitHub CRON_SECRET does not match Vercel CRON_SECRET."
+              exit 1
+              ;;
+            500)
+              echo "::error::Server error. See the response body above."
+              exit 1
+              ;;
+            504)
+              echo "::error::Vercel function exceeded its execution limit."
+              exit 1
+              ;;
+            *)
+              echo "::error::Unexpected HTTP status '${status:-none}'."
+              exit 1
+              ;;
+          esac
