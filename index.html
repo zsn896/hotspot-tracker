@@ -9,88 +9,18 @@
 <div id="boot" style="padding:24px">Loading Hot Spot…</div>
 <script>
 (async()=>{
-try{
-  let src=await fetch('/index-core.html?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Unable to load UI core');return r.text();});
-
-  /* Keep the old four-minute fallback, but drive live updates from actual Draw ID changes. */
-  src=src.replace("setInterval(refreshAll,30000)","setInterval(refreshAll,240000)");
-  src=src.replace(
-    "let html=await fetch('/index-base.html?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Unable to load base UI');return r.text();});",
-    "let html=await fetch('/index-base.html?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Unable to load base UI');return r.text();});html=html.replace(/setInterval\\(\\s*loadAll,\\s*60000\\s*\\);/g,'setInterval(loadAll,240000);');html=html.replace(/Last checked/g,'Last Checked');html=html.replace(/(<div class=\\\"manualMetricLabel\\\">\\s*)Last Seen(\\s*<\\/div>\\s*<div class=\\\"manualMetricValue cPurple\\\">\\s*\\$\\{\\s*latestDrawId)/,'$1Last 3+ Hit$2');"
-  );
-
-  src=src.replace(
-    "function refreshAll(){refreshLearner();refreshGroup()}setTimeout(refreshAll,900);setInterval(refreshAll,240000);window.addEventListener('focus',refreshAll);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')refreshAll()});",
-    "var drawWatchId=null,drawWatchBusy=false;async function checkLatestDraw(){if(drawWatchBusy||document.visibilityState==='hidden')return;drawWatchBusy=true;try{var r=await fetch('/api/state?ts='+Date.now(),{cache:'no-store'});if(!r.ok)return;var j=await r.json(),id=Number(j&&j.latest&&j.latest.draw_id||0);if(!id)return;if(drawWatchId===null){drawWatchId=Number(trackerLatest||id);if(id>drawWatchId){drawWatchId=id;refreshAll()}return}if(id!==drawWatchId){drawWatchId=id;refreshAll()}}catch(e){}finally{drawWatchBusy=false}}function refreshAll(){try{if(typeof loadAll==='function')loadAll()}catch(e){}refreshLearner();refreshGroup()}setTimeout(function(){refreshAll();setTimeout(checkLatestDraw,3000)},900);setInterval(checkLatestDraw,60000);window.addEventListener('focus',function(){setTimeout(checkLatestDraw,800)});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(checkLatestDraw,800)});"
-  );
-
-  const precursorCss=`
-.precursorMeter{margin-top:10px;padding:10px;border-radius:10px;border:1px solid rgba(85,162,255,.36);background:rgba(18,44,70,.38)}.precursorTop{display:flex;justify-content:space-between;align-items:center;gap:8px}.precursorTitle{font-size:10px;font-weight:950;color:#a9bad0}.precursorValue{font-size:17px;font-weight:1000}.precursorBar{height:7px;margin-top:8px;border-radius:999px;background:rgba(159,176,199,.16);overflow:hidden}.precursorFill{height:100%;border-radius:999px;background:currentColor}.precursorLow{color:#9fb0c7}.precursorMedium{color:#f4d273}.precursorHigh{color:#43ea82}.precursorMeta{font-size:10px;color:#91a5bd;margin-top:6px}.precursorPending{color:#91a5bd}.precursorStats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}.precursorStat{padding:7px 8px;border-radius:8px;background:rgba(4,12,23,.38);border:1px solid rgba(159,176,199,.16);font-size:10px;color:#9fb0c7}.precursorStat b{display:block;margin-top:2px;font-size:14px;color:#fff}.precursorNote{margin-top:7px;font-size:9px;color:#7f94ad}
-`;
-  src=src.replace('@media(max-width:390px)',precursorCss+'@media(max-width:390px)');
-
-  src=src.replace(
-    "var allowed=['DORMANT','EARLY_SIGNAL','RISING','STRONG','COOLING','REBOUND_WATCH'];var labels={DORMANT:'DORMANT',EARLY_SIGNAL:'EARLY SIGNAL',RISING:'RISING',STRONG:'STRONG',COOLING:'COOLING',REBOUND_WATCH:'REBOUND WATCH'};var trackerLatest=null,trackerWindow=null,autoDetails=[],manualDetails=[];",
-    "var allowed=['DORMANT','EARLY_SIGNAL','RISING','STRONG','COOLING','REBOUND_WATCH'];var labels={DORMANT:'DORMANT',EARLY_SIGNAL:'EARLY SIGNAL',RISING:'RISING',STRONG:'STRONG',COOLING:'COOLING',REBOUND_WATCH:'REBOUND WATCH'};var trackerLatest=null,trackerWindow=null,autoDetails=[],manualDetails=[],precursorByKey={},precursorLoaded=false,precursorBusy=false,precursorDelayTimer=null,manualServerSyncBusy=false,manualServerSynced=false;var PREC_KEY='hotspot_precursor_ui_cache_v2';"
-  );
-
-  const precursorFns=`
-function ensurePrecursorCache(){if(precursorLoaded)return;var v=readJson(PREC_KEY,{});precursorByKey=v&&typeof v==='object'&&!Array.isArray(v)?v:{};precursorLoaded=true}
-function savePrecursorCache(){try{writeJson(PREC_KEY,precursorByKey)}catch(e){}}
-function precursorHtml(nums){ensurePrecursorCache();var p=precursorByKey[keyOf(nums)];if(!p)return '<div class="precursorMeter precursorPending"><div class="precursorTop"><div class="precursorTitle">4+ OUTCOME VALIDATION</div><div class="precursorValue">Analyzing…</div></div><div class="precursorMeta">Checking held-out 4+ success/failure record before allowing a signal label</div></div>';var c=p.confidence||{},tier=p.tier||{},cal=tier.fourPlusOutcomeCalibration||{},can4=Array.isArray(nums)&&nums.length>=4,fourScore=can4?Number(tier.fourPlusScore!=null?tier.fourPlusScore:tier.score||0):0,threeScore=Number(tier.threePlusScore!=null?tier.threePlusScore:c.score||0),status=can4?String(tier.status||'QUIET'):String(c.level||'QUIET'),expected=can4?String(tier.expectedTier||'NONE'):'3_PLUS',opp=Number(cal.validationOpportunities||0),succ=Number(cal.fourPlusSuccesses||0),fail=Number(cal.fourPlusFailures||Math.max(0,opp-succ)),rate=Number(cal.successRate||0),qualified=Boolean(cal.qualifiesStrong),strong=can4&&qualified&&status==='STRONG'&&Boolean(tier.validatedFourPlus)&&(expected==='4_PLUS'||expected==='5_OF_5'||expected==='5_PLUS'),mainScore=can4?fourScore:threeScore,cls=strong?'precursorHigh':((status==='MEDIUM'||expected==='3_PLUS'||mainScore>=45)?'precursorMedium':'precursorLow'),days=Number(p.coverageDays||0),target=Number(p.targetDays||180),stale=Number(p.drawId||0)!==Number(trackerLatest||0),hit=c.hitNow?' · HIT RESET':'',activeCount=Array.isArray(c.activeSignals)?c.activeSignals.length:(Array.isArray(tier.strongestTierSignals)?tier.strongestTierSignals.length:0),record=opp?(succ+' successes / '+fail+' failures · '+(rate*100).toFixed(1)+'%'):'no held-out outcome record',label=can4?(strong?('VERIFIED 4+ SIGNAL · '+record):('UNVERIFIED PATTERN · '+record)):(status+' · 3-NUMBER SET');return '<div class="precursorMeter '+cls+'"><div class="precursorTop"><div class="precursorTitle">4+ OUTCOME VALIDATION</div><div class="precursorValue">'+esc(mainScore)+'/100</div></div><div class="precursorBar"><div class="precursorFill" style="width:'+Math.max(0,Math.min(100,mainScore))+'%"></div></div><div class="precursorStats"><div class="precursorStat">4+ EVIDENCE<b>'+esc(can4?fourScore:'—')+'/100</b></div><div class="precursorStat">3+ PRESSURE<b>'+esc(threeScore)+'/100</b></div><div class="precursorStat">4+ SUCC / FAIL<b>'+esc(opp?(succ+' / '+fail):'—')+'</b></div><div class="precursorStat">SUCCESS RATE<b>'+esc(opp?((rate*100).toFixed(1)+'%'):'—')+'</b></div></div><div class="precursorMeta">'+esc(label)+hit+' · Archive '+esc(days)+'/'+esc(target)+' days'+(stale?' · updating…':'')+'</div><div class="precursorNote">The word SIGNAL is shown only when the current 4+ precursor passes held-out outcome validation. Otherwise it is labeled UNVERIFIED PATTERN even when the internal score is high.</div></div>'}
-function migrateStrongManualLocal(){var current=readSets(MANUAL_KEY);if(current.length)return current;var legacy=readSets('hotspot_core_manual_saved_v4');if(legacy.length){writeJson(MANUAL_KEY,legacy);return legacy}return current}
-async function registerManualServer(nums){try{fetch('/api/track?action=register-strong-manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({numbers:nums}),keepalive:true}).catch(function(){})}catch(e){}}
-async function syncManualsFromServer(){if(manualServerSyncBusy||manualServerSynced)return false;manualServerSyncBusy=true;try{var r=await fetch('/api/track?action=strong-manual-groups&ts='+Date.now(),{cache:'no-store'});if(!r.ok)return false;var j=await r.json();if(!j||!Array.isArray(j.groups))return false;var local=migrateStrongManualLocal(),seen={},merged=[];local.concat(j.groups.filter(function(g){return g&&g.active!==false&&Array.isArray(g.numbers)}).map(function(g){return g.numbers})).forEach(function(nums){var n=Array.from(new Set((nums||[]).map(Number))).filter(function(v){return Number.isInteger(v)&&v>=1&&v<=80}).sort(function(a,b){return a-b});if(n.length<3||n.length>5)return;var k=keyOf(n);if(!seen[k]){seen[k]=1;merged.push(n)}});for(var i=0;i<local.length;i++)registerManualServer(local[i]);var before=local.map(keyOf).join('|'),after=merged.map(keyOf).join('|');manualServerSynced=true;if(before!==after){writeJson(MANUAL_KEY,merged);return true}return false}catch(e){return false}finally{manualServerSyncBusy=false}}
-async function refreshPrecursor(sets){ensurePrecursorCache();if(precursorBusy||!sets.length)return;precursorBusy=true;var latest=Number(trackerLatest||0);try{for(var i=0;i<Math.min(6,sets.length);i++){var nums=sets[i],k=keyOf(nums),cached=precursorByKey[k];if(cached&&Number(cached.drawId||0)===latest)continue;try{var r=await fetch('/api/health?mode=precursor-analyze&numbers='+encodeURIComponent(nums.join('-'))+'&ts='+Date.now(),{cache:'no-store'});if(!r.ok)continue;var j=await r.json(),analysis=j&&j.analysis?j.analysis:{};precursorByKey[k]={confidence:analysis.liveConfidence||null,tier:analysis.hitTierForecast||null,coverageDays:j&&j.archive?j.archive.coverageDays:0,targetDays:j&&j.archive?j.archive.targetDays:180,drawId:analysis.liveConfidence?analysis.liveConfidence.latestDrawId:latest};savePrecursorCache()}catch(e){}if(i<sets.length-1)await new Promise(function(resolve){setTimeout(resolve,120)})}}finally{precursorBusy=false;renderTracker()}}
-`;
-  src=src.replace('function ingestAuto(d){',precursorFns+'function ingestAuto(d){');
-
-  src=src.replace("if(kind==='manual'){if(nums.length>3){","if(kind==='manual'){extra+=precursorHtml(nums);if(nums.length>3){");
-
-  /* Prevent the legacy ANY 3+ cycle engine from ever producing a STRONG label inside Manual Strong. */
-  src=src.replace(
-    "tag=kind==='manual'?(state.text+' · '+state.ar):(stale?'قوي سابقًا':'قوي حالي')",
-    "tag=kind==='manual'?'4+ VALIDATION ONLY':(stale?'قوي سابقًا':'قوي حالي')"
-  );
-  src=src.replace(
-    "if(kind==='manual'&&nums.length>3&&c.appearedNow&&lastHits>=3)st={text:'ظهر الآن '+lastHits+'/'+nums.length+' ✅: '+lastNums.join(' - ')+' · Draw '+(c.latestDrawId||trackerLatest||'—'),hit:true,miss:false};var extra='';",
-    "if(kind==='manual'&&nums.length>3&&c.appearedNow&&lastHits>=3)st={text:'3+ HIT · cycle reset · '+lastHits+'/'+nums.length+' ✅ · Draw '+(c.latestDrawId||trackerLatest||'—'),hit:true,miss:false};if(kind==='manual'&&!st.hit)st={text:'4+ validation status is shown below',hit:false,miss:false};var extra='';"
-  );
-  src=src.replace(
-    "extra+=detailAnalysis(focus,'تحليل دورة ANY 3+')",
-    "extra+='<div class=\"coreMini\">سجل 3+ للمعلومة وإعادة ضبط الدورة فقط. لا يستخدم لإظهار STRONG أو SIGNAL؛ حالة 4+ الحقيقية تظهر حصريًا من سجل validation أدناه.</div>'"
-  );
-
-  src=src.replace(
-    "writeJson(MANUAL_KEY,sets);clearBoxes();refreshTrackerDetails()",
-    "writeJson(MANUAL_KEY,sets);registerManualServer(u);clearBoxes();refreshTrackerDetails()"
-  );
-
-  src=src.replace(
-    "async function refreshTrackerDetails(){var v=await Promise.all([evaluateSets(readSets(AUTO_KEY)),evaluateSets(readSets(MANUAL_KEY))]);autoDetails=v[0];manualDetails=v[1];renderTracker()}",
-    "async function refreshTrackerDetails(){var manualSets=migrateStrongManualLocal(),v=await Promise.all([evaluateSets(readSets(AUTO_KEY)),evaluateSets(manualSets)]);autoDetails=v[0];manualDetails=v[1];renderTracker();if(precursorDelayTimer)clearTimeout(precursorDelayTimer);precursorDelayTimer=setTimeout(function(){refreshPrecursor(manualSets)},7000);if(!manualServerSynced&&!manualServerSyncBusy){setTimeout(async function(){var changed=await syncManualsFromServer();if(changed)refreshTrackerDetails()},2500)}}"
-  );
-
-  /* Hide automatic Core3 cards from the Active/Historical UI only. Backend analysis and storage remain unchanged. */
-  src=src.replace(
-    "+'</div>';setupBoxes();restoreDraft();var a=document.getElementById('manualCoreAdd');",
-    "+'</div>';Array.prototype.forEach.call(p.querySelectorAll('.coreSection'),function(s){var h=s.querySelector('.coreSectionTitle'),t=h?String(h.textContent||'').trim():'';if(t==='ACTIVE STRONG'||t==='HISTORICAL STRONG')s.remove()});setupBoxes();restoreDraft();var a=document.getElementById('manualCoreAdd');"
-  );
-
-  /* Manual Strong is intentionally isolated from the separate Manual Analysis tool. */
-  src=src.replace(/MANUAL_KEY/g,'STRONG_MANUAL_KEY');
-  src=src.replace(
-    "STRONG_MANUAL_KEY='hotspot_core_manual_saved_v4'",
-    "STRONG_MANUAL_KEY='hotspot_core_strong_manual_saved_v1'"
-  );
-  src=src.replace(/MANUAL TRACKING \+ ANALYSIS/g,'MANUAL STRONG');
-
-  document.open();
-  document.write(src);
-  document.close();
-}catch(e){
-  document.getElementById('boot').textContent='Hot Spot failed to load: '+(e&&e.message?e.message:e);
-}
+  try{
+    let shell=await fetch('/index-shell.html?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Unable to load app shell');return r.text();});
+    const target='document.write(src);';
+    const replacement="document.write(src.replace('</body>','<scr'+'ipt src=\"/manual-live-patch.js?ts='+Date.now()+'\"></scr'+'ipt></body>'));";
+    if(!shell.includes(target))throw new Error('App shell injection point not found');
+    shell=shell.replace(target,replacement);
+    document.open();
+    document.write(shell);
+    document.close();
+  }catch(e){
+    document.getElementById('boot').textContent='Hot Spot failed to load: '+(e&&e.message?e.message:e);
+  }
 })();
 </script>
 </body>
