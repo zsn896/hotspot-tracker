@@ -83,6 +83,20 @@ function groupFivePayload(status) {
   };
 }
 
+async function storeDraw(draw) {
+  await db('hotspot_draws?on_conflict=draw_id', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: {
+      draw_id: draw.id,
+      draw_date: draw.date,
+      draw_time: draw.time,
+      numbers: draw.numbers,
+      bulls_eye: draw.bullsEye
+    }
+  });
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store,max-age=0');
 
@@ -93,10 +107,9 @@ module.exports = async (req, res) => {
       return res.status(405).json({ ok: false, error: 'Method not allowed' });
     }
 
-    const official = await getDraw(null);
-    const officialId = Number(official?.id || 0);
+    let official = await getDraw(null);
 
-    if (!officialId) {
+    if (!Number(official?.id || 0)) {
       return res.status(502).json({
         ok: false,
         error: 'Unable to read official latest draw'
@@ -106,30 +119,64 @@ module.exports = async (req, res) => {
     const storedRows = await db(
       'hotspot_draws?select=draw_id,draw_date,draw_time&order=draw_id.desc&limit=1'
     );
-    const storedId = Number(storedRows?.[0]?.draw_id || 0);
+    let storedId = Number(storedRows?.[0]?.draw_id || 0);
+
+    /*
+      The public Hot Spot page can briefly serve server-side HTML one draw behind
+      the live browser view. Probe ONLY the exact next draw on the official Past
+      Winning Numbers page. getDraw(id) rejects the response unless the official
+      page returns that exact draw ID, so this never invents or predicts a draw.
+
+      On browser GET requests, store that one verified draw immediately. This is
+      intentionally lightweight: the scheduled cron still performs all heavy
+      tracking/analysis work in the background.
+    */
+    let fastForwarded = false;
+    if (storedId > 0) {
+      const nextId = storedId + 1;
+      try {
+        const next = await getDraw(nextId);
+        if (Number(next?.id || 0) === nextId) {
+          official = next;
+          if (method === 'GET') {
+            await storeDraw(next);
+            storedId = nextId;
+            fastForwarded = true;
+          }
+        }
+      } catch (_) {
+        // Exact next draw is not published on the official historical page yet.
+      }
+    }
+
+    const officialId = Number(official?.id || 0);
     const drawLag = Math.max(0, officialId - storedId);
 
     const groupFiveBefore = await getActiveGroupFive();
     const gfBefore = groupFiveStatus(groupFiveBefore, officialId);
 
     /*
-      Browser/UI reads must stay fast. GET now reports sync state only and never
-      launches the expensive cron pipeline. The scheduled GitHub cron performs
-      catch-up in the background. POST remains available for an explicit sync.
+      Browser/UI reads stay fast. GET may write only one exact verified official
+      draw as above, but it never launches the expensive cron pipeline.
     */
     if (method === 'GET') {
-      const current = storedId >= officialId && !gfBefore.needsWork;
+      const current = storedId >= officialId;
       return res.status(200).json({
         ok: true,
-        synced: false,
-        reason: current ? 'already-current' : 'background-sync-pending',
+        synced: fastForwarded,
+        reason: fastForwarded
+          ? 'fast-forwarded-one-official-draw'
+          : current
+            ? 'already-current'
+            : 'background-sync-pending',
         officialDrawId: officialId,
         storedDrawId: storedId,
-        lag: drawLag,
-        drawLag,
+        lag: Math.max(0, officialId - storedId),
+        drawLag: Math.max(0, officialId - storedId),
         groupFive: groupFivePayload(gfBefore),
         caughtUp: current,
-        backgroundSync: !current
+        backgroundSync: !current || gfBefore.needsWork,
+        fastForwarded
       });
     }
 
