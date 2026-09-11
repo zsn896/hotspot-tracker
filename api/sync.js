@@ -1,6 +1,6 @@
 'use strict';
 
-const { getDraw, db } = require('./lib');
+const { getDraw, db, score } = require('./lib');
 const cron = require('./cron');
 
 const GROUP_FIVE_NAME = 'AUTO Group Five';
@@ -28,7 +28,7 @@ function createCollector() {
 
 async function getActiveGroupFive() {
   const rows = await db(
-    `tracker_groups?select=id,name,start_draw_id,last_seen_draw_id,active&name=eq.${encodeURIComponent(
+    `tracker_groups?select=id,name,numbers,start_draw_id,last_seen_draw_id,active&name=eq.${encodeURIComponent(
       GROUP_FIVE_NAME
     )}&active=eq.true&order=id.desc&limit=1`
   );
@@ -97,6 +97,72 @@ async function storeDraw(draw) {
   });
 }
 
+/*
+  Lightweight Group Five alignment for browser reads.
+
+  This intentionally processes at most one already-stored draw and never rotates
+  or selects a new group. Rotation/selection stays in the scheduled cron. The
+  purpose is only to keep the active group's visible result on the same draw as
+  the latest stored official draw without invoking the heavy cron pipeline.
+*/
+async function catchUpGroupFiveOne(group, officialId) {
+  if (!group || !Array.isArray(group.numbers) || group.numbers.length !== 5) {
+    return false;
+  }
+
+  const status = groupFiveStatus(group, officialId);
+  if (status.trackingLag <= 0) {
+    return false;
+  }
+
+  const nextId = status.lastSeenId + 1;
+  if (nextId > status.targetId || nextId > status.cutoffId) {
+    return false;
+  }
+
+  const rows = await db(
+    `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=eq.${nextId}&limit=1`
+  );
+  const d = rows?.[0];
+  if (!d || Number(d.draw_id || 0) !== nextId) {
+    return false;
+  }
+
+  const result = score(
+    {
+      id: Number(d.draw_id),
+      date: d.draw_date,
+      time: d.draw_time,
+      numbers: d.numbers,
+      bullsEye: d.bulls_eye
+    },
+    group.numbers
+  );
+
+  await db('tracker_results?on_conflict=group_id,draw_id', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: {
+      group_id: group.id,
+      draw_id: nextId,
+      hit_count: result.count,
+      hit_numbers: result.hit,
+      bulls_eye: result.bullsEye,
+      bulls_eye_match: result.bullsEyeMatch
+    }
+  });
+
+  await db(`tracker_groups?id=eq.${group.id}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: {
+      last_seen_draw_id: nextId
+    }
+  });
+
+  return true;
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store,max-age=0');
 
@@ -152,31 +218,48 @@ module.exports = async (req, res) => {
     const officialId = Number(official?.id || 0);
     const drawLag = Math.max(0, officialId - storedId);
 
-    const groupFiveBefore = await getActiveGroupFive();
-    const gfBefore = groupFiveStatus(groupFiveBefore, officialId);
+    let groupFiveBefore = await getActiveGroupFive();
+    let gfBefore = groupFiveStatus(groupFiveBefore, officialId);
+    let groupFiveFastForwarded = false;
+
+    if (method === 'GET' && gfBefore.trackingLag > 0) {
+      groupFiveFastForwarded = await catchUpGroupFiveOne(
+        groupFiveBefore,
+        officialId
+      );
+
+      if (groupFiveFastForwarded) {
+        groupFiveBefore = await getActiveGroupFive();
+        gfBefore = groupFiveStatus(groupFiveBefore, officialId);
+      }
+    }
 
     /*
       Browser/UI reads stay fast. GET may write only one exact verified official
-      draw as above, but it never launches the expensive cron pipeline.
+      draw and align one active Group Five result, but it never launches the
+      expensive cron pipeline.
     */
     if (method === 'GET') {
-      const current = storedId >= officialId;
+      const current = storedId >= officialId && !gfBefore.needsWork;
       return res.status(200).json({
         ok: true,
-        synced: fastForwarded,
+        synced: fastForwarded || groupFiveFastForwarded,
         reason: fastForwarded
           ? 'fast-forwarded-one-official-draw'
-          : current
-            ? 'already-current'
-            : 'background-sync-pending',
+          : groupFiveFastForwarded
+            ? 'aligned-group-five-one-draw'
+            : current
+              ? 'already-current'
+              : 'background-sync-pending',
         officialDrawId: officialId,
         storedDrawId: storedId,
         lag: Math.max(0, officialId - storedId),
         drawLag: Math.max(0, officialId - storedId),
         groupFive: groupFivePayload(gfBefore),
         caughtUp: current,
-        backgroundSync: !current || gfBefore.needsWork,
-        fastForwarded
+        backgroundSync: !current,
+        fastForwarded,
+        groupFiveFastForwarded
       });
     }
 
