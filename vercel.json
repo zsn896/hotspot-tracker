@@ -17,6 +17,9 @@
     },
     "api/group.js": {
       "maxDuration": 30
+    },
+    "api/signal-quality.js": {
+      "maxDuration": 60
     }
   },
   "headers": [

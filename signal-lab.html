@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مختبر جودة الإشارة</title>
+<style>
+body{font:17px/1.8 system-ui,sans-serif;background:#091220;color:#e8f0fb;margin:0;padding:24px}main{max-width:900px;margin:auto}a{color:#74d5fb}h1{line-height:1.3}section{background:#132239;border:1px solid #29435f;padding:24px;border-radius:16px;margin:20px 0}input,button{font:inherit;padding:12px;border-radius:8px}input{max-width:90%;width:320px;background:#091220;color:white;border:1px solid #6585a5}button{background:#72d9b1;border:0;color:#092321;cursor:pointer}button:disabled{opacity:.5}table{width:100%;border-collapse:collapse}th,td{text-align:right;padding:10px;border-bottom:1px solid #385068}.scroll{overflow:auto}.note{color:#b6c8dc}#status{font-weight:bold}.warn{color:#f4cd83}
+</style>
+<main><a href="/">العودة إلى التطبيق</a><h1>مختبر جودة الإشارة</h1>
+<p>طريقة تجريبية لاكتشاف الأنماط التي تسبق إصابة ٤ أرقام أو أكثر من مجموعتك، ثم اختبارها على فترة لاحقة لم تُستخدم في الاختيار.</p>
+<section><label for="numbers">أدخل خمسة أرقام مختلفة من ١ إلى ٨٠، باستخدام الأرقام الإنجليزية والفواصل</label><p><input id="numbers" dir="ltr" placeholder="9,17,37,51,56" autocomplete="off"> <button id="run">اختبر المجموعة</button></p>
+<p class="note">٦٠٪ لاكتشاف الأنماط، ٢٠٪ لاختيارها وتقدير معدل النجاح، و٢٠٪ للاختبار النهائي. تُستبعد النوافذ الناقصة، ولا تتداخل نوافذ النتائج المحتسبة.</p>
+<p id="status" role="status" aria-live="polite">لم يبدأ الاختبار بعد.</p></section>
+<section id="results" hidden><h2>نتيجة الاختبار النهائي</h2><p id="verdict" class="warn"></p><p id="scope"></p>
+<div class="scroll"><table><thead><tr><th>المقياس</th><th>الطريقة الجديدة</th></tr></thead><tbody id="metrics"></tbody></table></div>
+<p id="signals"></p><p id="estimate"></p><p id="legacy"></p>
+<p class="note">مقياس Brier الأصغر أفضل لتقييم تقديرات الاحتمال. تجاوزه للصدفة وحده لا يثبت أفضلية قابلة للاستمرار. قد تظهر نسب كبيرة في العينات الصغيرة.</p>
+<p class="note">المرجع القديم هنا قائمة أنماط مجمّدة من فترة الاكتشاف، وليس إعادة تشغيل كاملة لمحرك الإنتاج المتغير. قد تختلف نوافذ الإشارات بين الطريقتين، فلا تصلح نسبهما لترتيب نهائي للدقة.</p>
+<p class="note">هذه الصفحة لا تغيّر إشارات التطبيق ولا تسجّل توقعات بأثر رجعي. اجتياز الاختبار التاريخي يؤهل لتجربة مستقبلية مستقلة فقط. تكرار تجربة مجموعات كثيرة وانتقاء الأفضل قد يعطي نتيجة مضللة.</p></section>
+</main><script>
+const run=document.getElementById('run'),status=document.getElementById('status'),results=document.getElementById('results');
+const pct=v=>v==null?'غير متاح':(100*v).toFixed(2)+'٪';
+run.onclick=async()=>{
+ run.disabled=true;results.hidden=true;status.textContent='جارٍ تحليل الأرشيف؛ قد يستغرق ذلك دقيقة…';
+ try{
+ const response=await fetch('/api/signal-quality?numbers='+encodeURIComponent(document.getElementById('numbers').value.trim()),{signal:AbortSignal.timeout(65000)});
+ const d=await response.json();if(!response.ok||!d.ok)throw Error(d.error||(d.reason==='need-at-least-1500-valid-draws'?'يلزم ١٥٠٠ سحب صالح على الأقل.':'تعذر التحليل.'));
+ const t=d.test;
+ document.getElementById('verdict').textContent=d.eligibleForProspectiveTrial?'اجتاز شروط الاختبار التاريخي. لم تثبت دقته في تجربة مستقبلية بعد.':'لم تثبت أفضلية مستقرة في الاختبار النهائي. التوصية: عدم اعتماد هذه الطريقة للتوقع حاليًا.';
+ document.getElementById('scope').textContent='عدد السحوبات المحللة: '+d.analyzedDraws+' · بداية الاختبار: '+d.split.testStartId+' · آخر سحب: '+d.latestDrawId+(d.archiveCapped?' · التحليل محدود بآخر ٢٠ ألف سحب محفوظ.':'');
+ const rows=[['الإشارات المحسومة',t.episodes],['النجاحات / الإخفاقات',t.successes+' / '+t.failures],['نسبة النجاح في الاختبار',pct(t.rate)],['النجاح المرجعي بالصدفة',pct(d.baseline)],['الحد الأدنى الاسمي للثقة ٩٥٪',pct(t.lower95)],['Brier للطريقة الجديدة',t.brier==null?'غير متاح':t.brier.toFixed(4)],['Brier للصدفة على النوافذ نفسها',t.baselineBrier==null?'غير متاح':t.baselineBrier.toFixed(4)],['نسبة النصف الأول / الثاني',pct(t.halves[0].rate)+' / '+pct(t.halves[1].rate)]];
+ const body=document.getElementById('metrics');body.replaceChildren();
+ for(const [label,value] of rows){const tr=document.createElement('tr');for(const v of [label,value]){const td=document.createElement('td');td.textContent=v;tr.append(td);}body.append(tr);}
+ document.getElementById('signals').textContent='الأنماط المختارة: '+(d.selectedTriples.map(a=>a.join('-')).join(' ، ')||'لا توجد أنماط مدعومة بعينة كافية');
+ document.getElementById('estimate').textContent='التقدير المخفّض نحو الصدفة من فترة المعايرة: '+pct(d.estimatedProbability)+'؛ ليس احتمالًا موثوقًا للسحب التالي. الحالة الحالية: '+(d.currentSignal==='RESEARCH_CANDIDATE'?'مرشح بحثي فقط':'امتناع عن الإشارة');
+ document.getElementById('legacy').textContent='مرجع الأنماط القديمة المجمّدة: '+d.legacyFrozenCandidates.episodes+' نافذة، بنسبة نجاح '+pct(d.legacyFrozenCandidates.rate)+'.';
+ status.textContent='اكتمل الاختبار · '+d.generatedAt;results.hidden=false;
+ }catch(e){status.textContent=e.name==='TimeoutError'?'انتهت مهلة التحليل. حاول لاحقًا.':e.message;}
+ finally{run.disabled=false;}
+};
+</script></html>
