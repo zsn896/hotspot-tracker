@@ -250,7 +250,7 @@ function predictionFromStats(stat, currentGap, drawCount) {
     const long = regimes.long;
     const gapNow = currentGap == null ? 0 : currentGap;
 
-    if (gapNow <= short.maxGap) {
+    if (gapNow < short.maxGap) {
       activeRegime = 'SHORT';
       predictedGap = Math.max(gapNow + 1, short.centerGap);
       expectedDrawId = lastDrawId + predictedGap;
@@ -284,7 +284,7 @@ function predictionFromStats(stat, currentGap, drawCount) {
         },
         reason: 'Historical gaps separate into short and long cycles. The current cycle is still inside the short-cycle zone; if it survives past that zone, the model switches to the long-cycle regime instead of treating the short forecast as a failure.'
       };
-    } else if (gapNow <= long.maxGap) {
+    } else if (gapNow < long.maxGap) {
       activeRegime = 'LONG';
       adaptive = adaptiveResidualForecast(long.gaps, gapNow);
       if (adaptive) {
@@ -643,7 +643,7 @@ async function liveDrawContext() {
   if (Number(control?.start_draw_id || 0)) {
     rawDraws = (
       await db(
-        `hotspot_draws?select=draw_id,draw_date,draw_time,numbers&draw_id=gte.${Number(control.start_draw_id)}&order=draw_id.asc&limit=220`
+      `hotspot_draws?select=draw_id,draw_date,draw_time,numbers&draw_id=gte.${Number(control.start_draw_id)}&order=draw_id.asc&limit=500`
       )
     ) || [];
   } else {

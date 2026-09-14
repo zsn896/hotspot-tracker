@@ -13,11 +13,13 @@ jobs:
   run-worker:
     runs-on: ubuntu-latest
     timeout-minutes: 7
+    env:
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
     steps:
       - name: Check cron secret
         run: |
-          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+          if [ -z "$CRON_SECRET" ]; then
             echo "::error::CRON_SECRET is not set in GitHub Actions secrets."
             exit 1
           fi
@@ -34,7 +36,7 @@ jobs:
             --max-time 310 \
             -o response.txt \
             -w '%{http_code}' \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
             -H "accept: application/json" \
             https://zsn896hotspottrackerlatest.vercel.app/api/cron) || curl_exit=$?
 
@@ -55,6 +57,7 @@ jobs:
 
           case "$status" in
             200)
+              node -e 'const fs=require("fs"); const body=JSON.parse(fs.readFileSync("response.txt","utf8")); if(body.ok!==true || body.partialFailures?.length) process.exit(1);'
               echo "Cron completed successfully."
               ;;
             401)

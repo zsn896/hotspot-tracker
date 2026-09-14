@@ -1,7 +1,9 @@
 'use strict';
+const { cursorUpdatePath } = require('../lib/tracking-cursor');
 
 const { getDraw, db, score } = require('./lib');
 const cron = require('./cron');
+const { contiguousDraws } = require('../lib/draw-sequence');
 
 const GROUP_FIVE_NAME = 'AUTO Group Five';
 const GROUP_FIVE_TRACK_DRAWS = 20;
@@ -143,7 +145,7 @@ async function catchUpGroupFiveOne(group, officialId) {
     `hotspot_draws?select=draw_id,draw_date,draw_time,numbers,bulls_eye&draw_id=eq.${nextId}&limit=1`
   );
   const d = rows?.[0];
-  if (!d || Number(d.draw_id || 0) !== nextId) {
+  if (!d || contiguousDraws(rows, nextId - 1, nextId).length !== 1) {
     return false;
   }
 
@@ -171,13 +173,9 @@ async function catchUpGroupFiveOne(group, officialId) {
     }
   });
 
-  await db(`tracker_groups?id=eq.${group.id}`, {
-    method: 'PATCH',
-    prefer: 'return=minimal',
-    body: {
-      last_seen_draw_id: nextId
-    }
-  });
+  await db(cursorUpdatePath(group, nextId), {
+      method: 'PATCH', prefer: 'return=minimal', body: { last_seen_draw_id: nextId }
+    });
 
   return true;
 }
@@ -193,6 +191,7 @@ async function catchUpManualGroups(targetDrawId) {
   let groupsUpdated = 0;
   let drawsProcessed = 0;
   let strongHitsRecorded = 0;
+  let remainingLag = 0;
 
   for (const group of groups) {
     const startId = Number(group.start_draw_id || 0);
@@ -214,7 +213,7 @@ async function catchUpManualGroups(targetDrawId) {
     let lastProcessed = after;
     let processedForGroup = 0;
 
-    for (const d of rows) {
+    for (const d of contiguousDraws(rows, after, end)) {
       const drawId = Number(d?.draw_id || 0);
 
       /* Never jump over a missing draw; the scheduled cron can repair gaps. */
@@ -256,21 +255,19 @@ async function catchUpManualGroups(targetDrawId) {
     }
 
     if (lastProcessed > after) {
-      await db(`tracker_groups?id=eq.${group.id}`, {
-        method: 'PATCH',
-        prefer: 'return=minimal',
-        body: {
-          last_seen_draw_id: lastProcessed
-        }
-      });
+      await db(cursorUpdatePath(group, lastProcessed), {
+      method: 'PATCH', prefer: 'return=minimal', body: { last_seen_draw_id: lastProcessed }
+    });
       groupsUpdated++;
     }
+    remainingLag = Math.max(remainingLag, target - lastProcessed);
   }
 
   return {
     groupsUpdated,
     drawsProcessed,
     strongHitsRecorded,
+    remainingLag,
     updated: groupsUpdated > 0
   };
 }
@@ -283,6 +280,12 @@ module.exports = async (req, res) => {
 
     if (method !== 'GET' && method !== 'POST') {
       return res.status(405).json({ ok: false, error: 'Method not allowed' });
+    }
+
+    // Authenticate before I/O; never promote a public request to a cron call.
+    if (method === 'POST' && (!process.env.CRON_SECRET ||
+        req.headers?.authorization !== `Bearer ${process.env.CRON_SECRET}`)) {
+      return res.status(401).json({ ok: false, error: 'Unauthorized' });
     }
 
     let official = await getDraw(null);
@@ -315,7 +318,7 @@ module.exports = async (req, res) => {
       try {
         const next = await getDraw(nextId);
         if (Number(next?.id || 0) === nextId) {
-          official = next;
+          if (Number(next.id) > Number(official.id)) official = next;
           if (method === 'GET') {
             await storeDraw(next);
             storedId = nextId;
@@ -363,7 +366,7 @@ module.exports = async (req, res) => {
       stored draws only. It never launches the expensive cron pipeline.
     */
     if (method === 'GET') {
-      const current = storedId >= officialId && !gfBefore.needsWork;
+      const current = storedId >= officialId && !gfBefore.needsWork && manualFastSync.remainingLag === 0;
       return res.status(200).json({
         ok: true,
         synced:
@@ -437,7 +440,8 @@ module.exports = async (req, res) => {
 
     const groupFiveAfter = await getActiveGroupFive();
     const gfAfter = groupFiveStatus(groupFiveAfter, officialId);
-    const fullyCaughtUp = afterId >= officialId && !gfAfter.needsWork;
+    const manualAfter = await catchUpManualGroups(afterId);
+    const fullyCaughtUp = afterId >= officialId && !gfAfter.needsWork && manualAfter.remainingLag === 0;
 
     return res.status(200).json({
       ok: true,
@@ -462,6 +466,7 @@ module.exports = async (req, res) => {
         rotationDueAfter: gfAfter.rotationDue
       },
       caughtUp: fullyCaughtUp,
+      manual: manualAfter,
       worker: {
         mode: collector.payload?.mode || null,
         groupFive: collector.payload?.groupFive || null

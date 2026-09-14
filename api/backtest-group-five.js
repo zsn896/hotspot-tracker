@@ -1088,18 +1088,7 @@ function testWindow(
       future.length !==
       TRACK_DRAWS
     ) {
-      cycles.push({
-        cycle:
-          cycleIndex + 1,
-
-        analysisDraws:
-          analysisSize,
-
-        error:
-          'Selector or future window incomplete.'
-      });
-
-      continue;
+      throw new Error(`Window ${windowIndex + 1}, cycle ${cycleIndex + 1}: selector or future window incomplete; comparison aborted.`);
     }
 
     const oldResult =

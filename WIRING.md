@@ -1,89 +1,17 @@
-# Wiring the ledger into the existing cron
+# Forward-outcome ledger setup
 
-Three edits. Nothing in the precursor engine changes.
+`api/cron.js` now contains the integration. Do not copy additional recording calls into it.
 
-## 1. Database
+1. Apply `ledger-schema.sql` in the intended Supabase database.
+2. Configure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` and `WORKER_SECRET` on the server. Keep these values out of browser code.
+3. Set `SIGNAL_LEDGER_ENABLED=true` only after the table is ready. Without this setting, the cron response reports `signalLedger.enabled: false` and makes no ledger writes.
+4. The authenticated cron records eligible five-number forecasts from its live STRONG_MANUAL analysis, then resolves closed windows from stored draws. Its existing analysis limit is six active groups. Resolution also runs when there are no active targets.
+5. Read `GET /api/ledger?window=5&threshold=4`. The window selects episodes recorded with that fixed horizon; it does not rescore shorter slices of longer windows. Thresholds 3–5 are recomputed from recorded best hit counts. First-success timing is available only for the stored threshold 4.
 
-Run `ledger-schema.sql` in the Supabase SQL editor.
+Use `Authorization: Bearer <CRON_SECRET>` for `/api/cron` and `POST /api/sync`. Direct worker calls and Group Six run modes require `x-worker-secret: <WORKER_SECRET>`; query-string secrets are rejected. Do not expose either secret to the public UI. Public sync GET remains the existing bounded refresh path.
 
-## 2. Files
+Recording starts when enabled; historical backfilling of unrecorded predictions would invalidate forward testing. Existing malformed or inflated episodes are not silently deleted or rewritten by this change.
 
-| from | to |
-|---|---|
-| `precursor-engine.js` | `lib/precursor-engine.js` (replaces the current file) |
-| `signal-ledger.js` | `lib/signal-ledger.js` (new) |
-| `ledger-endpoint.js` | `api/ledger.js` (new) |
+`sample.capped` and `sample.openCountCapped` identify ledger read limits. P-values and intervals are exploratory under an independent-episode assumption; shared targets, overlapping windows and multiple comparisons affect interpretation.
 
-The engine replacement is behaviour-identical — verified byte-for-byte on 9
-datasets. It is purely the 8.7x speedup.
-
-## 3. `api/cron.js`
-
-Where the cron already computes a precursor forecast per watched target, add two
-calls. Record first, resolve second, so an episode opened this tick is never
-scored by the same tick.
-
-```js
-const { recordObservation, resolveEpisodes } = require('../lib/signal-ledger');
-
-// after you have `analysis = analyzePrecursors(draws, target)`
-if (analysis?.ok && analysis.hitTierForecast) {
-  await recordObservation(target, analysis.hitTierForecast, latestDrawId);
-}
-
-// once per tick, after all targets are recorded
-const loadDraws = (from, to) =>
-  db(`hotspot_draws?select=draw_id,numbers&draw_id=gte.${from}&draw_id=lte.${to}&order=draw_id.asc`);
-
-await resolveEpisodes(loadDraws, latestDrawId);
-```
-
-To also log MEDIUM — worth doing, since the control showed it fires on 63% of
-noise checks and the ledger will demonstrate that from your own data:
-
-```js
-await recordObservation(target, analysis.hitTierForecast, latestDrawId, {
-  trackStatuses: ['STRONG', 'MEDIUM']
-});
-```
-
-## What the report answers
-
-`GET /api/ledger` returns, for every status and every target:
-
-```
-episodes          how many independent events, not how many checks
-successes         4+ inside the fixed window
-expectedByChance  the exact hypergeometric expectation for the same window
-lift              observed / expected
-pValue            exact binomial, one-sided
-minimumDetectableLift   what this sample size could have found
-powerPlan         how many episodes are still needed
-```
-
-## How long until it settles the question
-
-The chance rate for a 4+ inside 5 draws is 6.21%. From that:
-
-| to prove | episodes needed |
-|---|---|
-| 5x edge | 20 |
-| 3x edge | 43 |
-| **2x edge** | **136** |
-| 1.5x edge | 470 |
-
-This is the payoff of targeting 4+ rather than 5/5. Proving a 2x edge on 5/5
-would take about 4,080 signals; on 4+ it takes 136. At roughly 11 STRONG
-episodes a day across 6 targets, **136 episodes is under two weeks**.
-
-Verified behaviour of the ledger itself:
-
-- 18 consecutive observations across two runs collapse to 2 episodes
-- a window with missing draws is skipped, never recorded as a failure
-- on 1,200 episodes over random draws: 64 successes against 74.5 expected,
-  lift 0.86, p = 0.91 — correctly reports no edge
-- with a genuine edge planted: 1.5x detected at p = 3.7e-4, 2x at p = 8.3e-10,
-  3x at p = 7.5e-14
-
-So it is neither blind nor credulous. Whatever it reports after 136 episodes is
-your answer, measured on your thresholds, with your data.
+See [AUDIT.md](AUDIT.md) for the review, tests and remaining deployment limitations.

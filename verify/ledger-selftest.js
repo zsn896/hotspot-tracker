@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 // Ledger behaviour checks: episode counting, window integrity, null result.
 // Run:  node verify/ledger-selftest.js
 // Build a throwaway sandbox mirroring the project layout, so signal-ledger.js
@@ -12,6 +13,9 @@ fs.mkdirSync(path.join(sandbox, 'lib'));
 fs.mkdirSync(path.join(sandbox, 'api'));
 fs.copyFileSync(path.join(__dirname, '..', 'lib', 'signal-ledger.js'), path.join(sandbox, 'lib', 'signal-ledger.js'));
 fs.copyFileSync(path.join(__dirname, 'fake-db.js'), path.join(sandbox, 'api', 'lib.js'));
+for (const name of ['db-pages.js', 'draw-sequence.js']) {
+  fs.copyFileSync(path.join(__dirname, '..', 'lib', name), path.join(sandbox, 'lib', name));
+}
 
 const L = require(path.join(sandbox, 'lib', 'signal-ledger.js'));
 const { tables, reset } = require(path.join(sandbox, 'api', 'lib.js'));
@@ -38,7 +42,9 @@ const loadDraws=async(from,to)=>{const out=[];for(let id=from;id<=to;id++)if(byI
   for(let d=3300100;d<=3300105;d++) await L.recordObservation(target,f('STRONG'),d);
   await L.recordObservation(target,f('QUIET'),3300106);
   for(let d=3300120;d<=3300122;d++) await L.recordObservation(target,f('STRONG'),d);
-  console.log('  18 observations recorded ->',tables.signal_episodes.length,'episodes (expected 2)');
+  assert.equal(tables.signal_episodes.length, 2);
+  assert.equal(tables.signal_episodes[0].window_end_draw_id, 3300105);
+  console.log('  10 observations recorded ->',tables.signal_episodes.length,'episodes (expected 2)');
   console.log('  episode 1 start/last/windowEnd:',tables.signal_episodes[0].start_draw_id,tables.signal_episodes[0].last_draw_id,tables.signal_episodes[0].window_end_draw_id);
   console.log('  window fixed at start? ',tables.signal_episodes[0].window_end_draw_id===tables.signal_episodes[0].start_draw_id+5);
 
@@ -47,7 +53,9 @@ const loadDraws=async(from,to)=>{const out=[];for(let id=from;id<=to;id++)if(byI
   reset();
   await L.recordObservation(target,f('STRONG'),3300100);
   const partial=async(a,b)=>{const r=await loadDraws(a,b);return r.slice(0,2)};
-  console.log('  resolve with missing draws ->',JSON.stringify(await L.resolveEpisodes(partial,3300200)));
+  const incomplete = await L.resolveEpisodes(partial,3300200);
+  assert.equal(incomplete.resolved, 0);
+  console.log('  resolve with missing draws ->',JSON.stringify(incomplete));
 
   console.log();
   console.log('=== TEST 3: full run — 1200 random STRONG episodes, no real signal ===');
@@ -62,6 +70,11 @@ const loadDraws=async(from,to)=>{const out=[];for(let id=from;id<=to;id++)if(byI
   console.log('  opened',opened,'| resolved',res.resolved,'| successes',res.successes);
   const rep=await L.ledgerReport();
   const o=rep.overall;
+  assert.equal(opened,1200);
+  assert.equal(res.resolved,1200);
+  assert.equal(o.episodes,1200);
+  assert.equal(o.successes,64);
+  assert.equal(o.significant,false);
   console.log();
   console.log('  chance model  : per draw',rep.chanceModel.perDrawRate,' in a 5-draw window',rep.chanceModel.windowRate);
   console.log('  episodes      :',o.episodes);

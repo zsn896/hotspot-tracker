@@ -1,6 +1,7 @@
 'use strict';
 
 const { db } = require('./lib');
+const { loadManualSummary } = require('../lib/manual-summary');
 
 const MANUAL_NAMES = [
   'MANUAL Group',
@@ -15,42 +16,11 @@ function slotForName(name) {
   return 0;
 }
 
-function summarize(rows) {
-  const out = {
-    exact3: 0,
-    exact4: 0,
-    exact5: 0,
-    threePlus: 0,
-    fourPlus: 0,
-    bestHit: 0,
-    lastStrongDrawId: null
-  };
-
-  for (const row of rows || []) {
-    const hit = Number(row?.hit_count || 0);
-    const drawId = Number(row?.draw_id || 0);
-
-    if (hit >= 3) out.threePlus++;
-    if (hit >= 4) out.fourPlus++;
-    if (hit === 3) out.exact3++;
-    if (hit === 4) out.exact4++;
-    if (hit >= 5) out.exact5++;
-
-    out.bestHit = Math.max(out.bestHit, hit);
-
-    if (
-      drawId > 0 &&
-      (out.lastStrongDrawId == null || drawId > out.lastStrongDrawId)
-    ) {
-      out.lastStrongDrawId = drawId;
-    }
-  }
-
-  return out;
-}
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store,max-age=0');
+
+  if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
   try {
     const latestRows = await db(
@@ -60,7 +30,7 @@ module.exports = async (req, res) => {
 
     const rows = (
       await db(
-        'tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&order=id.desc&limit=300'
+        'tracker_groups?select=id,name,numbers,active,start_draw_id,last_seen_draw_id,created_at&name=in.(MANUAL%20Group,MANUAL%20Group%202,MANUAL%20Group%203)&order=id.desc&limit=300'
       )
     ) || [];
 
@@ -86,20 +56,7 @@ module.exports = async (req, res) => {
         group.last_seen_draw_id ?? startDrawId ?? 0
       );
 
-      /*
-        A manual cycle records only 3/5+ rows. Pull a generous result window so
-        the counters represent the active cycle rather than just the 100 rows
-        shown in the expandable UI list.
-      */
-      const resultRows = (
-        await db(
-          `tracker_results?select=draw_id,hit_count&group_id=eq.${group.id}` +
-          `${startDrawId > 0 ? `&draw_id=gt.${startDrawId}` : ''}` +
-          '&hit_count=gte.3&order=draw_id.desc&limit=5000'
-        )
-      ) || [];
-
-      const summary = summarize(resultRows);
+      const summary = await loadManualSummary(db, group);
       const lag = Math.max(0, latestDrawId - trackingLastSeenDrawId);
 
       groups.push({

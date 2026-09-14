@@ -1,4 +1,8 @@
 'use strict';
+const { cursorUpdatePath } = require('../lib/tracking-cursor');
+
+const { InputError } = require('../lib/input-error');
+const { loadManualSummary } = require('../lib/manual-summary');
 
 const {
   getDraw,
@@ -23,7 +27,7 @@ function normalizeSlot(value) {
   const slot = Number(value ?? 1);
 
   if (slot !== 1 && slot !== 2) {
-    throw new Error(
+    throw new InputError(
       'Manual slot must be 1 or 2.'
     );
   }
@@ -46,7 +50,7 @@ function validateNumbers(input) {
       : [];
 
   if (numbers.length !== 5) {
-    throw new Error(
+    throw new InputError(
       'Enter exactly 5 numbers.'
     );
   }
@@ -59,7 +63,7 @@ function validateNumbers(input) {
         n > 80
     )
   ) {
-    throw new Error(
+    throw new InputError(
       'Each number must be from 1 to 80.'
     );
   }
@@ -67,7 +71,7 @@ function validateNumbers(input) {
   if (
     new Set(numbers).size !== 5
   ) {
-    throw new Error(
+    throw new InputError(
       'The 5 numbers must be different.'
     );
   }
@@ -375,21 +379,9 @@ async function backfillManual(
     lastProcessed >
     after
   ) {
-    await db(
-      `tracker_groups?id=eq.${group.id}`,
-      {
-        method:
-          'PATCH',
-
-        prefer:
-          'return=minimal',
-
-        body: {
-          last_seen_draw_id:
-            lastProcessed
-        }
-      }
-    );
+    await db(cursorUpdatePath(group, lastProcessed), {
+      method: 'PATCH', prefer: 'return=minimal', body: { last_seen_draw_id: lastProcessed }
+    });
 
     group.last_seen_draw_id =
       lastProcessed;
@@ -497,14 +489,14 @@ async function readManual(
   let recentRows =
     (
       await db(
-        `tracker_results?select=draw_id,hit_count,hit_numbers,bulls_eye,bulls_eye_match,created_at&group_id=eq.${group.id}&hit_count=gte.3&order=draw_id.desc&limit=100`
+        `tracker_results?select=draw_id,hit_count,hit_numbers,bulls_eye,bulls_eye_match,created_at&group_id=eq.${group.id}&draw_id=gt.${Number(group.start_draw_id || 0)}&hit_count=gte.3&order=draw_id.desc&limit=100`
       )
     ) || [];
 
   const bestRows =
     (
       await db(
-        `tracker_results?select=draw_id,hit_count,hit_numbers,bulls_eye,bulls_eye_match,created_at&group_id=eq.${group.id}&hit_count=gte.3&order=hit_count.desc,draw_id.desc&limit=1`
+        `tracker_results?select=draw_id,hit_count,hit_numbers,bulls_eye,bulls_eye_match,created_at&group_id=eq.${group.id}&draw_id=gt.${Number(group.start_draw_id || 0)}&hit_count=gte.3&order=hit_count.desc,draw_id.desc&limit=1`
       )
     ) || [];
 
@@ -595,7 +587,10 @@ async function readManual(
         )
       : null;
 
+  const summary = await loadManualSummary(db, group);
+
   return {
+    ...summary,
     id:
       group.id,
 
@@ -1311,7 +1306,7 @@ async function handler(
     );
 
     return res
-      .status(500)
+      .status(error instanceof InputError ? 400 : 500)
       .json({
         ok:
           false,

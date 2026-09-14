@@ -12,6 +12,9 @@ fs.mkdirSync(path.join(sandbox, 'lib'));
 fs.mkdirSync(path.join(sandbox, 'api'));
 fs.copyFileSync(path.join(__dirname, '..', 'lib', 'signal-ledger.js'), path.join(sandbox, 'lib', 'signal-ledger.js'));
 fs.copyFileSync(path.join(__dirname, 'fake-db.js'), path.join(sandbox, 'api', 'lib.js'));
+for (const name of ['db-pages.js', 'draw-sequence.js']) {
+  fs.copyFileSync(path.join(__dirname, '..', 'lib', name), path.join(sandbox, 'lib', name));
+}
 
 const L = require(path.join(sandbox, 'lib', 'signal-ledger.js'));
 const { tables, reset } = require(path.join(sandbox, 'api', 'lib.js'));
@@ -48,6 +51,8 @@ const f={status:'STRONG',expectedTier:'4_PLUS',fourPlusScore:80,fourPlusOutcomeC
   }
   await L.resolveEpisodes(load,3399999,{limit:5000});
   const o=(await L.ledgerReport()).overall;
+  require('node:assert/strict').equal(o.episodes,400);
+  require('node:assert/strict').equal(o.significant,true, `Planted ${lift}x edge should be detected in this seeded fixture`);
   console.log('planted lift '+lift+'x -> episodes',o.episodes,'| successes',o.successes,'(expected',o.expectedByChance+')',
     '| measured lift',o.lift,'| p',o.pValue,'| DETECTED:',o.significant);
  }

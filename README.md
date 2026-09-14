@@ -14,32 +14,25 @@ lib/precursor-engine.js    REPLACES the current file. Behaviour identical.
 lib/signal-ledger.js       NEW. Records episodes and scores their outcomes.
 api/ledger.js              NEW. GET /api/ledger returns the report.
 ledger-schema.sql          Run once in the Supabase SQL editor.
-WIRING.md                  The three edits needed in api/cron.js.
+WIRING.md                  Configuration for the integrated cron ledger.
 CALIBRATION.md             The control experiment and what it found.
 reference/                 The original engine, kept for comparison.
 verify/                    Scripts that re-prove every claim below.
 ```
 
-## Install
+## Run and verify
 
-1. Run `ledger-schema.sql` in Supabase.
-2. Copy `lib/` and `api/` over your project. `api/lib.js` is **not** touched.
-3. Add the two calls described in `WIRING.md` to `api/cron.js`.
-
-Nothing else changes. No new dependencies.
-
-## Verify it yourself
-
-Do not take any of this on trust. From the package root:
+Use Node.js 20 or newer. Install the locked dependencies and run the offline suite:
 
 ```bash
-node verify/verify-identical.js     # optimised engine == original engine
-node verify/ledger-selftest.js      # episode counting, window integrity, null result
-node verify/ledger-detection.js     # confirms it detects a real edge
-node verify/control-calibration.js  # ~2.5 min: STRONG on purely random draws
+npm ci --ignore-scripts
+npm test
+npm audit --omit=dev
 ```
 
-The first two run offline with no database.
+For server settings and optional forward-outcome recording, follow [WIRING.md](WIRING.md) and `.env.example`. The cron integration is included; no manual code insertion is needed. Apply the ledger schema before enabling its environment flag.
+
+The September 2026 code review, corrections, test results and production limitations are documented in [AUDIT.md](AUDIT.md). The historical measurements below predate that review; the current reproducible comparison script contains six datasets.
 
 ## What was measured
 
@@ -69,17 +62,15 @@ lift produced by noise is 2.12. MEDIUM fires on two thirds of noise checks.
 expected, lift 0.86, p = 0.91, correctly reporting no edge. With a real edge
 planted: 1.5x detected at p = 3.7e-4, 2x at p = 8.3e-10, 3x at p = 7.5e-14.
 
-## The number that settles it
+## Interpreting the forward sample
 
 A 4+ inside a 5-draw window happens 6.21% of the time by chance.
 
-| to prove | episodes needed |
+| planned alternative | episodes needed under the model |
 |---|---|
 | 5x edge | 20 |
 | 3x edge | 43 |
 | **2x edge** | **136** |
 | 1.5x edge | 470 |
 
-At roughly 11 STRONG episodes a day across 6 targets, 136 episodes is under two
-weeks. After that, `GET /api/ledger` answers the question with your thresholds
-and your data — proof or refutation, with no argument required from anyone.
+These sample-size estimates assume independent episodes and the specified effect size. Actual collection time depends on signal frequency. Overlapping targets or outcome windows and repeated comparisons weaken that assumption. A significant result in one sample is not proof of future predictive performance; a non-significant result is not proof that every smaller effect is absent.

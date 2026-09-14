@@ -1,4 +1,8 @@
 'use strict';
+const { cursorUpdatePath } = require('../lib/tracking-cursor');
+
+const { InputError } = require('../lib/input-error');
+const { loadManualSummary } = require('../lib/manual-summary');
 
 const { getDraw, getMany, db, score } = require('./lib');
 
@@ -36,11 +40,15 @@ function sameNumbers(a, b) {
 
 
 function validateManualNumbers(value) {
+  if (!Array.isArray(value) || value.length !== 5 ||
+      value.some(n => !Number.isInteger(Number(n)) || Number(n) < 1 || Number(n) > 80)) {
+    throw new InputError('Manual Group 3 requires exactly 5 whole numbers from 1 to 80.');
+  }
   const numbers =
     uniqueSorted(value);
 
   if (numbers.length !== 5) {
-    throw new Error(
+    throw new InputError(
       'Manual Group 3 requires exactly 5 unique numbers.'
     );
   }
@@ -53,7 +61,7 @@ function validateManualNumbers(value) {
         number > 80
     )
   ) {
-    throw new Error(
+    throw new InputError(
       'Manual Group 3 numbers must be whole numbers from 1 to 80.'
     );
   }
@@ -284,20 +292,9 @@ async function backfill(
   if (
     last > after
   ) {
-    await db(
-      `tracker_groups?id=eq.${group.id}`,
-      {
-        method: 'PATCH',
-
-        prefer:
-          'return=minimal',
-
-        body: {
-          last_seen_draw_id:
-            last
-        }
-      }
-    );
+    await db(cursorUpdatePath(group, last), {
+      method: 'PATCH', prefer: 'return=minimal', body: { last_seen_draw_id: last }
+    });
 
     group.last_seen_draw_id =
       last;
@@ -390,17 +387,27 @@ async function readFusion(group) {
   const rows =
     (
       await db(
-        `tracker_results?select=draw_id,hit_count,hit_numbers,bulls_eye,bulls_eye_match,created_at&group_id=eq.${group.id}&hit_count=gte.3&order=draw_id.desc&limit=100`
+        `tracker_results?select=draw_id,hit_count,hit_numbers,bulls_eye,bulls_eye_match,created_at&group_id=eq.${group.id}&draw_id=gt.${Number(group.start_draw_id || 0)}&hit_count=gte.3&order=draw_id.desc&limit=100`
       )
     ) || [];
 
-  const withMeta =
-    await attachMeta(rows);
+  const bestRows = await db(
+    `tracker_results?select=draw_id,hit_count,hit_numbers,bulls_eye,bulls_eye_match&group_id=eq.${group.id}&draw_id=gt.${Number(group.start_draw_id || 0)}&hit_count=gte.3&order=hit_count.desc,draw_id.desc&limit=1`
+  ) || [];
+  const bestRaw = bestRows[0];
+  if (bestRaw && !rows.some(row => Number(row.draw_id) === Number(bestRaw.draw_id))) rows.push(bestRaw);
+  const withMeta = await attachMeta(rows);
+  const best = withMeta.find(row => Number(row.draw_id) === Number(bestRaw?.draw_id));
 
   const last =
     withMeta[0] || null;
 
+  const summary = await loadManualSummary(db, group);
+
   return {
+    ...summary,
+    bestHit: Number(best?.hit_count || 0),
+    bestResult: best ? { drawId: best.draw_id, hitCount: Number(best.hit_count), time: best.time || '', date: best.date || '' } : null,
     id:
       group.id,
 
@@ -2850,7 +2857,7 @@ async function handler(
     );
 
     return res
-      .status(500)
+      .status(error instanceof InputError ? 400 : 500)
       .json({
         ok:
           false,

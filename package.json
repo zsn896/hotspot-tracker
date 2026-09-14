@@ -4,5 +4,14 @@
   "private": true,
   "dependencies": {
     "cheerio": "1.0.0"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  },
+  "scripts": {
+    "test": "node --test verify/*.test.js && node verify/ledger-selftest.js && node verify/ledger-detection.js && node verify/verify-identical.js"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

@@ -1,4 +1,5 @@
 'use strict';
+const { cursorUpdatePath, trackingEnd } = require('../lib/tracking-cursor');
 
 const worker = require('./worker');
 const { db, getDraw, getMany, score, parseDrawMinutes } = require('./lib');
@@ -7,6 +8,7 @@ const { runAdvanced } = require('../lib/advanced');
 const { runGroupFive } = require('../lib/group-five');
 const { analyzeGroupWave } = require('../lib/wave-engine');
 const { analyzePrecursors } = require('../lib/precursor-engine');
+const { recordObservation, resolveEpisodes } = require('../lib/signal-ledger');
 
 const AUTO_PREFIX = 'AUTO Group ';
 const MANUAL_PREFIX = 'MANUAL Group';
@@ -140,10 +142,11 @@ async function precursorHistoryBackfill() {
   }
 
   const oldestTime = parsedDate(oldest.draw_date);
-  const now = Date.now();
-  const coverageDays = oldestTime == null
+  const newest = (await db('hotspot_draws?select=draw_id,draw_date&order=draw_id.desc&limit=1'))?.[0];
+  const newestTime = parsedDate(newest?.draw_date);
+  const coverageDays = oldestTime == null || newestTime == null
     ? 0
-    : Math.max(0, Math.floor((now - oldestTime) / 86400000));
+    : Math.max(0, Math.floor((newestTime - oldestTime) / 86400000));
 
   if (coverageDays >= PRECURSOR_HISTORY_DAYS) {
     return {
@@ -180,17 +183,19 @@ async function precursorHistoryBackfill() {
   }
 
   let stored = 0;
+  const saved = [];
   for (const draw of batch) {
     if (!draw?.id) continue;
     try {
       await storeCloseDraw(draw);
       stored++;
+      saved.push(draw);
     } catch (_) {
       // One failed historical insert must not break the live cron.
     }
   }
 
-  const newOldest = batch
+  const newOldest = saved
     .filter(draw => draw?.id)
     .sort((a, b) => Number(a.id) - Number(b.id))[0] || null;
 
@@ -277,6 +282,7 @@ async function precursorLiveUpdate() {
         ok: Boolean(analysis?.ok),
         model: analysis?.model || null,
         confidence: analysis?.liveConfidence || null,
+        hitTierForecast: analysis?.hitTierForecast || null,
         activeSignals: Array.isArray(analysis?.activeSignals)
           ? analysis.activeSignals.slice(0, 5)
           : [],
@@ -294,13 +300,30 @@ async function precursorLiveUpdate() {
   }
 
   return {
-    ok: true,
+    ok: results.every(result => result.ok),
     latestDrawId: Number(latest?.draw_id || 0) || null,
     latestTime: latest?.draw_time || '',
     analyzedDraws: draws.length,
     groupLimit: PRECURSOR_LIVE_GROUP_LIMIT,
     groups: results
   };
+}
+
+async function updateSignalLedger(live) {
+  if (process.env.SIGNAL_LEDGER_ENABLED !== 'true') {
+    return { ok: true, enabled: false, reason: 'Enable after applying ledger-schema.sql' };
+  }
+  const latestDrawId = Number(live?.latestDrawId ||
+    (await db('hotspot_draws?select=draw_id&order=draw_id.desc&limit=1'))?.[0]?.draw_id || 0);
+  const observations = [];
+  for (const group of live?.groups || []) {
+    if (group.ok && group.numbers?.length === 5 && group.hitTierForecast) {
+      observations.push(await recordObservation(group.numbers, group.hitTierForecast, latestDrawId));
+    }
+  }
+  const resolved = await resolveEpisodes((from, to) =>
+    db(`hotspot_draws?select=draw_id,numbers&draw_id=gte.${from}&draw_id=lte.${to}&order=draw_id.asc`), latestDrawId);
+  return { ok: true, enabled: true, latestDrawId, observations, ...resolved };
 }
 
 async function safeCloseDraw(id, batchMap) {
@@ -363,7 +386,7 @@ async function finalizeOneCloseGroup(group, finalDraw) {
     finalDraw.id
   );
 
-  if (!Number.isFinite(after) || after >= Number(finalDraw.id)) {
+  if (!Number.isFinite(after) || after >= trackingEnd(group, finalDraw.id)) {
     return {
       group: group.name,
       processed: 0,
@@ -372,7 +395,7 @@ async function finalizeOneCloseGroup(group, finalDraw) {
     };
   }
 
-  const end = Math.min(Number(finalDraw.id), after + MAX_CLOSE_BACKFILL);
+  const end = Math.min(trackingEnd(group, finalDraw.id), after + MAX_CLOSE_BACKFILL);
   const ids = Array.from({ length: end - after }, (_, i) => after + i + 1);
 
   let batch = [];
@@ -406,7 +429,9 @@ async function finalizeOneCloseGroup(group, finalDraw) {
     }
 
     const drawMinutes = parseDrawMinutes(draw.time);
-    if (drawMinutes == null || drawMinutes > CLOSE_START_MINUTES) break;
+    // The ID range already ends at the verified closing draw. Earlier draws
+    // can be from the previous evening, before midnight.
+    if (drawMinutes == null) break;
 
     await storeCloseDraw(draw);
     const result = score(draw, group.numbers);
@@ -431,12 +456,8 @@ async function finalizeOneCloseGroup(group, finalDraw) {
   }
 
   if (lastProcessed > after) {
-    await db(`tracker_groups?id=eq.${group.id}`, {
-      method: 'PATCH',
-      prefer: 'return=minimal',
-      body: {
-        last_seen_draw_id: lastProcessed
-      }
+    await db(cursorUpdatePath(group, lastProcessed), {
+      method: 'PATCH', prefer: 'return=minimal', body: { last_seen_draw_id: lastProcessed }
     });
   }
 
@@ -515,6 +536,7 @@ module.exports = async (req, res) => {
   let closeFinalize = null;
   let precursorArchive = null;
   let precursorLive = null;
+  let signalLedger = null;
 
   if (collector.statusCode < 400 && workerPayload?.ok !== false) {
     try {
@@ -536,6 +558,14 @@ module.exports = async (req, res) => {
         groups: [],
         error: e.message || String(e)
       };
+    }
+  }
+
+  if (collector.statusCode < 400 && workerPayload?.ok !== false) {
+    try {
+      signalLedger = await updateSignalLedger(precursorLive);
+    } catch (error) {
+      signalLedger = { ok: false, enabled: true, error: error.message || String(error) };
     }
   }
 
@@ -622,11 +652,19 @@ module.exports = async (req, res) => {
     }
   }
 
-  return res.status(collector.statusCode).json({
+  const stages = { closeFinalize, precursorArchive, precursorLive, signalLedger, groupFive, specialActive, advanced };
+  const partialFailures = Object.entries(stages)
+    .filter(([, value]) => value?.ok === false)
+    .map(([stage, value]) => ({ stage, error: value.error || value.reason || 'Stage failed' }));
+  const failed = workerPayload.ok === false || partialFailures.length > 0;
+  return res.status(collector.statusCode >= 400 ? collector.statusCode : failed ? 500 : 200).json({
     ...workerPayload,
+    ok: !failed,
+    partialFailures,
     closeFinalize,
     precursorArchive,
     precursorLive,
+    signalLedger,
     groupFive,
     specialActive,
     advanced
