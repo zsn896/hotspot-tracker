@@ -57,7 +57,7 @@ test('research page shows results and clears stale evidence after a failed refre
    beforeParse(w){w.AbortSignal.timeout=()=>undefined;w.fetch=async()=>({ok:true,json:async()=>sample});}
  });
  try {
- const d=dom.window.document;d.getElementById('numbers').value='1,2,3,4,5';
+ const d=dom.window.document;[...d.querySelectorAll('.number-entry')].forEach((e,i)=>e.value=String(i+1));
  d.getElementById('run').click();await new Promise(resolve=>setImmediate(resolve));
  assert.equal(d.getElementById('results').hidden,false);
  assert.ok(d.getElementById('metrics').children.length>=8);
@@ -66,4 +66,30 @@ test('research page shows results and clears stale evidence after a failed refre
  assert.equal(d.getElementById('results').hidden,true);
  assert.equal(d.getElementById('run').disabled,false);
  } finally {dom.window.close();}
+});
+
+test('five-number input accepts Arabic digits and paste, rejecting invalid groups before network I/O',async()=>{
+ const {JSDOM}=require('jsdom'),fs=require('node:fs'),path=require('node:path');
+ const calls=[];
+ const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../signal-lab.html'),'utf8'),{
+  runScripts:'dangerously',url:'https://test.invalid/',
+  beforeParse(w){w.AbortSignal.timeout=()=>undefined;w.fetch=async url=>{calls.push(url);throw Error('test response');};}
+ });
+ try {
+  const w=dom.window,d=w.document,fields=[...d.querySelectorAll('.number-entry')];
+  assert.equal(fields.length,5);
+  d.getElementById('run').click();assert.equal(calls.length,0);
+  ['٩','١٧','٣٧','٥١','٥٦'].forEach((v,i)=>{fields[i].value=v;fields[i].dispatchEvent(new w.Event('input'));});
+  d.getElementById('run').click();await new Promise(r=>setImmediate(r));
+  assert.ok(calls[0].endsWith('9%2C17%2C37%2C51%2C56'));
+  fields[4].value='9';d.getElementById('run').click();assert.equal(calls.length,1);
+  fields[4].value='81';d.getElementById('run').click();assert.equal(calls.length,1);
+  const paste=new w.Event('paste',{bubbles:true,cancelable:true});
+  Object.defineProperty(paste,'clipboardData',{value:{getData:()=> '۳، ۱۳، ۱۷، ۲۸، ۵۰'}});
+  fields[2].dispatchEvent(paste);
+  assert.deepEqual(fields.map(e=>e.value),['3','13','17','28','50']);
+  d.getElementById('run').click();await new Promise(r=>setImmediate(r));assert.equal(calls.length,2);
+  d.getElementById('clear').click();assert.ok(fields.every(e=>!e.value));
+  assert.equal(d.activeElement,fields[0]);
+ } finally{dom.window.close();}
 });
