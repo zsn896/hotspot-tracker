@@ -35,3 +35,5 @@ for(const c of cases){
 }
 console.log('\nidentical outputs:',identical+'/'+cases.length);
 console.log('original total: '+tOld+' ms   optimised total: '+tNew+' ms   speedup: '+(tOld/tNew).toFixed(1)+'x');
+
+require('node:assert/strict').equal(identical, cases.length, 'Optimised engine differs from reference');

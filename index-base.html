@@ -985,6 +985,8 @@ footer{
   }
 }
 </style>
+<link rel="stylesheet" href="/ledger-panel.css">
+<script defer src="/ledger-panel.js"></script>
 </head>
 
 <body>
@@ -1021,6 +1023,7 @@ footer{
   </div>
 
 </header>
+<section id="forwardLedger" class="ledger-panel" dir="rtl" lang="ar" aria-label="تقييم التوقعات المستقبلية"></section>
 
 
 <section class="card">
@@ -1425,72 +1428,23 @@ setInterval(
 /* SYNC */
 
 function renderSyncInfo(sync){
-
-  const el =
-    document.getElementById(
-      'syncInfo'
-    );
-
-  if(!sync){
-
-    el.className =
-      'syncInfo warn';
-
-    el.textContent =
-      'Smart Sync status unavailable.';
-
+  const el = document.getElementById('syncInfo');
+  if (!sync || sync.ok === false) {
+    el.className = 'syncInfo warn';
+    el.textContent = 'Smart Sync status unavailable.';
     return;
   }
-
-  if(sync.synced){
-
-    if(
-      sync.caughtUp === false
-      ||
-      Number(
-        sync.remainingLag || 0
-      ) > 0
-    ){
-
-      el.className =
-        'syncInfo warn';
-
-      el.textContent =
-        `Sync ran — still ${
-          Number(
-            sync.remainingLag || 0
-          )
-        } draw(s) behind.`;
-
-      return;
-    }
-
-    el.className =
-      'syncInfo good';
-
-    el.textContent =
-      `✓ Smart Sync caught up to official draw #${
-        sync.storedDrawId
-        ??
-        sync.officialDrawId
-        ??
-        '—'
-      }.`;
-
+  const drawLag = Number(sync.remainingLag ?? sync.drawLag ?? sync.lag ?? 0);
+  const groupLag = Number(sync.groupFive?.lagAfter ?? sync.groupFive?.lag ?? 0);
+  const manualLag = Number(sync.manual?.remainingLag ?? 0);
+  const lag = Math.max(drawLag, groupLag, manualLag);
+  if (sync.caughtUp === false || lag > 0) {
+    el.className = 'syncInfo warn';
+    el.textContent = lag > 0 ? `Sync pending — tracking is up to ${lag} draw(s) behind.` : 'Background sync pending.';
     return;
   }
-
-  el.className =
-    'syncInfo good';
-
-  el.textContent =
-    `✓ Already current — official draw #${
-      sync.officialDrawId
-      ??
-      sync.storedDrawId
-      ??
-      '—'
-    }.`;
+  el.className = 'syncInfo good';
+  el.textContent = `✓ Current — official draw #${sync.officialDrawId ?? sync.storedDrawId ?? '—'}.`;
 }
 
 
@@ -3537,7 +3491,9 @@ function normalizeManuals(j){
 function fillInputs(
   slot,
   nums
-){
+ ){
+  // A refresh must not replace other fields while this group is being edited.
+  if (String(document.activeElement?.id || '').startsWith(`m${slot}_`)) return;
 
   for(
     let i = 1;
@@ -3763,19 +3719,10 @@ function renderManualSlot(
         null
     );
 
-  const latestHit =
-    Number(
-      latestStrong?.hitCount
-      ??
-      0
-    );
-
-  const latestTime =
-    String(
-      latestStrong?.time
-      ??
-      ''
-    );
+  const best = m.bestResult || matches.reduce((best, row) =>
+    Number(row.hit_count) > Number(best?.hit_count || 0) ? row : best, null);
+  const bestHit = Number(m.bestHit ?? best?.hitCount ?? best?.hit_count ?? 0);
+  const bestTime = String(best?.time || '');
 
   const latestDrawId =
     latestStrong?.drawId
@@ -3818,17 +3765,17 @@ function renderManualSlot(
         </div>
 
         <div class="manualMetricValue cGreen">
-          ${latestHit}/5
+          ${bestHit}/5
         </div>
 
         ${
-          latestHit >= 3
+          bestHit >= 3
           &&
-          latestTime
+          bestTime
             ?
             `
             <div class="bestTime">
-              ${esc(latestTime)}
+              ${esc(bestTime)}
             </div>
             `
             :
@@ -3845,7 +3792,7 @@ function renderManualSlot(
         </div>
 
         <div class="manualMetricValue cBlue">
-          ${matches.length}
+          ${m.summaryCapped ? '≥ ' : ''}${m.threePlus ?? matches.length}
         </div>
 
       </div>

@@ -1,4 +1,5 @@
 'use strict';
+const { cursorUpdatePath } = require('../lib/tracking-cursor');
 
 const { db, score } = require('../api/lib');
 const { deepAnalyze50 } = require('../lib/group-five');
@@ -971,9 +972,7 @@ async function trackGroup(group, draws, latestId) {
     return { processed: 0, lastSeen: after, capReached: after >= cutoff };
   }
 
-  const pending = draws.filter(
-    d => Number(d.draw_id) > after && Number(d.draw_id) <= target
-  );
+  const pending = require('../lib/draw-sequence').contiguousDraws(draws, after, target);
   for (const d of pending) {
     const s = score(
       { numbers: d.numbers, bullsEye: d.bulls_eye },
@@ -994,7 +993,7 @@ async function trackGroup(group, draws, latestId) {
   }
 
   const lastSeen = pending.at(-1)?.draw_id ?? after;
-  await db(`tracker_groups?id=eq.${group.id}`, {
+  await db(cursorUpdatePath(group, Number(lastSeen)), {
     method: 'PATCH',
     prefer: 'return=minimal',
     body: { last_seen_draw_id: Number(lastSeen) }
@@ -1076,7 +1075,7 @@ async function runGroupSix() {
     const cutoff = startId + TRACK_DRAWS;
     const trackedNow = await trackGroup(group, draws, latestId);
     processed += trackedNow.processed;
-    if (latestId < cutoff) break;
+    if (latestId < cutoff || !trackedNow.capReached) break;
 
     const window = getWindowEndingAt(draws, cutoff);
     const expectedWindowSize = analysisSizeForGroupStart(control.start_draw_id, cutoff);
@@ -1136,6 +1135,10 @@ async function handler(req, res) {
     }
 
     if (mode === 'group-six' || mode === 'six' || mode === 'run') {
+      const secret = process.env.WORKER_SECRET;
+      if (!secret || req.headers?.['x-worker-secret'] !== secret) {
+        return res.status(401).json({ ok: false, error: 'Unauthorized' });
+      }
       const result = await runGroupSix();
       return res.status(200).json(result);
     }

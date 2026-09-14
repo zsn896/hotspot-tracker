@@ -126,8 +126,8 @@ function frozenSinglePulseState(hitCounts, targetMatches, index) {
 
 function collectEpisodes(rows, hitCounts, targetMatches, startIndex, endIndex) {
   const episodes = [];
-  let previousActive = false;
   const start = Math.max(20, startIndex);
+  let previousActive = start > 20 && frozenSinglePulseState(hitCounts, targetMatches, start - 1).active;
   const end = Math.min(rows.length - 1, endIndex);
 
   for (let i = start; i < end; i++) {
@@ -149,7 +149,7 @@ function collectEpisodes(rows, hitCounts, targetMatches, startIndex, endIndex) {
 function baselineRate(hitCounts, startIndex, endIndex, horizon = HORIZON) {
   let opportunities = 0;
   let successes = 0;
-  const end = Math.min(endIndex, hitCounts.length - horizon - 1);
+  const end = Math.min(endIndex, hitCounts.length - 1) - horizon;
   for (let i = Math.max(20, startIndex); i <= end; i++) {
     opportunities++;
     if (futureExactFive(hitCounts, i, horizon) >= 0) successes++;

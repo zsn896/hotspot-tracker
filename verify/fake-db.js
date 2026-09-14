@@ -26,7 +26,9 @@ async function db(path, init={}){
     let rows=filter(tables[t],params);
     const order=u.searchParams.get('order');
     if(order){const [c,d]=order.split('.');rows=[...rows].sort((a,b)=>(d==='desc'?-1:1)*(Number(a[c])-Number(b[c])))}
-    const lim=u.searchParams.get('limit'); if(lim) rows=rows.slice(0,Number(lim));
+    const offset=Number(u.searchParams.get('offset')||0);
+    const lim=Number(u.searchParams.get('limit')||rows.length);
+    rows=rows.slice(offset,offset+lim);
     return rows;
   }
   if(m==='POST'){

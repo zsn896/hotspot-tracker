@@ -1,4 +1,5 @@
 'use strict';
+const { InputError } = require('../lib/input-error');
 
 const {
   db,
@@ -32,10 +33,13 @@ function parseOneGroup(req) {
     ? req.body.numbers
     : null;
 
-  if (bodyNumbers) return normalizeGroup(bodyNumbers);
-
   const raw = req.body?.numbers || req.query?.numbers || '';
-  return normalizeGroup(String(raw).split(/[,-]/));
+  const values = (bodyNumbers || String(raw).split(/[,-]/)).map(Number);
+  if (values.length < 3 || values.length > 5 || new Set(values).size !== values.length ||
+      values.some(n => !Number.isInteger(n) || n < 1 || n > 80)) {
+    throw new InputError('A group must contain 3 to 5 distinct integers from 1 to 80.');
+  }
+  return normalizeGroup(values);
 }
 
 function groupKey(numbers) {
@@ -204,7 +208,8 @@ async function registerStrongManualGroup(req) {
 
 async function legacyTrack(req, res) {
   const latest = await getDraw(null);
-  const after = Math.max(0, Number(req.query.after || latest.id));
+  const after = Number(req.query?.after ?? latest.id);
+  if (!Number.isSafeInteger(after) || after < 0) throw new InputError('after must be a non-negative integer');
   const groups = parseGroups(req.query.groups);
 
   if (after >= latest.id) {
@@ -276,9 +281,11 @@ module.exports = async (req, res) => {
       });
     }
 
-    return legacyTrack(req, res);
+    if (method !== 'GET') return res.status(405).json({ ok: false, error: 'Method not allowed' });
+    if (action) return res.status(400).json({ ok: false, error: 'Unknown action' });
+    return await legacyTrack(req, res);
   } catch (e) {
-    return res.status(500).json({
+    return res.status(e instanceof InputError ? 400 : 500).json({
       ok: false,
       error: e.message || String(e)
     });

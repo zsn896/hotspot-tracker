@@ -116,7 +116,7 @@ function buildFiveStudy(rows, target, lookback) {
       drawId: Number(event.draw_id),
       date: event.draw_date || '',
       time: event.draw_time || '',
-      bullsEye: Number.isInteger(Number(event.bulls_eye)) ? Number(event.bulls_eye) : null,
+      bullsEye: event.bulls_eye != null && Number.isInteger(Number(event.bulls_eye)) ? Number(event.bulls_eye) : null,
       gapFromPreviousFive: eventOrder === 0 ? null : Number(event.draw_id) - Number(rows[exactFiveIndexes[eventOrder - 1]].draw_id),
       priorWindow: timeline,
       priorSummary: {
@@ -239,8 +239,8 @@ function recentState(hitCounts, targetMatches, index) {
 function baselineRate(hitCounts, startIndex, endIndex, horizon) {
   let opportunities = 0;
   let successes = 0;
-  const end = Math.min(hitCounts.length - horizon, endIndex ?? hitCounts.length - horizon);
-  for (let i = Math.max(20, startIndex); i < end; i++) {
+  const end = Math.min(hitCounts.length - 1, endIndex ?? hitCounts.length - 1) - horizon;
+  for (let i = Math.max(20, startIndex); i <= end; i++) {
     opportunities++;
     if (futureExactFive(hitCounts, i, horizon) >= 0) successes++;
   }
@@ -253,8 +253,8 @@ function baselineRate(hitCounts, startIndex, endIndex, horizon) {
 
 function collectEpisodes(rows, hitCounts, targetMatches, startIndex, endIndex, ruleKey) {
   const episodes = [];
-  let previousActive = false;
   const start = Math.max(20, startIndex);
+  let previousActive = start > 20 && Boolean(recentState(hitCounts, targetMatches, start - 1)[ruleKey]);
   const end = Math.min(rows.length - 1, endIndex ?? rows.length - 1);
 
   for (let i = start; i < end; i++) {

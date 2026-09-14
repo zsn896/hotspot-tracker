@@ -1,3 +1,4 @@
+const { cursorUpdatePath, trackingEnd } = require('../lib/tracking-cursor');
 const {
   getDraw,
   getMany,
@@ -15,6 +16,7 @@ const AUTO_PREFIX = 'AUTO Group ';
 const MANUAL_PREFIX = 'MANUAL Group';
 const SPECIAL_NAME = 'AUTO Group Special';
 
+const { contiguousDraws } = require('../lib/draw-sequence');
 const MAX_BACKFILL = 80;
 const TRACKING_BLOCKS = 6;
 const MAX_TRACKED_DRAWS =
@@ -1092,10 +1094,7 @@ async function backfill(
         after + i + 1
     );
 
-  const ds =
-    await getMany(
-      ids
-    );
+  const ds = contiguousDraws(await getMany(ids), after, end, 'id');
 
   for (
     const d of ds
@@ -1110,21 +1109,9 @@ async function backfill(
     ds.at(-1)?.id ??
     after;
 
-  await db(
-    `tracker_groups?id=eq.${control.id}`,
-    {
-      method:
-        'PATCH',
-
-      prefer:
-        'return=minimal',
-
-      body: {
-        last_seen_draw_id:
-          last
-      }
-    }
-  );
+  await db(cursorUpdatePath(control, last), {
+      method: 'PATCH', prefer: 'return=minimal', body: { last_seen_draw_id: last }
+    });
 
   control.last_seen_draw_id =
     last;
@@ -1311,7 +1298,7 @@ async function loadDrawRange(
     }
   }
 
-  return cached;
+  return contiguousDraws(cached, after, end);
 }
 
 
@@ -1340,11 +1327,7 @@ async function processTracking(
         g.start_draw_id
       );
 
-    const trackingCap =
-      Number(
-        g.start_draw_id
-      ) +
-      MAX_TRACKED_DRAWS;
+    const trackingCap = trackingEnd(g, Infinity);
 
     if (
       after >= latest.id ||
@@ -1437,21 +1420,9 @@ async function processTracking(
         ?.draw_id ??
       after;
 
-    await db(
-      `tracker_groups?id=eq.${g.id}`,
-      {
-        method:
-          'PATCH',
-
-        prefer:
-          'return=minimal',
-
-        body: {
-          last_seen_draw_id:
-            last
-        }
-      }
-    );
+    await db(cursorUpdatePath(g, last), {
+      method: 'PATCH', prefer: 'return=minimal', body: { last_seen_draw_id: last }
+    });
 
     processed +=
       cached.length;
@@ -1578,21 +1549,9 @@ async function processManualTracking(
         ?.draw_id ??
       after;
 
-    await db(
-      `tracker_groups?id=eq.${g.id}`,
-      {
-        method:
-          'PATCH',
-
-        prefer:
-          'return=minimal',
-
-        body: {
-          last_seen_draw_id:
-            last
-        }
-      }
-    );
+    await db(cursorUpdatePath(g, last), {
+      method: 'PATCH', prefer: 'return=minimal', body: { last_seen_draw_id: last }
+    });
 
     processed +=
       cached.length;
@@ -1619,34 +1578,9 @@ async (
 
   try {
 
-    if (
-      process.env
-        .WORKER_SECRET
-    ) {
-
-      const token =
-        req.headers[
-          'x-worker-secret'
-        ]
-        ||
-        req.query.secret;
-
-      if (
-        token !==
-        process.env
-          .WORKER_SECRET
-      ) {
-
-        return res
-          .status(401)
-          .json({
-            ok:
-              false,
-
-            error:
-              'Unauthorized'
-          });
-      }
+    const secret = process.env.WORKER_SECRET;
+    if (!secret || req.headers?.['x-worker-secret'] !== secret) {
+      return res.status(401).json({ ok: false, error: 'Unauthorized' });
     }
 
 

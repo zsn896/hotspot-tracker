@@ -17,6 +17,7 @@ function uniqSorted(nums) {
   ]
     .filter(
       n =>
+        Number.isInteger(n) &&
         n >= 1 &&
         n <= 80
     )
@@ -183,6 +184,7 @@ function valid(d) {
     ).size === 20 &&
     d.numbers.every(
       n =>
+        Number.isInteger(n) &&
         n >= 1 &&
         n <= 80
     ) &&
@@ -256,6 +258,8 @@ async function getDraw(id) {
           {
             cache:
               'no-store',
+
+            signal: AbortSignal.timeout(10000),
 
             headers: {
               'user-agent':
@@ -465,7 +469,9 @@ async function db(
               ),
 
         cache:
-          'no-store'
+          'no-store',
+
+        signal: AbortSignal.timeout(15000)
       }
     );
 
@@ -699,7 +705,7 @@ function parseDrawMinutes(
         /(\d{1,2}):(\d{2})\s*([ap])/
       );
 
-  if (!t) {
+  if (!t || +t[1] < 1 || +t[1] > 12 || +t[2] > 59) {
     return null;
   }
 
