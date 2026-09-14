@@ -316,9 +316,19 @@ async function updateSignalLedger(live) {
   const latestDrawId = Number(live?.latestDrawId ||
     (await db('hotspot_draws?select=draw_id&order=draw_id.desc&limit=1'))?.[0]?.draw_id || 0);
   const observations = [];
-  for (const group of live?.groups || []) {
-    if (group.ok && group.numbers?.length === 5 && group.hitTierForecast) {
+  const eligible = (live?.groups || []).filter(group =>
+    group.ok && group.numbers?.length === 5 && group.hitTierForecast);
+  // A long analysis may finish after the next draw. Do not log an old
+  // forecast as though it was issued before that new outcome was known.
+  const official = eligible.length ? await getDraw(null) : null;
+  if (eligible.length && !Number.isSafeInteger(Number(official?.id))) {
+    throw new Error('Could not verify the live draw before recording a forecast');
+  }
+  for (const group of eligible) {
+    if (Number(official.id) === latestDrawId) {
       observations.push(await recordObservation(group.numbers, group.hitTierForecast, latestDrawId));
+    } else {
+      observations.push({ action: 'ignored', reason: 'forecast-draw-is-not-current' });
     }
   }
   const resolved = await resolveEpisodes((from, to) =>

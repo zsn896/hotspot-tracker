@@ -307,7 +307,7 @@ for(const file of ['api/five-study.js','api/five-cross-test.js']) {
 
 test('cron records valid five-number forecasts before resolving and can resolve without active targets',async t=>{
   setEnv(t,'SIGNAL_LEDGER_ENABLED','true');const calls=[];
-  const M=load('api/cron.js',{'./lib':{db:async()=>[{draw_id:105}]},'../lib/signal-ledger':{
+  const M=load('api/cron.js',{'./lib':{db:async()=>[{draw_id:105}],getDraw:async()=>draw(105)},'../lib/signal-ledger':{
     recordObservation:async(...args)=>{calls.push(['record',...args]);return {action:'opened'};},
     resolveEpisodes:async(fn,id)=>{calls.push(['resolve',id]);return {resolved:1,successes:0};}
   }},['updateSignalLedger']);
@@ -358,4 +358,39 @@ test('closing backfill includes previous-evening draws before crossing midnight'
   const M=load('api/cron.js',{'./lib':{getMany:async()=>batch,getDraw:forbidden,db:async()=>[],score:realScore,parseDrawMinutes:require('../api/lib').parseDrawMinutes}},['finalizeOneCloseGroup']);
   const result=await M.__test.finalizeOneCloseGroup({id:1,name:'MANUAL Group',numbers:target,start_draw_id:100,last_seen_draw_id:100},batch[1]);
   assert.equal(result.processed,2);assert.equal(result.lastSeen,102);
+});
+
+test('ledger API exposes recording configuration without enabling it or leaking database errors',async t=>{
+  setEnv(t,'SIGNAL_LEDGER_ENABLED','');
+  const M=load('api/ledger.js',{'../lib/signal-ledger':{ledgerReport:async()=>({ok:true,overall:{episodes:0}})}});
+  let res=response();await M({method:'GET',query:{}},res);
+  assert.equal(res.statusCode,200);assert.equal(res.body.recording.enabled,false);
+  assert.equal(res.body.recording.window,5);assert.equal(res.body.recording.threshold,4);
+  assert.ok(Number.isFinite(Date.parse(res.body.generatedAt)));
+  const broken=load('api/ledger.js',{'../lib/signal-ledger':{ledgerReport:async()=>{throw Error('private database diagnostics');}}});
+  res=response();await broken({method:'GET',query:{}},res);
+  assert.equal(res.statusCode,503);assert.equal(res.body.code,'LEDGER_UNAVAILABLE');
+  assert.ok(!res.body.error.includes('private'));
+});
+
+test('recent forward records distinguish pending and resolved outcomes with their original windows',async()=>{
+  const L=ledger();
+  L.tables.signal_episodes.push(
+    {id:1,target:'1-2-3-4-5',status:'STRONG',start_draw_id:100,last_draw_id:100,window_end_draw_id:105,resolved:false,created_at:'2026-09-14T00:00:00Z'},
+    {id:2,target:'1-2-3-4-5',status:'STRONG',start_draw_id:200,last_draw_id:200,window_end_draw_id:205,resolved:true,best_hit_count:3}
+  );
+  const report=await L.ledgerReport();
+  assert.equal(report.recentEpisodes.length,2);
+  assert.equal(report.recentEpisodes[0].success,false);
+  assert.equal(report.recentEpisodes[1].success,null);
+  assert.equal(report.recentEpisodes[1].recordedAt,'2026-09-14T00:00:00Z');
+  assert.equal(report.overall.episodes,1);
+});
+
+test('forward recording skips a forecast when a new official draw arrives during analysis',async t=>{
+  setEnv(t,'SIGNAL_LEDGER_ENABLED','true');
+  const M=load('api/cron.js',{'./lib':{getDraw:async()=>draw(106)},
+    '../lib/signal-ledger':{recordObservation:forbidden,resolveEpisodes:async()=>({resolved:0,successes:0})}},['updateSignalLedger']);
+  const result=await M.__test.updateSignalLedger({latestDrawId:105,groups:[{ok:true,numbers:target,hitTierForecast:forecast}]});
+  assert.deepEqual(result.observations,[{action:'ignored',reason:'forecast-draw-is-not-current'}]);
 });

@@ -15,3 +15,11 @@ Recording starts when enabled; historical backfilling of unrecorded predictions 
 `sample.capped` and `sample.openCountCapped` identify ledger read limits. P-values and intervals are exploratory under an independent-episode assumption; shared targets, overlapping windows and multiple comparisons affect interpretation.
 
 See [AUDIT.md](AUDIT.md) for the review, tests and remaining deployment limitations.
+
+## Forward-evidence dashboard
+
+The main page now includes an Arabic forward-evidence panel (ledger-panel.js and ledger-panel.css). It uses the fixed five-draw / four-hit definition rather than letting a viewer select the best-looking threshold. It shows resolved successes and failures, pending episodes, the chance baseline, nominal 95% interval, per-target results and the latest 50 records with timestamps. Empty, disabled, capped and unavailable states are distinct. A failed refresh removes the previous verdict rather than presenting stale evidence as current.
+
+Before recording, the cron rechecks the official latest draw. If it differs from the draw used for analysis, the forecast is skipped; it is not retroactively recorded or reassigned to the newer draw. This depends on the freshness of the official source and is not a guarantee of subsecond timing.
+
+The panel's enabled indicator describes configuration, not a successful-cron heartbeat. Historical pattern labels are explicitly historical; they are not validated forward win probabilities. Existing statistics may include records from earlier code versions and should not be treated as a clean, preregistered experiment. A formal model comparison still needs a frozen version, a predeclared sample size and a separate untouched evaluation period.

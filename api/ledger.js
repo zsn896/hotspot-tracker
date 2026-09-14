@@ -7,7 +7,6 @@
 //
 // Read-only. Recording happens in the cron tick (see WIRING.md).
 
-const { db } = require('./lib');
 const { ledgerReport } = require('../lib/signal-ledger');
 
 module.exports = async function handler(req, res) {
@@ -20,11 +19,14 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ ok: false, error: 'window must be 1–20 and threshold must be 3–5 (integers)' });
     }
     const report = await ledgerReport({ window, threshold });
-    return res.status(200).json(report);
+    return res.status(200).json({ ...report,
+      generatedAt: new Date().toISOString(),
+      recording: { enabled: process.env.SIGNAL_LEDGER_ENABLED === 'true',
+        groupLimit: 6, status: 'STRONG', targetSize: 5, window: 5, threshold: 4 }
+    });
   } catch (error) {
-    return res.status(500).json({ ok: false, error: error?.message || String(error) });
+    return res.status(503).json({ ok: false, code: 'LEDGER_UNAVAILABLE',
+      recording: { enabled: process.env.SIGNAL_LEDGER_ENABLED === 'true' },
+      error: 'Forward records are unavailable. Check database configuration and ledger-schema.sql.' });
   }
 };
-
-// Kept referenced so the shared db helper is not tree-shaken by the bundler.
-void db;

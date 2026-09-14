@@ -63,3 +63,43 @@ test('the real booted page renders correct manual metrics, sync lag and editing 
   assert.equal(doc.getElementById('m1_2').value,'79');
   assert.deepEqual(errors,[]);
 });
+
+test('forward panel distinguishes evidence, empty records, disabled recording and failed refresh',async t=>{
+  const dom=new JSDOM(await expandedDocument(),{url:'https://hotspot.test/',runScripts:'outside-only'});
+  t.after(()=>dom.window.close());
+  const w=dom.window;
+  w.setInterval=()=>0;
+  w.AbortSignal=globalThis.AbortSignal;
+  let fail=false;
+  const report={ok:true,recording:{enabled:true},generatedAt:'2026-09-14T00:00:00Z',
+    overall:{episodes:100,successes:8,failures:92,expectedByChance:6.21,observedRate:.08,confidenceInterval:[.04,.15],lift:1.29,significant:false},
+    chanceModel:{windowRate:.062084},openEpisodes:2,sample:{},byTarget:[],
+    recentEpisodes:[{target:'<img src=x onerror=alert(1)>',startDrawId:100,endDrawId:105,recordedAt:'2026-09-14T00:00:00Z',resolved:false,matchesWindow:true,success:null}]};
+  w.fetch=async()=>({ok:!fail,json:async()=>fail?{ok:false}:report});
+  w.eval(fs.readFileSync(path.join(root,'ledger-panel.js'),'utf8'));
+  const flush=async()=>{for(let i=0;i<3;i++)await new Promise(resolve=>setImmediate(resolve));};
+  await flush();
+  const panel=w.document.getElementById('forwardLedger');
+  assert.match(panel.textContent,/لم تثبت أفضلية/);
+  assert.match(panel.textContent,/8.00٪/);
+  assert.match(panel.textContent,/6.21٪/);
+  assert.match(panel.textContent,/معلّقة/);
+  assert.equal(panel.querySelectorAll('img').length,0);
+  assert.equal(panel.querySelector('.ledger-bar.observed i').style.width,'8%');
+  assert.match(panel.textContent,/لا يمثلان احتمال فوز/);
+  report.overall.significant=true;
+  panel.querySelector('button').click();await flush();
+  assert.match(panel.textContent,/تفوق ظاهري/);
+  report.overall.episodes=0;report.overall.successes=0;report.overall.failures=0;report.overall.expectedByChance=0;
+  report.recording.enabled=false;
+  panel.querySelector('button').click();await flush();
+  assert.match(panel.textContent,/لا توجد نتائج محسومة/);
+  assert.match(panel.textContent,/التسجيل غير مفعّل/);
+  assert.equal(panel.querySelector('.ledger-comparison'),null);
+  fail=true;panel.querySelector('button').click();await flush();
+  assert.match(panel.textContent,/تعذّر قراءة السجل/);
+  assert.equal(panel.querySelector('.ledger-grid'),null,'failed fetch must not retain an apparently current verdict');
+  assert.equal(panel.querySelector('button').disabled,false);
+  fail=false;panel.querySelector('button').click();await flush();
+  assert.match(panel.textContent,/لا توجد نتائج محسومة/);
+});
