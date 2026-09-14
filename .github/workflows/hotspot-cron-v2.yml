@@ -1,8 +1,7 @@
 name: HotSpot Worker Cron v2
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
+  # Vercel owns automatic scheduling; retain this workflow for manual recovery.
   workflow_dispatch:
 
 concurrency:
