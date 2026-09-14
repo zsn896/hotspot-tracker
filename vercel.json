@@ -20,6 +20,9 @@
     },
     "api/signal-quality.js": {
       "maxDuration": 60
+    },
+    "api/ml-data.js": {
+      "maxDuration": 60
     }
   },
   "headers": [

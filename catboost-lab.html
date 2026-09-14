@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تجربة CatBoost — متتبع الأرقام</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#091322;color:#e4edf8}*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:auto;padding:28px 18px 60px}a{color:#80d5ff;text-underline-offset:4px}nav{display:flex;gap:24px;flex-wrap:wrap}h1{font-size:clamp(1.8rem,5vw,2.6rem);margin-bottom:12px}h2{font-size:1.25rem}p{line-height:1.85;color:#c3d2e4}.card{background:#122135;border:1px solid #2a3d56;border-radius:16px;padding:20px;margin-top:20px}.eyebrow{color:#7ddcc4;font-weight:650}.muted{color:#a5bad2;font-size:.9rem}.scroll{overflow:auto}table{border-collapse:collapse;min-width:820px;width:100%;font-variant-numeric:tabular-nums;font-size:.94rem}th,td{text-align:right;padding:15px 10px;border-bottom:1px solid #2a3d56;white-space:nowrap}th{color:#9bc7ef}td:first-child{direction:ltr;text-align:right}button{font:inherit;color:#091322;background:#80d5ff;border:0;border-radius:9px;padding:10px 18px;cursor:pointer}button:disabled{opacity:.6;cursor:wait}#status{min-height:32px}#details p{padding-top:12px;border-top:1px solid #2a3d56}.badge{display:inline-block;border:1px solid #46617f;border-radius:30px;padding:4px 12px;font-size:.9rem}code{direction:ltr;unicode-bidi:isolate;overflow-wrap:anywhere}footer{margin-top:28px;line-height:1.9}
+</style>
+<main>
+<nav><a href="/">التطبيق</a><a href="/signal-lab.html">مختبر جودة الإشارة</a></nav>
+<h1>تجربة CatBoost</h1>
+<span class="badge">بحث تاريخي · نموذج تجريبي</span>
+<p>هل تساعد أنماط السحوبات السابقة في تقدير احتمال ظهور 4 أرقام أو أكثر من المجموعة، معًا في إحدى السحوبات الخمس التالية؟ هنا نختبر ذلك على بيانات لاحقة للتدريب.</p>
+<div class="card"><div class="eyebrow">ما الذي نقيسه؟</div><p>تدريب على 60% من الأرشيف، ضبط على 20%، واختبار على آخر 20%. خطأ الاحتمال «Brier» الأصغر أفضل؛ الرقم المعروض ليس نسبة دقة. نقارن النماذج على السحوبات نفسها، ونسجل النجاح والإخفاق.</p><p class="muted">هذه النتائج تخص تاريخًا محددًا. لا تغيّر إشارات التطبيق تلقائيًا، ولا تثبت القدرة على توقع السحوبات القادمة.</p></div>
+<div class="card">
+<button id="refresh" type="button">تحديث التقرير</button>
+<p id="status" role="status" aria-live="polite">جارٍ تحميل التقرير…</p>
+<section id="report" hidden>
+<h2>نتائج الاختبار المحجوز</h2>
+<p id="summary"></p><p id="archive" class="muted"></p>
+<div class="scroll" tabindex="0" role="region" aria-label="جدول مقارنة النماذج">
+<table><thead><tr><th scope="col">المجموعة</th><th scope="col">نوافذ الاختبار</th><th scope="col">CatBoost مضبوط</th><th scope="col">CatBoost خام</th><th scope="col">انحدار لوجستي</th><th scope="col">معدل التدريب</th><th scope="col">الصدفة</th><th scope="col">وزن CatBoost</th></tr></thead><tbody id="results"></tbody></table>
+</div>
+<p class="muted">وزن 0% يعني أن الضبط اختار الاعتماد على معدل التدريب بالكامل؛ هذه ليست زيادة في الدقة من CatBoost. «الصدفة» تفترض سحبًا مستقلًا وعادلًا.</p>
+<h2>هل تأهلت إشارات للتجربة؟</h2><div id="details"></div>
+<p class="muted">اختيار المجموعات بناءً على تاريخها، ومقارنة عدة نماذج، قد يجعلان النتائج تبدو أفضل من أدائها لاحقًا. يلزم اختبار مستقبلي ثابت قبل اعتمادها.</p>
+<p id="provenance" class="muted"></p>
+</section>
+</div>
+<footer><a id="run" href="https://github.com/zsn896/hotspot-tracker/actions/workflows/catboost.yml" target="_blank" rel="noopener noreferrer">التشغيل وملفات النماذج في GitHub</a> · <a href="https://github.com/zsn896/hotspot-tracker/blob/main/ml/README.md" target="_blank" rel="noopener noreferrer">طريقة التجربة والكود</a><p class="muted">ملفات التشغيل تتضمن النماذج، لقطة البيانات، وجميع توقعات الاختبار. تتطلب تنزيلات GitHub تسجيل الدخول، وتُحفظ مرفقات التشغيل لمدة 90 يومًا.</p></footer>
+</main>
+<script>
+'use strict';
+const byId=id=>document.getElementById(id);
+function renderReport(data){
+ if(data.model!=='CATBOOST_4PLUS_V1'||!Array.isArray(data.results))throw Error('invalid-report');
+ const evaluated=data.results.filter(r=>r.status==='evaluated');
+ const improved=evaluated.filter(r=>r.beatsAllBaselines).length;
+ byId('summary').textContent=`أكملت ${evaluated.length} مجموعات الاختبار. سجل CatBoost المضبوط خطأ أقل من جميع المراجع في ${improved} منها. هذه مقارنة وصفية على هذا الاختبار فقط.`;
+ byId('archive').textContent=`الأرشيف: ${data.drawCount.toLocaleString('ar')} سحبًا، من ${data.firstDrawId} إلى ${data.lastDrawId}. تاريخ التقرير: ${new Date(data.generatedAt).toLocaleString('ar')}.`;
+ byId('results').replaceChildren();byId('details').replaceChildren();
+ for(const r of data.results){
+  const target=r.target.join(' - '),tr=document.createElement('tr');
+  if(r.status!=='evaluated'){
+   const td=document.createElement('td');td.colSpan=8;td.textContent=target+' — بيانات غير كافية للتقييم';tr.append(td);
+  }else{
+   const values=[target,r.metrics.catboost.episodes,...['catboost','rawCatboost','logistic','empirical','chance'].map(k=>r.metrics[k].brier.toFixed(5)),Math.round(r.calibrationWeight*100)+'%'];
+   for(const value of values){const td=document.createElement('td');td.textContent=String(value);tr.append(td);}
+   const p=document.createElement('p'),s=r.selectedSignals;
+   p.textContent=r.threshold===null?`${target}: لم تتأهل عتبة في فترة الضبط؛ النموذج يمتنع عن إصدار إشارة لهذه التجربة.`:`${target}: العتبة المختارة ${(r.threshold*100).toFixed(0)}%. في الاختبار: ${s.episodes} إشارة، ${s.successes} نجاح، ${s.failures} إخفاق. لا تعني هذه النتيجة تفعيل النموذج في التطبيق.`;
+   byId('details').append(p);
+  }
+  byId('results').append(tr);
+ }
+ byId('provenance').textContent=`بصمة ملف البيانات SHA-256: ${data.inputSha256}. إصدار النموذج: ${data.model}.`;
+ if(/^\d+$/.test(String(data.workflowRunId)))byId('run').href='https://github.com/zsn896/hotspot-tracker/actions/runs/'+data.workflowRunId;
+ byId('report').hidden=false;
+}
+async function loadReport(){
+ byId('refresh').disabled=true;byId('report').hidden=true;byId('status').textContent='جارٍ تحميل التقرير…';
+ try{
+  const response=await fetch('/catboost-report.json',{cache:'no-store',signal:AbortSignal.timeout(20000)});
+  if(response.status===404){byId('status').textContent='التجربة مجهزة. لم يُنشر تقرير تدريب مكتمل بعد؛ يمكنك متابعة التشغيل في GitHub.';return;}
+  if(!response.ok)throw Error('fetch-failed');
+  renderReport(await response.json());byId('status').textContent='تم تحميل آخر تقرير منشور.';
+ }catch(e){byId('report').hidden=true;byId('status').textContent='تعذر تحميل تقرير صالح. حاول التحديث أو راجع تشغيل التجربة في GitHub.';}
+ finally{byId('refresh').disabled=false;}
+}
+byId('refresh').addEventListener('click',loadReport);loadReport();
+</script>
+</html>

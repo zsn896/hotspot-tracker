@@ -4,3 +4,7 @@ node_modules/
 !.env.example
 .vercel/
 coverage/
+__pycache__/
+*.pyc
+catboost-output/
+training-draws.json
