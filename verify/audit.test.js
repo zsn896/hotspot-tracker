@@ -394,3 +394,19 @@ test('forward recording skips a forecast when a new official draw arrives during
   const result=await M.__test.updateSignalLedger({latestDrawId:105,groups:[{ok:true,numbers:target,hitTierForecast:forecast}]});
   assert.deepEqual(result.observations,[{action:'ignored',reason:'forecast-draw-is-not-current'}]);
 });
+
+for (const missingSchema of [true,false]) {
+  test('cron isolates optional ledger setup while retaining real errors: '+missingSchema,async t=>{
+    setEnv(t,'CRON_SECRET','cron');setEnv(t,'WORKER_SECRET','worker');setEnv(t,'SIGNAL_LEDGER_ENABLED','true');
+    const M=load('api/cron.js',{
+      './worker':async(req,res)=>res.json({ok:true,mode:'cleanup'}),
+      './lib':{db:async url=>url.startsWith('tracker_groups')?[]:url.includes('order=draw_id.asc')?[{draw_id:100,draw_date:'2026-01-01'}]:[{draw_id:200,draw_date:'2026-09-01'}]},
+      '../lib/signal-ledger':{resolveEpisodes:async()=>{throw Error(missingSchema?"Supabase 404: PGRST205 could not find public.signal_episodes":"connection lost");}}
+    });
+    const res=response();await M({headers:{authorization:'Bearer cron'},method:'GET'},res);
+    assert.equal(res.statusCode,missingSchema?200:500);
+    assert.equal(res.body.signalLedger.ready,false);
+    assert.equal(res.body.signalLedger.requiresSetup,missingSchema?true:undefined);
+    if(missingSchema)assert.equal(res.body.ok,true);
+  });
+}

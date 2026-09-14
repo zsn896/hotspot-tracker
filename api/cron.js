@@ -575,7 +575,12 @@ module.exports = async (req, res) => {
     try {
       signalLedger = await updateSignalLedger(precursorLive);
     } catch (error) {
-      signalLedger = { ok: false, enabled: true, error: error.message || String(error) };
+      const message = error.message || String(error);
+      const missingSchema = message.includes('PGRST205') && message.includes('signal_episodes');
+      signalLedger = missingSchema
+        ? { ok: true, enabled: true, ready: false, requiresSetup: true,
+            reason: 'Apply ledger-schema.sql to enable forward recording; no ledger outcomes were recorded.' }
+        : { ok: false, enabled: true, ready: false, error: message };
     }
   }
 

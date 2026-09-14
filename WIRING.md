@@ -23,3 +23,5 @@ The main page now includes an Arabic forward-evidence panel (ledger-panel.js and
 Before recording, the cron rechecks the official latest draw. If it differs from the draw used for analysis, the forecast is skipped; it is not retroactively recorded or reassigned to the newer draw. This depends on the freshness of the official source and is not a guarantee of subsecond timing.
 
 The panel's enabled indicator describes configuration, not a successful-cron heartbeat. Historical pattern labels are explicitly historical; they are not validated forward win probabilities. Existing statistics may include records from earlier code versions and should not be treated as a clean, preregistered experiment. A formal model comparison still needs a frozen version, a predeclared sample size and a separate untouched evaluation period.
+
+If the optional ledger table is missing (PGRST205 for signal_episodes), cron reports signalLedger.ready=false and requiresSetup=true while continuing normal tracking. Other ledger failures still fail the cron response. The dashboard remains unavailable until the schema is applied; no forward results are fabricated.
