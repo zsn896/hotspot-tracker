@@ -25,3 +25,11 @@ Before recording, the cron rechecks the official latest draw. If it differs from
 The panel's enabled indicator describes configuration, not a successful-cron heartbeat. Historical pattern labels are explicitly historical; they are not validated forward win probabilities. Existing statistics may include records from earlier code versions and should not be treated as a clean, preregistered experiment. A formal model comparison still needs a frozen version, a predeclared sample size and a separate untouched evaluation period.
 
 If the optional ledger table is missing (PGRST205 for signal_episodes), cron reports signalLedger.ready=false and requiresSetup=true while continuing normal tracking. Other ledger failures still fail the cron response. The dashboard remains unavailable until the schema is applied; no forward results are fabricated.
+
+## Automatic scheduling
+
+Production uses Vercel Cron (`vercel.json`) to invoke `/api/cron` every five minutes. The existing production `CRON_SECRET` is sent by Vercel as a Bearer authorization header; no public or query-string secret is introduced. This cadence requires Vercel Pro or Enterprise.
+
+GitHub Actions is retained for manual recovery (`workflow_dispatch`) only. Do not enable a second automatic scheduler for the same endpoint. Avoid manually triggering recovery while an automatic run is in progress. Changes to the Vercel schedule take effect with a production deployment. Check Vercel runtime logs for `/api/cron` execution times and HTTP errors, and `/api/state` for collection progress; `/api/ledger` being enabled does not prove the scheduler ran.
+
+GitHub scheduled events can be delayed or dropped during high load. Moving the regular trigger to the hosting platform removes that dependency; it does not guarantee exact timing, full signal coverage, or prediction accuracy. Vercel does not automatically retry failed cron invocations. Investigate errors instead of treating an empty prediction ledger as proof of success.
