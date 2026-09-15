@@ -8,3 +8,4 @@ __pycache__/
 *.pyc
 catboost-output/
 training-draws.json
+draw-repeat-output/
