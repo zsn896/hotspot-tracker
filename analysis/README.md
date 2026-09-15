@@ -43,3 +43,9 @@ The report includes provenance, all histogram counts, lag summaries and up to
 12 pairs with maximum overlap. Check any suspicious pair against the
 [official Hot Spot archive](https://www.calottery.com/en/draw-games/hot-spot/past-winning-numbers)
 before interpreting it. This is a data audit, not a prediction engine.
+
+`verify_repeats.py` makes one unauthenticated read of each maximum-overlap draw
+and the two window boundaries from the official historical pages. It checks
+the page's own draw ID, records date/time and numbers, compares them with the
+archive, and saves public HTML plus hashes and a verification JSON. HTTP or
+parsing failures are reported as unavailable, never treated as confirmation.

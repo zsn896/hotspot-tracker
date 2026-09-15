@@ -1,6 +1,7 @@
 import copy
 import unittest
 from draw_repeats import compare, reference, simulate_maxima, validate
+from verify_repeats import parse_result
 
 
 class DrawRepeatTests(unittest.TestCase):
@@ -35,6 +36,13 @@ class DrawRepeatTests(unittest.TestCase):
         a = simulate_maxima(15, 4)
         self.assertEqual(a, simulate_maxima(15, 4))
         self.assertEqual(sum(a.values()), 4)
+
+    def test_official_reader_checks_identity_before_comparing_numbers(self):
+        html = '<body>Draw Number: 3300668 Draw Date: September 12, 2026 | Draw Time: 6:48 a.m. ' + ' '.join(map(str, range(1, 21))) + ' Check out the Hot Spot</body>'
+        result = parse_result(html, 3300668)
+        self.assertEqual(result['numbers'], list(range(1, 21)))
+        with self.assertRaises(ValueError):
+            parse_result(html, 3300669)
 
 
 if __name__ == '__main__':

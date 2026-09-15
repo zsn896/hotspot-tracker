@@ -31,11 +31,13 @@ jobs:
           --input archive/training-draws.json
           --expected-sha cd7cbe315d1372f28cc1bd06243a97a8fe80b3d29c3e6e0eabff6870bbd76f0f
           --draws 2100 --simulations 199
+      - name: Check suspicious pairs against public official pages
+        run: python analysis/verify_repeats.py
       - name: Save reproducible report
         uses: actions/upload-artifact@v4
         with:
           name: draw-repeat-audit-${{ github.run_id }}
-          path: draw-repeat-output/report.json
+          path: draw-repeat-output/
           retention-days: 90
       - name: Summarize findings
         run: |
