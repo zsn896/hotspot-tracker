@@ -1,0 +1,53 @@
+name: Full draw repeat audit
+on:
+  workflow_dispatch:
+  push:
+    branches: [research/draw-repeat-audit]
+    paths: ['analysis/*.py', '.github/workflows/draw-repeat-audit.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test archive validation and overlap counting
+        run: python -m unittest discover -s analysis -p 'test_*.py' -v
+      - name: Read the existing CatBoost archive inside GitHub
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 34898569138
+          name: catboost-e0255ed61172b59666e63e8ad07289ea2cd9f14c-34898569138
+          path: archive
+      - name: Compare 2100 real draws and 199 fair reference windows
+        run: >-
+          python analysis/draw_repeats.py
+          --input archive/training-draws.json
+          --expected-sha cd7cbe315d1372f28cc1bd06243a97a8fe80b3d29c3e6e0eabff6870bbd76f0f
+          --draws 2100 --simulations 199
+      - name: Check suspicious pairs against public official pages
+        run: python analysis/verify_repeats.py
+      - name: Save reproducible report
+        uses: actions/upload-artifact@v4
+        with:
+          name: draw-repeat-audit-${{ github.run_id }}
+          path: draw-repeat-output/
+          retention-days: 90
+      - name: Summarize findings
+        run: |
+          python - <<'PY'
+          import json,os
+          r=json.load(open('draw-repeat-output/report.json'))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as out:
+            out.write('# Full draw overlap audit\n\n')
+            out.write(f"Frozen archive: {r['firstDrawId']}–{r['lastDrawId']} ({r['drawCount']} draws).\n\n")
+            out.write(f"Pairs: {r['pairCount']:,}; exact 20/20 repeats: {r['exactRepeatPairs']}; maximum overlap: {r['maximumShared']}/20.\n\n")
+            out.write(f"Whole-window maximum comparison: Monte Carlo p={r['simulation']['monteCarloP']:.3f}, {r['simulation']['repetitions']} reference windows.\n\n")
+            out.write('No prediction or live signal is enabled. 2100 draws approximate seven operating days; dates and times are absent from this frozen input.\n')
+          PY
