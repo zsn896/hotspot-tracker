@@ -1,0 +1,487 @@
+{
+  "atLeast": [
+    {
+      "expectedFairPairs": 10452.553665639372,
+      "observedPairs": 10380,
+      "sharedNumbers": 10
+    },
+    {
+      "expectedFairPairs": 220.85892053380064,
+      "observedPairs": 217,
+      "sharedNumbers": 12
+    },
+    {
+      "expectedFairPairs": 1.2639956401401038,
+      "observedPairs": 3,
+      "sharedNumbers": 14
+    },
+    {
+      "expectedFairPairs": 0.054284775544659596,
+      "observedPairs": 3,
+      "sharedNumbers": 15
+    },
+    {
+      "expectedFairPairs": 2.1040136130076207e-7,
+      "observedPairs": 2,
+      "sharedNumbers": 18
+    },
+    {
+      "expectedFairPairs": 7.487149220956834e-10,
+      "observedPairs": 2,
+      "sharedNumbers": 19
+    },
+    {
+      "expectedFairPairs": 6.234095937516099e-13,
+      "observedPairs": 2,
+      "sharedNumbers": 20
+    }
+  ],
+  "auditVersion": "FULL_DRAW_REPEAT_V1",
+  "bullseyeCompared": false,
+  "drawCount": 2100,
+  "duplicateCards": [
+    {
+      "drawIds": [
+        3300668,
+        3300669
+      ],
+      "numbers": [
+        6,
+        10,
+        12,
+        13,
+        17,
+        20,
+        22,
+        25,
+        28,
+        30,
+        44,
+        51,
+        52,
+        53,
+        54,
+        59,
+        60,
+        75,
+        77,
+        80
+      ]
+    },
+    {
+      "drawIds": [
+        3300895,
+        3300900
+      ],
+      "numbers": [
+        15,
+        16,
+        19,
+        21,
+        25,
+        26,
+        30,
+        32,
+        36,
+        48,
+        51,
+        57,
+        58,
+        61,
+        62,
+        65,
+        73,
+        74,
+        76,
+        77
+      ]
+    }
+  ],
+  "exactRepeatPairs": 2,
+  "fairReference": "Independent uniform draws of 20 distinct numbers from 1..80. All unordered draw pairs are compared.",
+  "firstDrawId": 3299281,
+  "fullRepeatProbabilityUpperBound": 6.234095937516098e-13,
+  "generatedAt": "2026-09-15T02:49:40.640038+00:00",
+  "ignoredOrder": true,
+  "inputSha256": "cd7cbe315d1372f28cc1bd06243a97a8fe80b3d29c3e6e0eabff6870bbd76f0f",
+  "lagComparisons": [
+    {
+      "exactRepeats": 1,
+      "lagDraws": 1,
+      "maximumShared": 20,
+      "meanShared": 4.993330157217723,
+      "pairs": 2099
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 2,
+      "maximumShared": 11,
+      "meanShared": 5.0452812202097235,
+      "pairs": 2098
+    },
+    {
+      "exactRepeats": 1,
+      "lagDraws": 5,
+      "maximumShared": 20,
+      "meanShared": 4.957517899761337,
+      "pairs": 2095
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 10,
+      "maximumShared": 11,
+      "meanShared": 4.980861244019139,
+      "pairs": 2090
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 15,
+      "maximumShared": 11,
+      "meanShared": 5.000479616306954,
+      "pairs": 2085
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 30,
+      "maximumShared": 10,
+      "meanShared": 5.051207729468599,
+      "pairs": 2070
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 60,
+      "maximumShared": 13,
+      "meanShared": 5.026470588235294,
+      "pairs": 2040
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 150,
+      "maximumShared": 11,
+      "meanShared": 5.017435897435897,
+      "pairs": 1950
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 300,
+      "maximumShared": 10,
+      "meanShared": 5.03,
+      "pairs": 1800
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 600,
+      "maximumShared": 10,
+      "meanShared": 4.981333333333334,
+      "pairs": 1500
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 900,
+      "maximumShared": 11,
+      "meanShared": 4.995,
+      "pairs": 1200
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 1200,
+      "maximumShared": 10,
+      "meanShared": 5.015555555555555,
+      "pairs": 900
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 1500,
+      "maximumShared": 11,
+      "meanShared": 5.066666666666666,
+      "pairs": 600
+    },
+    {
+      "exactRepeats": 0,
+      "lagDraws": 1800,
+      "maximumShared": 10,
+      "meanShared": 5.016666666666667,
+      "pairs": 300
+    }
+  ],
+  "lastDrawId": 3301380,
+  "limitations": [
+    "Existing archive snapshot, not a fresh live export.",
+    "Archive lacks dates/times: lags of 300 draws are not verified same-clock-time comparisons.",
+    "An exact repeat must be checked against the official source before interpreting it.",
+    "Lag and overlap-histogram comparisons are descriptive; no separate significance claim is made for each.",
+    "A lack of extreme repeats does not prove independence or rule out every other dependency.",
+    "No prediction, live signal or production model is enabled by this audit."
+  ],
+  "maximumExamples": [
+    {
+      "firstDrawId": 3300668,
+      "firstNumbers": [
+        6,
+        10,
+        12,
+        13,
+        17,
+        20,
+        22,
+        25,
+        28,
+        30,
+        44,
+        51,
+        52,
+        53,
+        54,
+        59,
+        60,
+        75,
+        77,
+        80
+      ],
+      "lagDraws": 1,
+      "matchingNumbers": [
+        6,
+        10,
+        12,
+        13,
+        17,
+        20,
+        22,
+        25,
+        28,
+        30,
+        44,
+        51,
+        52,
+        53,
+        54,
+        59,
+        60,
+        75,
+        77,
+        80
+      ],
+      "secondDrawId": 3300669,
+      "secondNumbers": [
+        6,
+        10,
+        12,
+        13,
+        17,
+        20,
+        22,
+        25,
+        28,
+        30,
+        44,
+        51,
+        52,
+        53,
+        54,
+        59,
+        60,
+        75,
+        77,
+        80
+      ]
+    },
+    {
+      "firstDrawId": 3300895,
+      "firstNumbers": [
+        15,
+        16,
+        19,
+        21,
+        25,
+        26,
+        30,
+        32,
+        36,
+        48,
+        51,
+        57,
+        58,
+        61,
+        62,
+        65,
+        73,
+        74,
+        76,
+        77
+      ],
+      "lagDraws": 5,
+      "matchingNumbers": [
+        15,
+        16,
+        19,
+        21,
+        25,
+        26,
+        30,
+        32,
+        36,
+        48,
+        51,
+        57,
+        58,
+        61,
+        62,
+        65,
+        73,
+        74,
+        76,
+        77
+      ],
+      "secondDrawId": 3300900,
+      "secondNumbers": [
+        15,
+        16,
+        19,
+        21,
+        25,
+        26,
+        30,
+        32,
+        36,
+        48,
+        51,
+        57,
+        58,
+        61,
+        62,
+        65,
+        73,
+        74,
+        76,
+        77
+      ]
+    }
+  ],
+  "maximumPairCount": 2,
+  "maximumShared": 20,
+  "meanShared": 5.0023126658953245,
+  "overlapHistogram": [
+    {
+      "expectedFairPairs": 2613.236080434121,
+      "observedPairs": 2611,
+      "sharedNumbers": 0
+    },
+    {
+      "expectedFairPairs": 25494.98615057679,
+      "observedPairs": 25311,
+      "sharedNumbers": 1
+    },
+    {
+      "expectedFairPairs": 109567.73809950265,
+      "observedPairs": 109144,
+      "sharedNumbers": 2
+    },
+    {
+      "expectedFairPairs": 275193.38871502987,
+      "observedPairs": 275176,
+      "sharedNumbers": 3
+    },
+    {
+      "expectedFairPairs": 451880.0530604752,
+      "observedPairs": 452127,
+      "sharedNumbers": 4
+    },
+    {
+      "expectedFairPairs": 514139.0825932518,
+      "observedPairs": 513404,
+      "sharedNumbers": 5
+    },
+    {
+      "expectedFairPairs": 419135.1216792814,
+      "observedPairs": 419525,
+      "sharedNumbers": 6
+    },
+    {
+      "expectedFairPairs": 249697.51929829526,
+      "observedPairs": 249487,
+      "sharedNumbers": 7
+    },
+    {
+      "expectedFairPairs": 109892.91864951016,
+      "observedPairs": 110224,
+      "sharedNumbers": 8
+    },
+    {
+      "expectedFairPairs": 35883.402008003315,
+      "observedPairs": 36561,
+      "sharedNumbers": 9
+    },
+    {
+      "expectedFairPairs": 8683.783285936805,
+      "observedPairs": 8638,
+      "sharedNumbers": 10
+    },
+    {
+      "expectedFairPairs": 1547.9114591687708,
+      "observedPairs": 1525,
+      "sharedNumbers": 11
+    },
+    {
+      "expectedFairPairs": 200.9308144113308,
+      "observedPairs": 200,
+      "sharedNumbers": 12
+    },
+    {
+      "expectedFairPairs": 18.66411048232971,
+      "observedPairs": 14,
+      "sharedNumbers": 13
+    },
+    {
+      "expectedFairPairs": 1.2097108645954442,
+      "observedPairs": 0,
+      "sharedNumbers": 14
+    },
+    {
+      "expectedFairPairs": 0.05278738318234666,
+      "observedPairs": 1,
+      "sharedNumbers": 15
+    },
+    {
+      "expectedFairPairs": 0.001472862253971726,
+      "observedPairs": 0,
+      "sharedNumbers": 16
+    },
+    {
+      "expectedFairPairs": 0.0000243197069799253,
+      "observedPairs": 0,
+      "sharedNumbers": 17
+    },
+    {
+      "expectedFairPairs": 2.096526463786664e-7,
+      "observedPairs": 0,
+      "sharedNumbers": 18
+    },
+    {
+      "expectedFairPairs": 7.480915125019318e-10,
+      "observedPairs": 0,
+      "sharedNumbers": 19
+    },
+    {
+      "expectedFairPairs": 6.234095937516099e-13,
+      "observedPairs": 2,
+      "sharedNumbers": 20
+    }
+  ],
+  "pairCount": 2203950,
+  "scope": "Latest 2100 contiguous draws in the frozen CatBoost archive; approximately 7 operating days, not named calendar dates.",
+  "simulation": {
+    "atLeastObserved": 0,
+    "maximaCounts": {
+      "13": 44,
+      "14": 147,
+      "15": 8
+    },
+    "monteCarloP": 0.005,
+    "repetitions": 199,
+    "seed": 20260915,
+    "statistic": "Maximum shared-number count across every unordered pair in the complete window"
+  },
+  "sourceArchiveDraws": 20000,
+  "sourceCommit": "73d3c3d3b180a237e0d9fb880f2c5944d0086333",
+  "workflowRunId": "34922612878"
+}

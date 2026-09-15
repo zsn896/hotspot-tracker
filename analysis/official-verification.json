@@ -1,0 +1,664 @@
+{
+  "checkedAt": "2026-09-15T02:49:42.986541+00:00",
+  "correctedComparison": {
+    "atLeast": [
+      {
+        "expectedFairPairs": 10452.553665639372,
+        "observedPairs": 10384,
+        "sharedNumbers": 10
+      },
+      {
+        "expectedFairPairs": 220.85892053380064,
+        "observedPairs": 214,
+        "sharedNumbers": 12
+      },
+      {
+        "expectedFairPairs": 1.2639956401401038,
+        "observedPairs": 1,
+        "sharedNumbers": 14
+      },
+      {
+        "expectedFairPairs": 0.054284775544659596,
+        "observedPairs": 1,
+        "sharedNumbers": 15
+      },
+      {
+        "expectedFairPairs": 2.1040136130076207e-7,
+        "observedPairs": 0,
+        "sharedNumbers": 18
+      },
+      {
+        "expectedFairPairs": 7.487149220956834e-10,
+        "observedPairs": 0,
+        "sharedNumbers": 19
+      },
+      {
+        "expectedFairPairs": 6.234095937516099e-13,
+        "observedPairs": 0,
+        "sharedNumbers": 20
+      }
+    ],
+    "duplicateCards": [],
+    "exactRepeatPairs": 0,
+    "fullRepeatProbabilityUpperBound": 6.234095937516098e-13,
+    "lagComparisons": [
+      {
+        "exactRepeats": 0,
+        "lagDraws": 1,
+        "maximumShared": 11,
+        "meanShared": 4.987613149118628,
+        "pairs": 2099
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 2,
+        "maximumShared": 11,
+        "meanShared": 5.042897998093422,
+        "pairs": 2098
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 5,
+        "maximumShared": 12,
+        "meanShared": 4.949403341288783,
+        "pairs": 2095
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 10,
+        "maximumShared": 11,
+        "meanShared": 4.983253588516747,
+        "pairs": 2090
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 15,
+        "maximumShared": 11,
+        "meanShared": 5,
+        "pairs": 2085
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 30,
+        "maximumShared": 10,
+        "meanShared": 5.052173913043478,
+        "pairs": 2070
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 60,
+        "maximumShared": 13,
+        "meanShared": 5.025490196078431,
+        "pairs": 2040
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 150,
+        "maximumShared": 11,
+        "meanShared": 5.017948717948718,
+        "pairs": 1950
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 300,
+        "maximumShared": 10,
+        "meanShared": 5.029444444444445,
+        "pairs": 1800
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 600,
+        "maximumShared": 10,
+        "meanShared": 4.98,
+        "pairs": 1500
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 900,
+        "maximumShared": 11,
+        "meanShared": 4.996666666666667,
+        "pairs": 1200
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 1200,
+        "maximumShared": 10,
+        "meanShared": 5.015555555555555,
+        "pairs": 900
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 1500,
+        "maximumShared": 11,
+        "meanShared": 5.068333333333333,
+        "pairs": 600
+      },
+      {
+        "exactRepeats": 0,
+        "lagDraws": 1800,
+        "maximumShared": 10,
+        "meanShared": 5.016666666666667,
+        "pairs": 300
+      }
+    ],
+    "maximumExamples": [
+      {
+        "firstDrawId": 3299914,
+        "firstNumbers": [
+          4,
+          8,
+          12,
+          13,
+          17,
+          18,
+          19,
+          21,
+          24,
+          25,
+          32,
+          35,
+          44,
+          45,
+          46,
+          47,
+          59,
+          64,
+          73,
+          77
+        ],
+        "lagDraws": 117,
+        "matchingNumbers": [
+          4,
+          8,
+          13,
+          17,
+          21,
+          25,
+          32,
+          35,
+          44,
+          45,
+          46,
+          47,
+          64,
+          73,
+          77
+        ],
+        "secondDrawId": 3300031,
+        "secondNumbers": [
+          4,
+          8,
+          13,
+          17,
+          21,
+          22,
+          25,
+          29,
+          32,
+          35,
+          44,
+          45,
+          46,
+          47,
+          48,
+          64,
+          70,
+          73,
+          75,
+          77
+        ]
+      }
+    ],
+    "maximumPairCount": 1,
+    "maximumShared": 15,
+    "meanShared": 5.002243245082693,
+    "overlapHistogram": [
+      {
+        "expectedFairPairs": 2613.236080434121,
+        "observedPairs": 2613,
+        "sharedNumbers": 0
+      },
+      {
+        "expectedFairPairs": 25494.98615057679,
+        "observedPairs": 25320,
+        "sharedNumbers": 1
+      },
+      {
+        "expectedFairPairs": 109567.73809950265,
+        "observedPairs": 109138,
+        "sharedNumbers": 2
+      },
+      {
+        "expectedFairPairs": 275193.38871502987,
+        "observedPairs": 275193,
+        "sharedNumbers": 3
+      },
+      {
+        "expectedFairPairs": 451880.0530604752,
+        "observedPairs": 452125,
+        "sharedNumbers": 4
+      },
+      {
+        "expectedFairPairs": 514139.0825932518,
+        "observedPairs": 513408,
+        "sharedNumbers": 5
+      },
+      {
+        "expectedFairPairs": 419135.1216792814,
+        "observedPairs": 419557,
+        "sharedNumbers": 6
+      },
+      {
+        "expectedFairPairs": 249697.51929829526,
+        "observedPairs": 249427,
+        "sharedNumbers": 7
+      },
+      {
+        "expectedFairPairs": 109892.91864951016,
+        "observedPairs": 110230,
+        "sharedNumbers": 8
+      },
+      {
+        "expectedFairPairs": 35883.402008003315,
+        "observedPairs": 36555,
+        "sharedNumbers": 9
+      },
+      {
+        "expectedFairPairs": 8683.783285936805,
+        "observedPairs": 8642,
+        "sharedNumbers": 10
+      },
+      {
+        "expectedFairPairs": 1547.9114591687708,
+        "observedPairs": 1528,
+        "sharedNumbers": 11
+      },
+      {
+        "expectedFairPairs": 200.9308144113308,
+        "observedPairs": 199,
+        "sharedNumbers": 12
+      },
+      {
+        "expectedFairPairs": 18.66411048232971,
+        "observedPairs": 14,
+        "sharedNumbers": 13
+      },
+      {
+        "expectedFairPairs": 1.2097108645954442,
+        "observedPairs": 0,
+        "sharedNumbers": 14
+      },
+      {
+        "expectedFairPairs": 0.05278738318234666,
+        "observedPairs": 1,
+        "sharedNumbers": 15
+      },
+      {
+        "expectedFairPairs": 0.001472862253971726,
+        "observedPairs": 0,
+        "sharedNumbers": 16
+      },
+      {
+        "expectedFairPairs": 0.0000243197069799253,
+        "observedPairs": 0,
+        "sharedNumbers": 17
+      },
+      {
+        "expectedFairPairs": 2.096526463786664e-7,
+        "observedPairs": 0,
+        "sharedNumbers": 18
+      },
+      {
+        "expectedFairPairs": 7.480915125019318e-10,
+        "observedPairs": 0,
+        "sharedNumbers": 19
+      },
+      {
+        "expectedFairPairs": 6.234095937516099e-13,
+        "observedPairs": 0,
+        "sharedNumbers": 20
+      }
+    ],
+    "pairCount": 2203950
+  },
+  "correctedDrawIds": [
+    3300669,
+    3300900
+  ],
+  "correctedMaximumMonteCarloP": 0.045,
+  "correctionScope": "In-memory audit copy only. The frozen source artifact and production database are not modified. Only the listed official records were checked.",
+  "inputSha256": "cd7cbe315d1372f28cc1bd06243a97a8fe80b3d29c3e6e0eabff6870bbd76f0f",
+  "records": [
+    {
+      "archiveMatchesOfficial": true,
+      "archiveNumbers": [
+        1,
+        2,
+        7,
+        9,
+        11,
+        15,
+        17,
+        25,
+        27,
+        31,
+        54,
+        59,
+        63,
+        69,
+        72,
+        73,
+        74,
+        76,
+        79,
+        80
+      ],
+      "date": "September 7, 2026",
+      "drawId": 3299281,
+      "htmlSha256": "f29dab65653e894eaa2d46c7e077bd7d038e40e193def78bc99c31e1e6c28b75",
+      "httpStatus": 200,
+      "numbers": [
+        1,
+        2,
+        7,
+        9,
+        11,
+        15,
+        17,
+        25,
+        27,
+        31,
+        54,
+        59,
+        63,
+        69,
+        72,
+        73,
+        74,
+        76,
+        79,
+        80
+      ],
+      "resultTextExcerpt": " 1 2 7 9 11 15 17 25 27 31 54 59 63 69 72 73 Bulls-eye number is {number} 74 76 79 80 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 Payouts ",
+      "status": "verified",
+      "time": "2:20 p.m.",
+      "url": "https://www.calottery.com/en/draw-games/hot-spot/past-winning-numbers?query=3299281"
+    },
+    {
+      "archiveMatchesOfficial": true,
+      "archiveNumbers": [
+        6,
+        10,
+        12,
+        13,
+        17,
+        20,
+        22,
+        25,
+        28,
+        30,
+        44,
+        51,
+        52,
+        53,
+        54,
+        59,
+        60,
+        75,
+        77,
+        80
+      ],
+      "date": "September 12, 2026",
+      "drawId": 3300668,
+      "htmlSha256": "b8c599313a4a96412eebe67317631e9548002150056757a19932e59afbc1301c",
+      "httpStatus": 200,
+      "numbers": [
+        6,
+        10,
+        12,
+        13,
+        17,
+        20,
+        22,
+        25,
+        28,
+        30,
+        44,
+        51,
+        52,
+        53,
+        54,
+        59,
+        60,
+        75,
+        77,
+        80
+      ],
+      "resultTextExcerpt": " 6 10 12 13 17 20 22 25 28 30 44 51 52 53 54 59 Bulls-eye number is {number} 60 75 77 80 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 Payouts ",
+      "status": "verified",
+      "time": "6:48 a.m.",
+      "url": "https://www.calottery.com/en/draw-games/hot-spot/past-winning-numbers?query=3300668"
+    },
+    {
+      "archiveMatchesOfficial": false,
+      "archiveNumbers": [
+        6,
+        10,
+        12,
+        13,
+        17,
+        20,
+        22,
+        25,
+        28,
+        30,
+        44,
+        51,
+        52,
+        53,
+        54,
+        59,
+        60,
+        75,
+        77,
+        80
+      ],
+      "date": "September 12, 2026",
+      "drawId": 3300669,
+      "htmlSha256": "a09f18dc4d7ea42708774c62dfb0af111e85821a435e87a7dd59ac6b18f0213f",
+      "httpStatus": 200,
+      "numbers": [
+        4,
+        7,
+        15,
+        19,
+        20,
+        30,
+        32,
+        33,
+        35,
+        37,
+        45,
+        48,
+        50,
+        52,
+        53,
+        57,
+        63,
+        74,
+        79,
+        80
+      ],
+      "resultTextExcerpt": " 4 7 15 19 Bulls-eye number is {number} 20 30 32 33 35 37 45 48 50 52 53 57 63 74 79 80 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 Payouts ",
+      "status": "verified",
+      "time": "6:52 a.m.",
+      "url": "https://www.calottery.com/en/draw-games/hot-spot/past-winning-numbers?query=3300669"
+    },
+    {
+      "archiveMatchesOfficial": true,
+      "archiveNumbers": [
+        15,
+        16,
+        19,
+        21,
+        25,
+        26,
+        30,
+        32,
+        36,
+        48,
+        51,
+        57,
+        58,
+        61,
+        62,
+        65,
+        73,
+        74,
+        76,
+        77
+      ],
+      "date": "September 12, 2026",
+      "drawId": 3300895,
+      "htmlSha256": "50356d183df09bef4115708b600bfbcdd4a0130b5b609132f7db8c048783acda",
+      "httpStatus": 200,
+      "numbers": [
+        15,
+        16,
+        19,
+        21,
+        25,
+        26,
+        30,
+        32,
+        36,
+        48,
+        51,
+        57,
+        58,
+        61,
+        62,
+        65,
+        73,
+        74,
+        76,
+        77
+      ],
+      "resultTextExcerpt": " 15 16 19 21 25 26 30 32 36 48 51 57 58 61 62 65 73 74 Bulls-eye number is {number} 76 77 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 Payouts ",
+      "status": "verified",
+      "time": "9:56 p.m.",
+      "url": "https://www.calottery.com/en/draw-games/hot-spot/past-winning-numbers?query=3300895"
+    },
+    {
+      "archiveMatchesOfficial": false,
+      "archiveNumbers": [
+        15,
+        16,
+        19,
+        21,
+        25,
+        26,
+        30,
+        32,
+        36,
+        48,
+        51,
+        57,
+        58,
+        61,
+        62,
+        65,
+        73,
+        74,
+        76,
+        77
+      ],
+      "date": "September 12, 2026",
+      "drawId": 3300900,
+      "htmlSha256": "b27cd70f6cd9dc678bfe0fd1e119e7193bae5d9e310ca961545ab9a4cee3d935",
+      "httpStatus": 200,
+      "numbers": [
+        1,
+        3,
+        6,
+        8,
+        14,
+        16,
+        20,
+        33,
+        35,
+        36,
+        37,
+        38,
+        48,
+        57,
+        58,
+        61,
+        62,
+        63,
+        66,
+        72
+      ],
+      "resultTextExcerpt": " 1 3 6 8 14 16 20 33 35 36 37 Bulls-eye number is {number} 38 48 57 58 61 62 63 66 72 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 Payouts ",
+      "status": "verified",
+      "time": "10:16 p.m.",
+      "url": "https://www.calottery.com/en/draw-games/hot-spot/past-winning-numbers?query=3300900"
+    },
+    {
+      "archiveMatchesOfficial": true,
+      "archiveNumbers": [
+        5,
+        6,
+        16,
+        20,
+        24,
+        25,
+        28,
+        31,
+        44,
+        46,
+        53,
+        55,
+        57,
+        58,
+        64,
+        67,
+        68,
+        69,
+        72,
+        75
+      ],
+      "date": "September 14, 2026",
+      "drawId": 3301380,
+      "htmlSha256": "b27ad58cf5fed30e8410accce7481707244f5bf7a71cbcbf5177c9ddd32c5751",
+      "httpStatus": 200,
+      "numbers": [
+        5,
+        6,
+        16,
+        20,
+        24,
+        25,
+        28,
+        31,
+        44,
+        46,
+        53,
+        55,
+        57,
+        58,
+        64,
+        67,
+        68,
+        69,
+        72,
+        75
+      ],
+      "resultTextExcerpt": " 5 6 16 20 24 25 28 31 44 46 53 55 57 58 64 67 68 69 72 Bulls-eye number is {number} 75 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 Payouts ",
+      "status": "verified",
+      "time": "2:16 p.m.",
+      "url": "https://www.calottery.com/en/draw-games/hot-spot/past-winning-numbers?query=3301380"
+    }
+  ],
+  "source": "Public California Lottery historical pages"
+}

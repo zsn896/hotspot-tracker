@@ -1,5 +1,7 @@
 # Complete-draw repeat audit
 
+[Read the completed audit and verified data discrepancies (Arabic)](REPORT.md).
+
 The user asks whether the same 20-number Hot Spot draw recurs within a week.
 This audit compares every unordered pair among the last 2,100 consecutive draw
 IDs in the existing 20,000-draw CatBoost snapshot. It ignores number order and
