@@ -7,6 +7,7 @@ import urllib.request
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
+from draw_repeats import compare, validate
 
 
 class PageText(HTMLParser):
@@ -53,7 +54,8 @@ def main():
     raw = Path('archive/training-draws.json').read_bytes()
     if hashlib.sha256(raw).hexdigest() != report['inputSha256']:
         raise ValueError('Archive provenance mismatch')
-    archive = {row['draw_id']: sorted(row['numbers']) for row in json.loads(raw)['draws']}
+    archive_rows = json.loads(raw)['draws']
+    archive = {row['draw_id']: sorted(row['numbers']) for row in archive_rows}
     ids = {report['firstDrawId'], report['lastDrawId']}
     for pair in report['maximumExamples']:
         ids.update((pair['firstDrawId'], pair['secondDrawId']))
@@ -81,6 +83,20 @@ def main():
     result = {'checkedAt': datetime.now(timezone.utc).isoformat(),
               'inputSha256': report['inputSha256'], 'source': 'Public California Lottery historical pages',
               'records': evidence}
+    replacements = {entry['drawId']: entry['numbers'] for entry in evidence
+                    if entry['status'] == 'verified' and not entry['archiveMatchesOfficial']}
+    if replacements:
+        corrected_rows = [{'draw_id': row['draw_id'],
+                           'numbers': replacements.get(row['draw_id'], row['numbers'])}
+                          for row in archive_rows]
+        corrected = compare(validate(corrected_rows, report['drawCount']))
+        simulated = report['simulation']['maximaCounts']
+        repetitions = report['simulation']['repetitions']
+        at_least = sum(n for maximum, n in simulated.items() if int(maximum) >= corrected['maximumShared'])
+        result['correctedComparison'] = corrected
+        result['correctedMaximumMonteCarloP'] = (at_least + 1) / (repetitions + 1)
+    result['correctedDrawIds'] = sorted(replacements)
+    result['correctionScope'] = 'In-memory audit copy only. The frozen source artifact and production database are not modified. Only the listed official records were checked.'
     (directory / 'official-verification.json').write_text(json.dumps(result, indent=2) + '\n')
     print('OFFICIAL_REPEAT_VERIFICATION ' + json.dumps(result), flush=True)
 

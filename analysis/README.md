@@ -49,3 +49,7 @@ and the two window boundaries from the official historical pages. It checks
 the page's own draw ID, records date/time and numbers, compares them with the
 archive, and saves public HTML plus hashes and a verification JSON. HTTP or
 parsing failures are reported as unavailable, never treated as confirmation.
+If a checked official record differs, the script replaces it only in an in-memory
+audit copy, repeats all pair comparisons and reports both versions. It does not
+change the original training artifact or production database. Unchecked records
+are not certified by this targeted verification.
