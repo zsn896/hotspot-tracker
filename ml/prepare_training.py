@@ -1,6 +1,7 @@
 """Targeted official verification; corrections affect an exported copy only."""
 import copy
 import hashlib
+import json
 import sys
 import urllib.request
 from collections import defaultdict
@@ -36,6 +37,7 @@ def prepare(rows, fetcher=fetch_official):
     corrected = copy.deepcopy(original)
     by_id = {r['draw_id']: r for r in corrected}
     pending = duplicate_ids(corrected) | (KNOWN_DISCREPANCIES & by_id.keys())
+    print("TRAINING_ARCHIVE_SUSPECTS " + json.dumps({"count": len(pending), "drawIds": sorted(pending)}), flush=True)
     records, checked = [], set()
     # If a correction creates a different duplicate, verify that pair too.
     while pending:
