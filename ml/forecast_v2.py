@@ -12,6 +12,7 @@ import numpy as np
 from catboost import CatBoostClassifier
 from train_catboost import BASELINE, DEFAULT_TARGETS, clean_draws, dataset, metrics
 from prepare_training import prepare
+from audit_training import load_reviewed
 
 VERSION = 'CATBOOST_4PLUS_V2'
 # Last draw examined in the published September 15 audit; never move on reruns.
@@ -133,10 +134,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', required=True)
     parser.add_argument('--output', default='forecast-v2-output')
+    parser.add_argument('--reviewed', help='Directory from the separate official archive audit')
     args = parser.parse_args()
     raw = Path(args.input).read_bytes()
     payload = json.loads(raw)
-    rows, quality = prepare(payload['draws'])
+    rows, quality = load_reviewed(raw, Path(args.reviewed)) if args.reviewed else prepare(payload['draws'])
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
     corrected = json.dumps({**payload, 'draws': rows}).encode()
@@ -148,7 +150,7 @@ def main():
               'inputSha256': hashlib.sha256(raw).hexdigest(), 'correctedInputSha256': hashlib.sha256(corrected).hexdigest(),
               'drawCount': len(rows), 'firstDrawId': rows[0]['draw_id'], 'lastDrawId': rows[-1]['draw_id'],
               'testStartDrawId': TEST_START, 'targetSource': 'fixed-six-targets-before-test-cutoff',
-              'dataQuality': quality, 'productionEnabled': False, 'results': [],
+              'dataQuality': {k: v for k, v in quality.items() if k != 'records'}, 'productionEnabled': False, 'results': [],
               'limitations': 'Historical retrospective evaluation. Same fixed test start on every rerun; reruns are not independent evidence. Targeted verification cannot certify all rows. Gates are exploratory, not proof of predictability.'}
     for target in DEFAULT_TARGETS:
         result = run_target(rows, target, out)

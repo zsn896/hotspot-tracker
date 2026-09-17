@@ -35,7 +35,10 @@ Before fitting, verify both previously erroneous IDs and every exact duplicate
 card against each draw's own official page. Never assume a duplicate is an error:
 keep officially confirmed repeats. Correct only the exported training copy and
 retain before/after values, official URLs and page hashes. Missing/mismatched
-pages abort training. More than 100 suspect draws requires a separate audit.
+pages abort training. The direct training path allows at most 100 suspect draws. The separate archive
+audit stage supports at most 200, with four concurrent public-page requests. It
+saves reviewed data and a hash-bound manifest before training can consume it.
+A larger scope aborts instead of silently dropping records.
 This targeted check does **not** certify the rest of the archive or fix Supabase.
 
 ## Run and outputs

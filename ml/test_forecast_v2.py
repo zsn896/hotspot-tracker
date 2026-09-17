@@ -1,4 +1,6 @@
 import copy
+import hashlib
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,6 +10,7 @@ from catboost import CatBoostClassifier
 from test_catboost import fixture
 from forecast_v2 import make_dataset, run_target, assess, BASELINE
 from prepare_training import prepare
+from audit_training import load_reviewed
 
 
 class ForecastV2Tests(unittest.TestCase):
@@ -51,6 +54,25 @@ class ForecastV2Tests(unittest.TestCase):
         result = assess(y, p, {'chance': p, 'empirical': p, 'legacy': p}, None)
         self.assertFalse(result['eligibleForProspectiveTrial'])
         self.assertEqual(result['episodes'], 0)
+
+    def test_reviewed_copy_is_bound_to_original_and_evidence(self):
+        raw = b'original snapshot'
+        clean = json.dumps({'draws': fixture(20)}).encode()
+        evidence = b'{"checkedDraws": 0}'
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            (out/'corrected-training-draws.json').write_bytes(clean)
+            (out/'data-quality.json').write_bytes(evidence)
+            (out/'review-manifest.json').write_text(json.dumps({
+                'inputSha256': hashlib.sha256(raw).hexdigest(),
+                'correctedSha256': hashlib.sha256(clean).hexdigest(),
+                'evidenceSha256': hashlib.sha256(evidence).hexdigest()}))
+            self.assertEqual(len(load_reviewed(raw, out)[0]), 20)
+            with self.assertRaises(ValueError):
+                load_reviewed(b'another snapshot', out)
+            (out/'data-quality.json').write_text('{}')
+            with self.assertRaises(ValueError):
+                load_reviewed(raw, out)
 
     def test_duplicate_corrections_preserve_original_and_verify_identity(self):
         rows = fixture(20)

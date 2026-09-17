@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
   push:
     branches: [main, improve/forecast-v2]
-    paths: ['ml/forecast_v2.py', 'ml/prepare_training.py', 'ml/test_forecast_v2.py', '.github/workflows/forecast-v2.yml']
+    paths: ['ml/forecast_v2.py', 'ml/prepare_training.py', 'ml/audit_training.py', 'ml/test_forecast_v2.py', '.github/workflows/forecast-v2.yml']
   pull_request:
-    paths: ['ml/forecast_v2.py', 'ml/prepare_training.py', 'ml/test_forecast_v2.py', '.github/workflows/forecast-v2.yml']
+    paths: ['ml/forecast_v2.py', 'ml/prepare_training.py', 'ml/audit_training.py', 'ml/test_forecast_v2.py', '.github/workflows/forecast-v2.yml']
 permissions:
   contents: read
 concurrency:
@@ -41,8 +41,10 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: python ml/fetch_archive.py
-      - name: Verify suspect draws and evaluate frozen six groups
-        run: python ml/forecast_v2.py --input training-draws.json
+      - name: Audit suspect archive records against official results
+        run: python ml/audit_training.py --input training-draws.json --output forecast-v2-output
+      - name: Evaluate frozen six groups using the reviewed copy
+        run: python ml/forecast_v2.py --input training-draws.json --reviewed forecast-v2-output
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -31,7 +31,7 @@ def fetch_official(draw_id):
     return result
 
 
-def prepare(rows, fetcher=fetch_official):
+def prepare(rows, fetcher=fetch_official, max_checks=100):
     from train_catboost import clean_draws
     original = clean_draws(rows)
     corrected = copy.deepcopy(original)
@@ -41,8 +41,8 @@ def prepare(rows, fetcher=fetch_official):
     records, checked = [], set()
     # If a correction creates a different duplicate, verify that pair too.
     while pending:
-        if len(checked | pending) > 100:
-            raise ValueError('More than 100 suspect draws: require a separate archive audit')
+        if len(checked | pending) > max_checks:
+            raise ValueError(f'More than {max_checks} suspect draws: require a separate archive audit')
         for draw_id in sorted(pending):
             official = fetcher(draw_id)  # Any missing/wrong official page aborts training.
             if official['drawId'] != draw_id:
