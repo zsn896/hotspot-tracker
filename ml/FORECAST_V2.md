@@ -1,5 +1,7 @@
 # Forecast V2
 
+[Completed evaluation and official corrections (Arabic)](FORECAST_V2_RESULTS.md).
+
 The objective remains at least four of a fixed group's five numbers together in
 one of the next five draws. This changes the prediction algorithm, not numeric
 input. It estimates an event probability; it cannot guarantee future numbers.
