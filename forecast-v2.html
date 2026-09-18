@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>اختبار خوارزمية التوقع المحسنة</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#091322;color:#e4edf8}*{box-sizing:border-box}body{margin:0}main{max-width:1100px;margin:auto;padding:28px 18px 60px}a{color:#80d5ff}nav{display:flex;gap:24px;flex-wrap:wrap}h1{font-size:clamp(1.7rem,5vw,2.5rem)}h2{font-size:1.25rem}p{line-height:1.9;color:#c3d2e4}.card{background:#122135;border:1px solid #2a3d56;border-radius:16px;padding:20px;margin-top:20px}.scroll{overflow:auto}table{border-collapse:collapse;min-width:750px;width:100%;font-variant-numeric:tabular-nums}td,th{text-align:right;padding:14px 10px;border-bottom:1px solid #2a3d56;white-space:nowrap}td:first-child{direction:ltr}button{font:inherit;background:#80d5ff;color:#091322;border:0;border-radius:8px;padding:10px 18px}button:disabled{opacity:.6}.muted{font-size:.9rem;color:#a5bad2}#details p{border-top:1px solid #2a3d56;padding-top:15px}
+</style>
+<main>
+<nav><a href="/">التطبيق</a><a href="/catboost-lab.html">تجربة CatBoost الأولى</a></nav>
+<h1>اختبار خوارزمية التوقع المحسنة</h1>
+<p>هل تساعد علاقات ظهور أرقام المجموعة معًا في توقع ظهور 4 من أرقامها الخمسة خلال خمس سحوبات؟ نقارن النسخة الجديدة بالنموذج السابق وبالاحتمال العشوائي على السحوبات نفسها.</p>
+<div class="card"><h2>ما الذي تغيّر؟</h2><p>أضفنا تكرار ظهور الأزواج والثلاثيات، وفصلنا التدريب واختيار النموذج وضبط احتمالاته. ثبّتنا المجموعات الست، وحجزنا السحوبات الأحدث من 3301380 للاختبار. تُراجع السجلات المتطابقة والمخالفتان المعروفتان مقابل المصدر الرسمي قبل التدريب.</p><p class="muted">هذا تقرير اختبار تاريخي، وليس توقعًا مباشرًا للسحب القادم. خطأ الاحتمال «Brier» الأصغر أفضل؛ لا يمثل نسبة دقة. النموذج السابق في المقارنة أُعيد تدريبه على التقسيم نفسه.</p></div>
+<div class="card"><button id="refresh" type="button">تحديث التقرير</button><p id="status" role="status" aria-live="polite">جارٍ تحميل التقرير…</p>
+<section id="report" hidden><h2 id="summary"></h2><p id="period"></p><p id="quality"></p>
+<div class="scroll" tabindex="0" role="region" aria-label="مقارنة أخطاء التوقع"><table><thead><tr><th>المجموعة</th><th>نوافذ الاختبار</th><th>النسخة الجديدة</th><th>النموذج السابق</th><th>معدل التدريب</th><th>الصدفة</th><th>وزن النموذج</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div id="details"></div><p class="muted">التأهل يعني مرشحًا لتجربة مستقبلية فقط. تكرار الاختبار على السحوبات نفسها لا يثبت تحسنًا مستقلًا، ومراجعة السجلات المشتبه بها لا تثبت صحة كامل الأرشيف.</p>
+<p id="provenance" class="muted"></p></section></div>
+<p><a id="run" href="https://github.com/zsn896/hotspot-tracker/actions/workflows/forecast-v2.yml">نتائج التشغيل والأدلة</a> · <a href="https://github.com/zsn896/hotspot-tracker/blob/main/ml/FORECAST_V2_RESULTS.md">تقرير النتائج والتصحيحات</a> · <a href="https://github.com/zsn896/hotspot-tracker/blob/main/ml/FORECAST_V2.md">طريقة التوقع والاختبار</a></p>
+</main>
+<script>
+'use strict';
+const el=id=>document.getElementById(id);
+function render(data){
+ if(data.model!=='CATBOOST_4PLUS_V2'||!Array.isArray(data.results))throw Error('Invalid report');
+ const evaluated=data.results.filter(r=>r.status==='evaluated');
+ const qualified=evaluated.filter(r=>r.assessment.eligibleForProspectiveTrial).length;
+ el('summary').textContent=qualified?`${qualified} مجموعات تأهلت لتجربة مستقبلية، دون تفعيل تلقائي`:'لم يثبت تحسن كافٍ لإصدار إشارات موثوقة';
+ el('period').textContent=`الأرشيف: ${data.drawCount} سحبًا حتى ${data.lastDrawId}. تبدأ أصول توقعات الاختبار من ${data.testStartDrawId}. التقرير: ${new Date(data.generatedAt).toLocaleString('ar')}.`;
+ const q=data.dataQuality;
+ el('quality').textContent=`تمت مراجعة ${q.checkedDraws} سجلًا مستهدفًا وتصحيح ${q.correctedDrawIds.length} منها في نسخة التدريب فقط. قاعدة البيانات الحية لم تتغير بهذا الفحص.`;
+ el('rows').replaceChildren();el('details').replaceChildren();
+ for(const r of data.results){
+  const tr=document.createElement('tr'),target=r.target.join(' - ');
+  if(r.status!=='evaluated'){
+   const td=document.createElement('td');td.colSpan=7;td.textContent=target+' — بيانات غير كافية للاختبار';tr.append(td);
+  }else{
+   const values=[target,r.metrics.v2.episodes,...['v2','legacy','empirical','chance'].map(k=>r.metrics[k].brier.toFixed(5)),`${Math.round(r.calibration.weight*100)}%`];
+   for(const value of values){const td=document.createElement('td');td.textContent=String(value);tr.append(td);}
+   const p=document.createElement('p'),a=r.assessment;
+   p.textContent=`${target}: ${r.calibration.weight===0?'اختار الضبط احتمالًا مرجعيًا ثابتًا؛ لا يُنسب تحسن إلى CatBoost. ':''}${r.threshold===null?'لم تتأهل عتبة إشارة في فترة الضبط.':`إشارات الاختبار: ${a.episodes}؛ النجاحات: ${a.successes}؛ الإخفاقات: ${a.failures}.`} ${a.eligibleForProspectiveTrial?'مرشح للتقييم المستقبلي.':'غير مؤهل لإشارة موثوقة.'}`;
+   el('details').append(p);
+  }
+  el('rows').append(tr);
+ }
+ el('provenance').textContent=`إصدار الخوارزمية: ${data.model}. هذا الاختبار لا يضمن أرقامًا صحيحة للسحب القادم.`;
+ if(/^\d+$/.test(String(data.workflowRunId)))el('run').href='https://github.com/zsn896/hotspot-tracker/actions/runs/'+data.workflowRunId;
+ el('report').hidden=false;
+}
+async function load(){
+ el('refresh').disabled=true;el('report').hidden=true;el('status').textContent='جارٍ تحميل التقرير…';
+ try{
+  const response=await fetch('/forecast-v2-report.json',{cache:'no-store',signal:AbortSignal.timeout(20000)});
+  if(response.status===404){el('status').textContent='لم يُنشر تقرير مكتمل بعد. يمكنك متابعة التشغيل من الرابط أدناه.';return;}
+  if(!response.ok)throw Error('Request failed');
+  render(await response.json());el('status').textContent='تم تحميل آخر تقرير منشور.';
+ }catch(_){el('report').hidden=true;el('status').textContent='تعذر تحميل تقرير صالح. حاول مجددًا.';}
+ finally{el('refresh').disabled=false;}
+}
+el('refresh').addEventListener('click',load);load();
+</script>
+</html>
