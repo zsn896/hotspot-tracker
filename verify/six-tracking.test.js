@@ -15,9 +15,18 @@ test('cycle excludes historical and post-window hits, counts zeros, and caps at 
 test('actual tracking UI shows remaining, matches and draw result including zero',()=>{
   const fs=require('node:fs'),vm=require('node:vm');
   const source=fs.readFileSync(require('node:path').join(__dirname,'../index-core.html'),'utf8');
-  const renderer=source.slice(source.indexOf('function groupSixResultsHtml()'),source.indexOf('async function refreshGroupSixTracking()'));
+  const renderer=source.slice(source.indexOf('function sixDrawDate('),source.indexOf('async function refreshGroupSixTracking()'));
   const context={esc:String,groupSixTrack:summarizeCycle(numbers,100,101,[draw(101,0)])};
   vm.createContext(context);vm.runInContext(renderer,context);
   const html=vm.runInContext('groupSixResultsHtml()',context);
-  assert.match(html,/السحبات المتبقية: 19 \/ 20/);assert.match(html,/آخر نتيجة: 0 \/ 5/);assert.match(html,/السحبة 101/);assert.match(html,/10:00/);
+  assert.match(html,/المتبقي<b>19<\/b>/);assert.match(html,/مطابقة آخر سحبة<b>0<\/b>/);assert.match(html,/>101<\/bdi>/);assert.match(html,/10:00/);assert.ok(!html.includes('أرقام السحبة:'));assert.match(html,/<table/);
+});
+
+test('completed saved cycle is explicitly historical and collapsed',()=>{
+ const fs=require('node:fs'),vm=require('node:vm');
+ const source=fs.readFileSync(require('node:path').join(__dirname,'../index-core.html'),'utf8');
+ const context={esc:String,groupSixAnalysis:{},groupSixSuggestion:{numbers},groupSixTrack:{finished:true,last:{date:'Sep 18, 2026'}},groupSixTracking:true,groupSixCycle:{},groupSixResultsHtml:()=>'<span>ARCHIVE RESULTS</span>',sixDrawDate:x=>x};
+ vm.createContext(context);vm.runInContext(source.slice(source.indexOf('function sixGeneratorHtml()'),source.indexOf('function resetGroupSixCycle()')),context);
+ const html=vm.runInContext('sixGeneratorHtml()',context);
+ assert.match(html,/لا توجد متابعة نشطة/);assert.match(html,/<details[^>]*><summary>عرض الدورة السابقة/);assert.ok(html.indexOf('تحليل جديد')<html.indexOf('ARCHIVE RESULTS'));assert.ok(!html.includes('<details open'));
 });
