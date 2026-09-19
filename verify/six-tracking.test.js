@@ -12,14 +12,28 @@ test('cycle excludes historical and post-window hits, counts zeros, and caps at 
   assert.equal(summarizeCycle(numbers,100,100,rows).last,null);
   assert.throws(()=>summarizeCycle(numbers,100,103,[draw(103,5)]));
 });
-test('actual tracking UI shows remaining, matches and draw result including zero',()=>{
+test('tracking UI preserves counters and lists only 3+ matches in a closed disclosure',()=>{
   const fs=require('node:fs'),vm=require('node:vm');
   const source=fs.readFileSync(require('node:path').join(__dirname,'../index-core.html'),'utf8');
   const renderer=source.slice(source.indexOf('function sixDrawDate('),source.indexOf('async function refreshGroupSixTracking()'));
   const context={esc:String,groupSixTrack:summarizeCycle(numbers,100,101,[draw(101,0)])};
   vm.createContext(context);vm.runInContext(renderer,context);
   const html=vm.runInContext('groupSixResultsHtml()',context);
-  assert.match(html,/المتبقي<b>19<\/b>/);assert.match(html,/مطابقة آخر سحبة<b>0<\/b>/);assert.match(html,/>101<\/bdi>/);assert.match(html,/10:00/);assert.ok(!html.includes('أرقام السحبة:'));assert.match(html,/<table/);
+  assert.match(html,/المتبقي<b>19<\/b>/);assert.match(html,/مطابقة آخر سحبة<b>0<\/b>/);
+  assert.ok(!html.includes('أرقام السحبة:'));assert.ok(!html.includes('<table'));assert.ok(!html.includes('المطابق من مجموعتك:'));
+  const rows=Array.from({length:6},(_,i)=>draw(101+i,i));
+  context.groupSixTrack=summarizeCycle(numbers,100,106,rows);
+  const {JSDOM}=require('jsdom');
+  const dom=new JSDOM(vm.runInContext('groupSixResultsHtml()',context));
+  const detail=dom.window.document.querySelector('details');
+  assert.equal(detail.open,false);
+  const entries=Array.from(detail.querySelectorAll('tbody tr'));
+  assert.equal(entries.length,3);
+  assert.deepEqual(entries.map(row=>row.querySelector('bdi').textContent),['106','105','104']);
+  assert.ok(entries.every(row=>row.textContent.includes('10:00')));
+  assert.ok(entries[2].textContent.includes('1 · 2 · 3'));
+  assert.match(dom.window.document.querySelector('.sixStats').textContent,/تمت متابعتها6/);
+  dom.window.close();
 });
 
 test('completed saved cycle is explicitly historical and collapsed',()=>{
