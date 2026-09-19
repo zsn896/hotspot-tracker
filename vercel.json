@@ -1,5 +1,6 @@
 {
   "functions": {
+    "api/group-six.js": {"maxDuration": 300},
     "api/track.js": {
       "maxDuration": 60
     },

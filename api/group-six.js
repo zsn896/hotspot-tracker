@@ -1,7 +1,8 @@
 'use strict';
 const { cursorUpdatePath } = require('../lib/tracking-cursor');
 
-const { db, score } = require('../api/lib');
+const { db, score, getDraw, getMany } = require('../api/lib');
+const { selectRecentSix } = require('../lib/six-recent');
 const { deepAnalyze50 } = require('../lib/group-five');
 const { analyzeGroupWave } = require('../lib/wave-engine');
 
@@ -96,18 +97,22 @@ function combineSixManualGroups(groups) {
 }
 
 async function analyzeSixManualGroups() {
-  const groups = await getSixManualGroups();
-  const combined = combineSixManualGroups(groups);
+  const [groups, live] = await Promise.all([getSixManualGroups(), getDraw()]);
+  const latestId = Number(live.id);
+  if (!Number.isSafeInteger(latestId) || latestId < 50) throw Error('تعذر التحقق من أحدث سحبة رسمية');
+  const stored = await db(`hotspot_draws?select=draw_id,draw_date,draw_time,numbers&draw_id=gte.${latestId-49}&draw_id=lte.${latestId}&order=draw_id.asc&limit=50`);
+  const rows = new Map((stored || []).filter(d => Array.isArray(d.numbers) && new Set(d.numbers).size === 20).map(d => [Number(d.draw_id),d]));
+  const asRow = d => ({draw_id:Number(d.id),numbers:d.numbers,draw_date:d.date,draw_time:d.time});
+  rows.set(latestId, asRow(live));
+  const missing = Array.from({length:50}, (_,i) => latestId-49+i).filter(id => !rows.has(id));
+  for (const d of await getMany(missing)) rows.set(Number(d.id), asRow(d));
+  const combined = selectRecentSix(groups, [...rows.values()], latestId);
   return {
-    ok: combined.ok,
-    mode: 'six-manual-groups-combination',
+    ok: true,
+    mode: 'six-live-50-cooccurrence',
     groups,
-    groupCount: combined.groupCount,
-    suggestion: combined.ok ? {
-      numbers: combined.numbers,
-      core: combined.core,
-      additions: combined.additions
-    } : null,
+    groupCount: groups.length,
+    suggestion: combined,
     analysis: combined
   };
 }
