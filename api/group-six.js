@@ -27,6 +27,91 @@ function norm(values) {
     .sort((a, b) => a - b);
 }
 
+async function getSixManualGroups() {
+  const rows = await db(
+    'tracker_groups?select=id,name,numbers,active,created_at&active=eq.true&name=like.STRONG_MANUAL%20Group*&order=id.asc&limit=6'
+  );
+  return (rows || [])
+    .map(row => ({
+      id: Number(row.id),
+      name: String(row.name || ''),
+      numbers: norm(row.numbers)
+    }))
+    .filter(row => row.numbers.length === 5)
+    .slice(0, 6);
+}
+
+function combineSixManualGroups(groups) {
+  const source = Array.isArray(groups) ? groups.slice(0, 6) : [];
+  if (source.length !== 6) {
+    return {
+      ok: false,
+      reason: 'six-active-strong-manual-groups-required',
+      groupCount: source.length,
+      numbers: []
+    };
+  }
+
+  const frequency = new Map();
+  source.forEach((group, groupIndex) => {
+    norm(group.numbers).forEach(number => {
+      const item = frequency.get(number) || { number, groupCount: 0, occurrences: 0, groups: [] };
+      item.groupCount += 1;
+      item.occurrences += 1;
+      item.groups.push(groupIndex + 1);
+      frequency.set(number, item);
+    });
+  });
+
+  const ranked = [...frequency.values()].sort((a, b) =>
+    b.groupCount - a.groupCount ||
+    b.occurrences - a.occurrences ||
+    a.number - b.number
+  );
+  const shared = ranked.filter(item => item.groupCount >= 2);
+  const core = shared.slice(0, 3);
+  const coreNumbers = new Set(core.map(item => item.number));
+  const additions = ranked.filter(item => !coreNumbers.has(item.number)).slice(0, 2);
+  const selected = [...core, ...additions];
+
+  return {
+    ok: selected.length === 5,
+    groupCount: source.length,
+    numbers: selected.map(item => item.number).sort((a, b) => a - b),
+    core: core.map(item => item.number),
+    additions: additions.map(item => item.number),
+    sharedNumbers: shared.map(item => ({
+      number: item.number,
+      groupCount: item.groupCount,
+      occurrences: item.occurrences,
+      groups: item.groups
+    })),
+    frequency: ranked.map(item => ({
+      number: item.number,
+      groupCount: item.groupCount,
+      occurrences: item.occurrences,
+      groups: item.groups
+    }))
+  };
+}
+
+async function analyzeSixManualGroups() {
+  const groups = await getSixManualGroups();
+  const combined = combineSixManualGroups(groups);
+  return {
+    ok: combined.ok,
+    mode: 'six-manual-groups-combination',
+    groups,
+    groupCount: combined.groupCount,
+    suggestion: combined.ok ? {
+      numbers: combined.numbers,
+      core: combined.core,
+      additions: combined.additions
+    } : null,
+    analysis: combined
+  };
+}
+
 function recencyWeight(index, total) {
   if (total <= 1) return 1;
   return 1 + index / (total - 1);
@@ -1134,6 +1219,11 @@ async function handler(req, res) {
       return res.status(200).json(result);
     }
 
+    if (mode === 'six-manual-groups' || mode === 'six-groups' || mode === 'combine-six') {
+      const result = await analyzeSixManualGroups();
+      return res.status(200).json(result);
+    }
+
     if (mode === 'group-six' || mode === 'six' || mode === 'run') {
       const secret = process.env.WORKER_SECRET;
       if (!secret || req.headers?.['x-worker-secret'] !== secret) {
@@ -1157,3 +1247,6 @@ module.exports.fullWindowCompanionStats = fullWindowCompanionStats;
 module.exports.runDailyPatternLearner = runDailyPatternLearner;
 module.exports.walkForwardLearn = walkForwardLearn;
 module.exports.learnerStrengthRating = learnerStrengthRating;
+module.exports.getSixManualGroups = getSixManualGroups;
+module.exports.combineSixManualGroups = combineSixManualGroups;
+module.exports.analyzeSixManualGroups = analyzeSixManualGroups;
