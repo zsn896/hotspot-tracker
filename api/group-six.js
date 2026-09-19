@@ -1219,6 +1219,23 @@ async function handler(req, res) {
     }
 
     const mode = String(req.query?.mode || 'group-six').trim().toLowerCase();
+    if (mode === 'tracking-start') {
+      const live = await getDraw();
+      return res.status(200).json({ok:true,latestDrawId:Number(live.id)});
+    }
+    if (mode === 'tracking') {
+      const start = Number(req.query.start), numbers = norm(String(req.query.numbers || '').split('-'));
+      if (!Number.isSafeInteger(start) || start < 1 || numbers.length !== 5) return res.status(400).json({ok:false,error:'Invalid cycle'});
+      const live = await getDraw(), latest = Number(live.id), end = Math.min(start+20, latest);
+      if (start > latest) return res.status(400).json({ok:false,error:'بداية المتابعة أحدث من السحبة الرسمية'});
+      const stored = await db(`hotspot_draws?select=draw_id,draw_date,draw_time,numbers&draw_id=gt.${start}&draw_id=lte.${end}&order=draw_id.asc&limit=20`);
+      const rows = new Map((stored || []).filter(d=>Array.isArray(d.numbers)&&new Set(d.numbers).size===20).map(d=>[Number(d.draw_id),d]));
+      const asRow = d => ({draw_id:Number(d.id),numbers:d.numbers,draw_date:d.date,draw_time:d.time});
+      if(latest>start && latest<=end) rows.set(latest,asRow(live));
+      const missing=Array.from({length:Math.max(0,end-start)},(_,i)=>start+1+i).filter(id=>!rows.has(id));
+      for(const d of await getMany(missing)) rows.set(Number(d.id),asRow(d));
+      return res.status(200).json({ok:true,...require('../lib/six-tracking').summarizeCycle(numbers,start,latest,[...rows.values()])});
+    }
     if (mode === 'learner' || mode === '12h' || mode === 'daily-pattern-learner') {
       const result = await runDailyPatternLearner();
       return res.status(200).json(result);
