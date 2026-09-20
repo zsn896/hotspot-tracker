@@ -47,10 +47,10 @@ html+='<details class="sixGeneratorMeta"><summary>الإصابات — 3 أرق�
 return html+'</div>'}
 async function refreshGroupSixTracking(){var cycle=groupSixCycle;if(!cycle)return;try{var r=await fetch('/api/group-six?mode=tracking&start='+cycle.startDrawId+'&numbers='+cycle.numbers.join('-')+'&ts='+Date.now(),{cache:'no-store'}),j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'تعذر تحميل النتائج');if(groupSixCycle!==cycle)return;if(groupSixTrack&&Number(groupSixTrack.completed)>Number(j.completed))return;groupSixTrack=j;cycle.tracking=j;writeJson(GROUP_SIX_CYCLE_KEY,cycle)}catch(e){if(groupSixCycle===cycle)groupSixTrack=Object.assign({},groupSixTrack||{},{error:e.message})}renderTracker()}
 function sixSelectionEvidenceHtml(a){
-if(a.selectionRule==='whole-five-temporal-30-20-v4'){
+if(a.selectionRule==='whole-five-temporal-30-20-v4'||a.selectionRule==='whole-five-all-eligible-30-20-v5'){
 var n=a.nomination||{},c=a.comparison||{},nc=n.jointCounts||{},cc=c.jointCounts||{};
 return '<details class="sixGeneratorMeta"><summary>سبب اختيار هذه الأرقام — ترشيح 30 / مفاضلة 20</summary>'+
-'<p>نقيّم الخماسية كاملة، دون تثبيت ثلاثية أولًا. رُشحت '+esc(a.shortlistSize)+' خماسية كحد أقصى '+esc(a.shortlistLimit)+' من أرقام المجموعات الست فقط.</p>'+
+(a.selectionRule==='whole-five-all-eligible-30-20-v5'?'<p>قورنت جميع الخماسيات المؤهلة من أرقام المجموعات الست: '+esc(a.comparedCandidateCount)+' خماسية، دون حد أقصى لعدد المرشحين.</p>':'<p>نقيّم الخماسية كاملة، دون تثبيت ثلاثية أولًا. رُشحت '+esc(a.shortlistSize)+' خماسية كحد أقصى '+esc(a.shortlistLimit)+' من أرقام المجموعات الست فقط.</p>')+
 '<p>الترشيح — أقدم 30 سحبة: ظهر 3 أرقام فأكثر من هذه الخماسية معًا في '+esc(nc.threePlus)+' سحبة، وشارك كل رقم من الخمسة في ظهور مشترك.<br>السحبات: <bdi dir="ltr">'+esc(n.firstDrawId)+' – '+esc(n.lastDrawId)+'</bdi>.</p>'+
 '<p>المفاضلة — أحدث 20 سحبة: ظهر 3 أرقام فأكثر معًا في '+esc(cc.threePlus)+' سحبة.<br>3 بالضبط: '+esc(cc.three)+' · 4 بالضبط: '+esc(cc.four)+' · 5: '+esc(cc.five)+'.<br>السحبات: <bdi dir="ltr">'+esc(c.firstDrawId)+' – '+esc(c.lastDrawId)+'</bdi>.</p>'+
 '<p>الأولوية لعدد سحبات ظهور 3 أرقام فأكثر في مرحلة المفاضلة، ثم 4 فأكثر، ثم 5. عند التعادل نرجع إلى ترتيب الترشيح.</p>'+

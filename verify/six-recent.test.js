@@ -30,11 +30,10 @@ function reference(groups, rows) {
     c.jointCounts.threePlus >= 2 && c.numbers.every(n => first.some(d =>
       d.numbers.includes(n) && c.numbers.filter(x => d.numbers.includes(x)).length >= 3))
   ).sort((a, b) => compare(a.jointCounts, b.jointCounts) || numeric(a.numbers, b.numbers));
-  const shortlist = candidates.slice(0, 20);
-  const winner = shortlist.slice().sort((a, b) =>
+  const winner = candidates.slice().sort((a, b) =>
     compare(recount(a.numbers, last), recount(b.numbers, last)) ||
     compare(a.jointCounts, b.jointCounts) || numeric(a.numbers, b.numbers))[0];
-  return { shortlist, eligible: candidates.length, winner };
+  return { eligible: candidates.length, winner };
 }
 
 test('requires six valid groups and exactly 50 complete consecutive pinned draws', () => {
@@ -53,12 +52,12 @@ test('requires six valid groups and exactly 50 complete consecutive pinned draws
   }
 });
 
-test('latest 20 draws can change the winner but cannot change nomination, eligibility, or shortlist order', () => {
+test('latest 20 draws can change the winner but cannot change candidate eligibility', () => {
   const first = i => i % 2 ? A : B;
   const a = selectRecentSix(twoGroups, windowFor(i => i < 30 ? first(i) : A), 150);
   const b = selectRecentSix(twoGroups, windowFor(i => i < 30 ? first(i) : B), 150);
   assert.deepEqual(a.numbers, A); assert.deepEqual(b.numbers, B);
-  assert.deepEqual(a.shortlist, b.shortlist);
+  assert.equal(a.comparedCandidateCount, b.comparedCandidateCount);
   assert.equal(a.eligibleCandidateCount, b.eligibleCandidateCount);
   assert.equal(a.combinationsChecked, b.combinationsChecked);
 });
@@ -88,7 +87,7 @@ test('cannot nominate from comparison-only appearances or add unsupported filler
   assert.throws(() => selectRecentSix(groups, windowFor(i => i < 15 ? [1, 2, 3] : i < 30 ? [4, 5] : A), 150), /لن تضاف أرقام بلا دليل/);
 });
 
-test('declines a shortlist with no 3+ joint appearances in the latest 20', () => {
+test('declines when no eligible five has 3+ joint appearances in the latest 20', () => {
   assert.throws(() => selectRecentSix(groups, windowFor(i => i < 30 ? A : [1, 2]), 150), /أحدث 20 سحبة/);
 });
 
@@ -106,14 +105,24 @@ test('comparison breaks a 3+ tie by 4+, then breaks a 4+ tie by 5', () => {
   assert.deepEqual(selectRecentSix(twoGroups, five, 150).numbers, B);
 });
 
-test('shortlist is capped at 20 using nomination counts and deterministic numeric ties', () => {
+test('compares all 252 eligible fives and breaks exact ties deterministically', () => {
   const result = selectRecentSix(twoGroups, windowFor(() => [...A, ...B]), 150);
   assert.equal(result.candidateCount, 10);
   assert.equal(result.combinationsChecked, 252);
   assert.equal(result.eligibleCandidateCount, 252);
-  assert.equal(result.shortlistLimit, 20); assert.equal(result.shortlistSize, 20);
-  assert.deepEqual(result.shortlist.map(c => c.numbers), combinations([...A, ...B]).slice(0, 20));
+  assert.equal(result.comparedCandidateCount, 252);
+  assert.equal(result.shortlist, undefined);
+  assert.equal(result.shortlistLimit, undefined);
   assert.deepEqual(result.numbers, A);
+});
+
+test('a five outside the former top-20 shortlist wins when its recent joint appearances rank first', () => {
+  const rows = windowFor(i => i < 30 ? [...A, ...B] : B);
+  assert.ok(!combinations([...A, ...B]).slice(0, 20).some(n => n.join('-') === B.join('-')));
+  const result = selectRecentSix(twoGroups, rows, 150);
+  assert.deepEqual(result.numbers, B);
+  assert.equal(result.comparedCandidateCount, 252);
+  assert.equal(result.comparison.jointCounts.five, 20);
 });
 
 test('optimized selector matches independent full-five enumeration on varied draws', () => {
@@ -125,7 +134,7 @@ test('optimized selector matches independent full-five enumeration on varied dra
     }));
     const result = selectRecentSix(twoGroups, rows, 150), expected = reference(twoGroups, rows);
     assert.equal(result.eligibleCandidateCount, expected.eligible);
-    assert.deepEqual(result.shortlist, expected.shortlist);
+    assert.equal(result.comparedCandidateCount, expected.eligible);
     assert.deepEqual(result.numbers, expected.winner.numbers);
   }
 });
@@ -144,7 +153,7 @@ test('evidence recounts both disjoint phases with real draw ids and no forecast 
     assert.equal(e.date, d.draw_date); assert.equal(e.time, d.draw_time);
   }
   assert.equal(result.historicalOnly, true);
-  assert.equal(result.selectionRule, 'whole-five-temporal-30-20-v4');
+  assert.equal(result.selectionRule, 'whole-five-all-eligible-30-20-v5');
   for (const key of ['success', 'accuracy', 'probability']) assert.equal(result[key], undefined);
 });
 
@@ -170,4 +179,16 @@ test('supports 30 distinct candidates including number 80 and checks every possi
   assert.deepEqual(result.numbers, target);
   assert.equal(result.eligibleCandidateCount, 1);
   assert.equal(result.jointCounts.five, 50);
+});
+
+test('large eligible pools keep a compact response while every candidate is compared', () => {
+  const source = Array.from({ length: 6 }, (_, g) => ({ numbers: Array.from({ length: 5 }, (_, i) => 51 + 5 * g + i) }));
+  const rows = Array.from({ length: 50 }, (_, i) => ({
+    draw_id: 101 + i, numbers: Array.from({ length: 20 }, (_, n) => 51 + (i + n) % 30)
+  }));
+  const result = selectRecentSix(source, rows, 150);
+  assert.equal(result.combinationsChecked, 142506);
+  assert.ok(result.eligibleCandidateCount > 100000);
+  assert.equal(result.comparedCandidateCount, result.eligibleCandidateCount);
+  assert.ok(JSON.stringify(result).length < 20000);
 });

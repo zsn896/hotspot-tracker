@@ -27,12 +27,18 @@ test('real expanded shell shows separate historical phases in a closed explanati
   assert.match(detail.querySelector('summary').textContent, /ترشيح 30 \/ مفاضلة 20/);
   assert.match(detail.textContent, /101 – 130/); assert.match(detail.textContent, /131 – 150/);
   assert.match(detail.textContent, /هذه أرقام تاريخية وليست نسبة دقة أو إصابات مستقبلية/);
+  assert.match(detail.textContent, /قورنت جميع الخماسيات المؤهلة/);
+  assert.match(detail.textContent, /دون حد أقصى لعدد المرشحين/);
   assert.equal(dom.window.document.querySelectorAll('button,table,.sixGeneratorBall').length, 0);
   context.analysis = { selectionRule: 'fixed-core-conditional-v3', core: [1, 2, 3], coreEvidence: { count: 4 }, companionEvidence: [] };
   assert.match(vm.runInContext('sixSelectionEvidenceHtml(analysis)', context), /الثلاثية الثابتة/);
+  context.analysis = { selectionRule: 'whole-five-temporal-30-20-v4', shortlistSize: 20, shortlistLimit: 20 };
+  const legacy = vm.runInContext('sixSelectionEvidenceHtml(analysis)', context);
+  assert.match(legacy, /خماسية كحد أقصى 20/);
+  assert.doesNotMatch(legacy, /قورنت جميع الخماسيات المؤهلة/);
 });
 
-test('booted page keeps manual analyze/generate/start flow and freezes v4 selections across reloads', async t => {
+test('booted page keeps manual analyze/generate/start flow and freezes v5 selections across reloads', async t => {
   const html = await expandedDocument(), requests = [], errors = [], pages = [];
   let storage = {}, latest = 158, selected = analysis;
   t.after(() => pages.forEach(dom => dom.window.close()));
@@ -98,7 +104,7 @@ test('booted page keeps manual analyze/generate/start flow and freezes v4 select
   w.document.getElementById('groupSixStart').click(); await flush();
   const cycle = JSON.parse(w.localStorage.getItem('hotspot_group_six_cycle_v1'));
   assert.equal(cycle.startDrawId, 158); assert.equal(cycle.endDrawId, 178);
-  assert.equal(cycle.analysis.selectionRule, 'whole-five-temporal-30-20-v4');
+  assert.equal(cycle.analysis.selectionRule, 'whole-five-all-eligible-30-20-v5');
   assert.match(w.document.getElementById('groupSixCounters').textContent, /المتبقي20/);
   close(w);
 
