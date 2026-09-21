@@ -68,6 +68,9 @@ test('forward panel distinguishes evidence, empty records, disabled recording an
   const dom=new JSDOM(await expandedDocument(),{url:'https://hotspot.test/',runScripts:'outside-only'});
   t.after(()=>dom.window.close());
   const w=dom.window;
+  const mount=w.document.createElement('section');
+  mount.id='forwardLedger';
+  w.document.body.appendChild(mount);
   w.setInterval=()=>0;
   w.AbortSignal=globalThis.AbortSignal;
   let fail=false;
