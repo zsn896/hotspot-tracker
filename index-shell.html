@@ -71,10 +71,10 @@ async function refreshPrecursor(sets){ensurePrecursorCache();if(precursorBusy||!
     "async function refreshTrackerDetails(){var manualSets=migrateStrongManualLocal(),v=await Promise.all([evaluateSets(readSets(AUTO_KEY)),evaluateSets(manualSets)]);autoDetails=v[0];manualDetails=v[1];renderTracker();if(precursorDelayTimer)clearTimeout(precursorDelayTimer);precursorDelayTimer=setTimeout(function(){refreshPrecursor(manualSets)},7000);if(!manualServerSynced&&!manualServerSyncBusy){setTimeout(async function(){var changed=await syncManualsFromServer();if(changed)refreshTrackerDetails()},2500)}}"
   );
 
-  /* Hide automatic Core3 cards from the Active/Historical UI only. Backend analysis and storage remain unchanged. */
+  /* Hide automatic Core3 and Manual Strong result sections from the UI only. */
   src=src.replace(
     "+'</div>';setupBoxes();restoreDraft();var a=document.getElementById('manualCoreAdd');",
-    "+'</div>';Array.prototype.forEach.call(p.querySelectorAll('.coreSection'),function(s){var h=s.querySelector('.coreSectionTitle'),t=h?String(h.textContent||'').trim():'';if(t==='ACTIVE STRONG'||t==='HISTORICAL STRONG')s.remove()});setupBoxes();restoreDraft();var a=document.getElementById('manualCoreAdd');"
+    "+'</div>';Array.prototype.forEach.call(p.querySelectorAll('.coreSection'),function(s){var h=s.querySelector('.coreSectionTitle'),t=h?String(h.textContent||'').trim():'';if(t==='ACTIVE STRONG'||t==='HISTORICAL STRONG'||t==='MANUAL STRONG')s.remove()});setupBoxes();restoreDraft();var a=document.getElementById('manualCoreAdd');"
   );
 
   /* Manual Strong is intentionally isolated from the separate Manual Analysis tool. */
